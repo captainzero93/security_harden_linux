@@ -14,45 +14,45 @@ Features:
 
 Creates a backup of important configuration files before making changes
 
--System Update
+- System Update
 
 Updates and upgrades the system packages
 
--Firewall Setup
+- Firewall Setup
 
 Installs and configures Uncomplicated Firewall (UFW)
 Sets default secure policies
 
--Fail2Ban Installation
+- Fail2Ban Installation
 
 Installs Fail2Ban to protect against brute-force attacks
 
--Antivirus Setup
+- Antivirus Setup
 
 Installs ClamAV antivirus and updates its database
 
--User Account Security
+- User Account Security
 
-Disables root login for enhanced security
+Disables root login for better security
 
--Package Management
+- Package Management
 
 Removes unnecessary and potentially vulnerable packages
 
--Audit Configuration
+- Audit Configuration
 
 Installs and configures the audit system
 Sets up rules to monitor changes to user and group files
 
--Filesystem Security
+- Filesystem Security
 
 Disables unused and potentially risky filesystems
 
--Boot Security
+- Boot Security
 
 Secures GRUB configuration file permissions
 
--Additional Security Measures
+- Additional Security Measures
 
 Disables core dumps
 Sets proper permissions on sensitive files
