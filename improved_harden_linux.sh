@@ -131,35 +131,6 @@ secure_boot() {
     log "Boot settings secured."
 }
 
-# Additional Security Measures
-additional_security() {
-    log "Applying additional security measures..."
-    
-    # Disable core dumps
-    echo "* hard core 0" | sudo tee -a /etc/security/limits.conf
-    
-    # Set proper permissions on sensitive files
-    sudo chmod 600 /etc/shadow
-    sudo chmod 600 /etc/gshadow
-    
-    # Enable process accounting
-    sudo apt-get install acct -y
-    sudo /usr/sbin/accton on
-    
-    # Restrict SSH
-    sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
-    sudo systemctl restart sshd
-    
-    # Configure strong password policy
-    # sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
-    # sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t10/' /etc/login.defs
-    # sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14/' /etc/pam.d/common-password
-    
-    # Enable address space layout randomization (ASLR)
-    echo "kernel.randomize_va_space = 2" | sudo tee -a /etc/sysctl.conf
-    
 # New function to handle IPv6 configuration
 configure_ipv6() {
     local disable_ipv6
