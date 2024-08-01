@@ -49,7 +49,7 @@ Features:
 - IPv6 Configuration
   - Offers an option to disable IPv6 during script execution
 
-## Customization Options
+## Customisation Options
 
 - Password Policy
   - The script includes commented-out lines for implementing a stricter password policy. To enable these, uncomment the following lines in the `additional_security()` function:
