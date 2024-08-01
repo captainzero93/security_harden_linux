@@ -21,7 +21,7 @@ Updates and upgrades the system packages
 Firewall Setup
 
 Installs and configures Uncomplicated Firewall (UFW)
-Sets default policies and allows SSH
+Sets default secure policies
 
 Fail2Ban Installation
 
