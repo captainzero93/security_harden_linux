@@ -1,4 +1,4 @@
-# Linux Hardening Scripts
+# Linux Hardening Scripts ( Debian based, Ubuntu etc )
 
 This repository contains two bash scripts designed to enhance the security of Linux systems. The scripts are:
 
