@@ -5,7 +5,7 @@ This repository contains two bash scripts designed to enhance security;
 1. `improved_harden_linux.sh`: A ( somewhat ) comprehensive script for hardening Linux systems
 2. `update_grub_config.sh`: A script for updating GRUB configuration with security-enhancing parameters
 
-Note: I would harden GRUB with the "update_grub_config.sh" config script first then reboot to avoid potential issues. Please be careful when first using these scrips, every step has been taken to avoid issues, but use at your own risk!
+Note: I would harden GRUB with the "update_grub_config.sh" config script first then reboot to avoid potential issues. Please be careful when first using these scripts, every step has been taken to avoid issues, but use at your own risk!
 
 ## 1. Improved Linux Hardening Script (`improved_harden_linux.sh`)
 
