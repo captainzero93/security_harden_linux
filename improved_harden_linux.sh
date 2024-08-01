@@ -97,13 +97,38 @@ install udf /bin/true
 EOF'
 }
 
-# Secure Boot Settings
 secure_boot() {
     log "Securing Boot Settings..."
-    sudo chown root:root /boot/grub/grub.cfg
-    sudo chmod og-rwx /boot/grub/grub.cfg
-    sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="ipv6.disable=1 audit=1"/' /etc/default/grub
-    sudo update-grub
+    
+    # Secure GRUB configuration file
+    if [ -f /boot/grub/grub.cfg ]; then
+        sudo chown root:root /boot/grub/grub.cfg
+        sudo chmod 600 /boot/grub/grub.cfg
+    else
+        log "Warning: /boot/grub/grub.cfg not found. Skipping GRUB file permissions."
+    fi
+    
+    # Modify kernel parameters
+    if [ -f /etc/default/grub ]; then
+        # Backup original file
+        sudo cp /etc/default/grub /etc/default/grub.bak
+        
+        # Add or modify kernel parameters
+        sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="audit=1"/' /etc/default/grub
+        
+        # Update GRUB
+        if command -v update-grub &> /dev/null; then
+            sudo update-grub
+        elif command -v grub2-mkconfig &> /dev/null; then
+            sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+        else
+            log "Warning: Neither update-grub nor grub2-mkconfig found. Please update GRUB manually."
+        fi
+    else
+        log "Warning: /etc/default/grub not found. Skipping kernel parameter modifications."
+    fi
+    
+    log "Boot settings secured."
 }
 
 # Additional Security Measures
