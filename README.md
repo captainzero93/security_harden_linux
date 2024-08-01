@@ -9,8 +9,8 @@ This repository contains two bash scripts designed to enhance the security of Li
 
 ## 1. Improved Linux Hardening Script (`improved_harden_linux.sh`)
 
-Features
-Backup
+Features:
+
 
 Creates a backup of important configuration files before making changes
 
