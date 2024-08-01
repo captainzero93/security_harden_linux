@@ -54,10 +54,10 @@ Secures GRUB configuration file permissions
 
 -Additional Security Measures
 
-Disables core dumps
-Sets proper permissions on sensitive files
-Enables process accounting
-Restricts SSH access (disables root login and password authentication)
+Disables core dumps, 
+Sets proper permissions on sensitive files, 
+Enables process accounting, 
+Restricts SSH access (disables root login and password authentication) 
 
 ## 2. GRUB Configuration Update Script (`update_grub_config.sh`)
 
