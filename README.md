@@ -82,7 +82,7 @@ Adds the following security-enhancing parameters to the GRUB configuration:
 - Runs `update-grub` to apply changes (or `grub2-mkconfig` on systems that use it).
 
 ### Error Handling
-- Provides warnings if the GRUB configuration file is not found or if the update command is not available.
+- Provides warnings if the GRUB configuration file is not found or if the update command is not available etc.
 
 ### Logging
 - Logs all actions and any warnings or errors to help with troubleshooting.
