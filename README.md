@@ -99,7 +99,7 @@ Adds the following security-enhancing parameters to the GRUB configuration:
 
 ### 2. Main Linux Hardening Script (`improved_harden_linux.sh`)
 
-This comprehensive script applies various security measures to harden your Linux system:
+This (semi) comprehensive script applies various security measures to harden your Linux system:
 
 - Creates a backup of important configuration files before making changes
 - System Update
