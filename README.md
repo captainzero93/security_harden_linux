@@ -87,19 +87,54 @@ Adds the following security-enhancing parameters to the GRUB configuration:
 ### Logging
 - Logs all actions and any warnings or errors to help with troubleshooting.
 
-### Usage
-To use these scripts ( once in the folder in a Terminal ) :
+# Linux Security Hardening Scripts (Debian based, Ubuntu etc)
 
-1. Ensure you have sudo privileges.
-2. Make the script executable:
+This repository contains two bash scripts designed to enhance security:
+
+1. `update_grub_config.sh`: A script for updating GRUB configuration with security-enhancing parameters
+2. `improved_harden_linux.sh`: A comprehensive script for hardening Linux systems
+
+## Usage
+
+To use these scripts, follow these steps in order:
+
+### 1. Update GRUB Configuration
+
+First, run the GRUB configuration update script:
+
+1. Open a terminal in the folder containing the scripts.
+2. Ensure you have sudo privileges.
+3. Make the script executable:
    ```
    sudo chmod +x update_grub_config.sh
    ```
-3. Run the script with sudo:
+4. Run the script with sudo:
    ```
    sudo ./update_grub_config.sh
    ```
-4. Reboot your system for the changes to take effect.
+5. Reboot your system for the changes to take effect:
+   ```
+   sudo reboot
+   ```
+
+### 2. Run the Main Hardening Script
+
+After your system has rebooted, run the main hardening script:
+
+1. Open a terminal in the folder containing the scripts.
+2. Make the script executable:
+   ```
+   sudo chmod +x improved_harden_linux.sh
+   ```
+3. Run the script with sudo:
+   ```
+   sudo ./improved_harden_linux.sh
+   ```
+4. Follow any prompts or instructions provided by the script.
+5. After the script completes, reboot your system again:
+   ```
+   sudo reboot
+   ```
 
 ### Caution
 This script modifies your system's boot configuration. It's recommended to:
