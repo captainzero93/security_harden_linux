@@ -109,7 +109,3 @@ These scripts make significant changes to your system configuration. It's recomm
 ## Contributing
 
 Contributions to improve these scripts are welcome. Please submit a pull request or open an issue to discuss proposed changes.
-
-## License
-
-[MIT License](LICENSE)
