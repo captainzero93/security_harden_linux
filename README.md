@@ -9,45 +9,55 @@ This repository contains two bash scripts designed to enhance the security of Li
 
 ## 1. Improved Linux Hardening Script (`improved_harden_linux.sh`)
 
-This script performs various security-enhancing operations on a Linux system. Here's a breakdown of its main functions:
+Features
+Backup
 
-### Backup
-- Creates a backup of important configuration files before making changes
+Creates a backup of important configuration files before making changes
 
-### System Update
-- Updates and upgrades the system packages
+System Update
 
-### Firewall Setup
-- Installs and configures Uncomplicated Firewall (UFW)
-- Sets default policies and allows SSH
+Updates and upgrades the system packages
 
-### Fail2Ban Installation
-- Installs Fail2Ban to protect against brute-force attacks
+Firewall Setup
 
-### Antivirus Setup
-- Installs ClamAV antivirus and updates its database
+Installs and configures Uncomplicated Firewall (UFW)
+Sets default policies and allows SSH
 
-### User Account Security
-- Disables root login for enhanced security
+Fail2Ban Installation
 
-### Package Management
-- Removes unnecessary and potentially vulnerable packages
+Installs Fail2Ban to protect against brute-force attacks
 
-### Audit Configuration
-- Installs and configures the audit system
-- Sets up rules to monitor changes to user and group files
+Antivirus Setup
 
-### Filesystem Security
-- Disables unused and potentially risky filesystems
+Installs ClamAV antivirus and updates its database
 
-### Boot Security
-- Secures GRUB configuration file permissions
+User Account Security
 
-### Additional Security Measures
-- Disables core dumps
-- Sets proper permissions on sensitive files
-- Enables process accounting
-- Restricts SSH access (disables root login and password authentication)
+Disables root login for enhanced security
+
+Package Management
+
+Removes unnecessary and potentially vulnerable packages
+
+Audit Configuration
+
+Installs and configures the audit system
+Sets up rules to monitor changes to user and group files
+
+Filesystem Security
+
+Disables unused and potentially risky filesystems
+
+Boot Security
+
+Secures GRUB configuration file permissions
+
+Additional Security Measures
+
+Disables core dumps
+Sets proper permissions on sensitive files
+Enables process accounting
+Restricts SSH access (disables root login and password authentication)
 
 ## 2. GRUB Configuration Update Script (`update_grub_config.sh`)
 
@@ -111,3 +121,6 @@ These scripts make significant changes to your system configuration. It's recomm
 ## Contributing
 
 Contributions to improve these scripts are welcome. Please submit a pull request or open an issue to discuss proposed changes.
+
+## Disclaimer
+This script is provided as-is, without any warranty. The author is not responsible for any damage or data loss caused by the use of this script. Use at your own risk.
