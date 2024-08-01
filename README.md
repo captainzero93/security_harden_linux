@@ -123,4 +123,4 @@ These scripts make significant changes to your system configuration. It's recomm
 Contributions to improve these scripts are welcome. Please submit a pull request or open an issue to discuss proposed changes.
 
 ## Disclaimer
-This script is provided as-is, without any warranty. The author is not responsible for any damage or data loss caused by the use of this script. Use at your own risk.
+These scripts are provided as-is, without any warranty. The author is not responsible for any damage or data loss caused by the use of this script. Use at your own risk.
