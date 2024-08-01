@@ -26,7 +26,6 @@ update_system() {
     log "Updating System..."
     sudo apt-get update -y || handle_error "System update failed"
     sudo apt-get upgrade -y || handle_error "System upgrade failed"
-    sudo apt-get dist-upgrade -y || handle_error "Distribution upgrade failed"
 }
 
 # Install and Configure Firewall
