@@ -21,6 +21,14 @@ backup_files() {
     log "Backup created in $backup_dir"
 }
 
+check_permissions() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "This script must be run with sudo privileges."
+        echo "Please run it again using: sudo $0"
+        exit 1
+    fi
+}
+
 # Update System
 update_system() {
     log "Updating System..."
@@ -187,6 +195,7 @@ additional_security() {
 
 # Main execution
 main() {
+    check_permissions
     backup_files
     update_system
     setup_firewall
