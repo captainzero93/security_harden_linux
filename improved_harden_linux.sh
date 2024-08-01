@@ -128,9 +128,9 @@ additional_security() {
     sudo systemctl restart sshd
     
     # Configure strong password policy
-    sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
-    sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t10/' /etc/login.defs
-    sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14/' /etc/pam.d/common-password
+    # sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
+    # sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t10/' /etc/login.defs
+    # sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14/' /etc/pam.d/common-password
     
     # Enable address space layout randomization (ASLR)
     echo "kernel.randomize_va_space = 2" | sudo tee -a /etc/sysctl.conf
