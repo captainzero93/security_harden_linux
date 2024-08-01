@@ -208,7 +208,7 @@ main() {
     secure_boot
     additional_security
     
-    log "Enhanced Security Configuration Applied Successfully!"
+    log "Enhanced Security Configuration executed! https://github.com/captainzero93"
 }
 
 # Run the main function
