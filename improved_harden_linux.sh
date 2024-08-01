@@ -2,7 +2,7 @@
 
 # Function for logging
 log() {
-    echo "$(date): $1" | tee -a /var/log/security_hardening.log
+    echo "$(date): $1" | sudo tee -a /var/log/security_hardening.log
 }
 
 # Function for error handling
@@ -14,9 +14,10 @@ handle_error() {
 # Backup important files
 backup_files() {
     local backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
-    mkdir -p "$backup_dir" || handle_error "Failed to create backup directory"
-    cp /etc/default/grub "$backup_dir/" || handle_error "Failed to backup GRUB config"
-    cp /etc/ssh/sshd_config "$backup_dir/" || handle_error "Failed to backup SSH config"
+    sudo mkdir -p "$backup_dir" || handle_error "Failed to create backup directory"
+    sudo cp /etc/default/grub "$backup_dir/" || handle_error "Failed to backup GRUB config"
+    sudo cp /etc/ssh/sshd_config "$backup_dir/" || handle_error "Failed to backup SSH config"
+    sudo cp /etc/pam.d/common-password "$backup_dir/" || handle_error "Failed to backup PAM password config"
     log "Backup created in $backup_dir"
 }
 
@@ -25,6 +26,7 @@ update_system() {
     log "Updating System..."
     sudo apt-get update -y || handle_error "System update failed"
     sudo apt-get upgrade -y || handle_error "System upgrade failed"
+    sudo apt-get dist-upgrade -y || handle_error "Distribution upgrade failed"
 }
 
 # Install and Configure Firewall
@@ -34,6 +36,8 @@ setup_firewall() {
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
     sudo ufw allow ssh
+    sudo ufw allow http
+    sudo ufw allow https
     sudo ufw --force enable
 }
 
@@ -41,14 +45,20 @@ setup_firewall() {
 setup_fail2ban() {
     log "Installing and Configuring Fail2Ban..."
     sudo apt-get install fail2ban -y || handle_error "Fail2Ban installation failed"
-    # Add custom Fail2Ban configuration here if needed
+    sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+    sudo sed -i 's/bantime  = 10m/bantime  = 1h/' /etc/fail2ban/jail.local
+    sudo systemctl enable fail2ban
+    sudo systemctl start fail2ban
 }
 
 # Install and Update ClamAV
 setup_clamav() {
     log "Installing and Updating ClamAV..."
-    sudo apt-get install clamav -y || handle_error "ClamAV installation failed"
+    sudo apt-get install clamav clamav-daemon -y || handle_error "ClamAV installation failed"
+    sudo systemctl stop clamav-freshclam
     sudo freshclam || log "Warning: ClamAV database update failed"
+    sudo systemctl start clamav-freshclam
+    sudo systemctl enable clamav-freshclam
 }
 
 # Disable root login
@@ -60,7 +70,7 @@ disable_root() {
 # Remove unnecessary packages
 remove_packages() {
     log "Removing unnecessary packages..."
-    sudo apt-get remove telnetd nis yp-tools rsh-client rsh-redone-client xinetd -y
+    sudo apt-get remove --purge telnetd nis yp-tools rsh-client rsh-redone-client xinetd -y
 }
 
 # Configure audit rules
@@ -69,7 +79,9 @@ setup_audit() {
     sudo apt-get install auditd -y || handle_error "Auditd installation failed"
     echo "-w /etc/passwd -p wa -k identity" | sudo tee /etc/audit/rules.d/identity.rules
     echo "-w /etc/group -p wa -k identity" | sudo tee -a /etc/audit/rules.d/identity.rules
+    echo "-w /etc/shadow -p wa -k identity" | sudo tee -a /etc/audit/rules.d/identity.rules
     sudo systemctl enable auditd
+    sudo systemctl start auditd
 }
 
 # Disable Unused Filesystems
@@ -91,6 +103,8 @@ secure_boot() {
     log "Securing Boot Settings..."
     sudo chown root:root /boot/grub/grub.cfg
     sudo chmod og-rwx /boot/grub/grub.cfg
+    sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="ipv6.disable=1 audit=1"/' /etc/default/grub
+    sudo update-grub
 }
 
 # Additional Security Measures
@@ -111,7 +125,23 @@ additional_security() {
     # Restrict SSH
     sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
     sudo systemctl restart sshd
+    
+    # Configure strong password policy
+    sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
+    sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t10/' /etc/login.defs
+    sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14/' /etc/pam.d/common-password
+    
+    # Enable address space layout randomization (ASLR)
+    echo "kernel.randomize_va_space = 2" | sudo tee -a /etc/sysctl.conf
+    
+    # Disable IPv6 if not needed
+    echo "net.ipv6.conf.all.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+    echo "net.ipv6.conf.default.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+    
+    # Apply sysctl changes
+    sudo sysctl -p
 }
 
 # Main execution
@@ -128,7 +158,7 @@ main() {
     secure_boot
     additional_security
     
-    log "Basic Security Configuration Applied Successfully!"
+    log "Enhanced Security Configuration Applied Successfully!"
 }
 
 # Run the main function
