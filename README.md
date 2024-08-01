@@ -88,7 +88,7 @@ Adds the following security-enhancing parameters to the GRUB configuration:
 - Logs all actions and any warnings or errors to help with troubleshooting.
 
 ### Usage
-To use this script:
+To use these scripts:
 
 1. Ensure you have sudo privileges.
 2. Make the script executable:
