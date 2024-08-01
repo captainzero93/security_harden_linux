@@ -90,7 +90,7 @@ To use these scripts:
 
 2. Navigate to the script directory:
    ```
-   cd linux-hardening-scripts
+   cd security_harden_linux
    ```
 
 3. Make the scripts executable:
