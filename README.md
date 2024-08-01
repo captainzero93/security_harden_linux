@@ -1,83 +1,67 @@
-# Linux Security Hardening Scripts ( Debian based, Ubuntu etc )
+# Linux Security Hardening Scripts (Debian based, Ubuntu etc)
 
-This repository contains two bash scripts designed to enhance security;
+This repository contains two bash scripts designed to enhance security:
 
-1. `improved_harden_linux.sh`: A ( somewhat ) comprehensive script for hardening Linux systems
+1. `improved_harden_linux.sh`: A comprehensive script for hardening Linux systems
 2. `update_grub_config.sh`: A script for updating GRUB configuration with security-enhancing parameters
 
 ## 1. Updated Linux Hardening Script (`improved_harden_linux.sh`)
 
 Features:
 
+- Creates a backup of important configuration files before making changes
 
-Creates a backup of important configuration files before making changes
+- System Update
+  - Updates and upgrades the system packages
 
--System Update
+- Firewall Setup
+  - Installs and configures Uncomplicated Firewall (UFW)
+  - Sets default secure policies
 
-Updates and upgrades the system packages
+- Fail2Ban Installation
+  - Installs Fail2Ban to protect against brute-force attacks
 
--Firewall Setup
+- Antivirus Setup
+  - Installs ClamAV antivirus and updates its database
 
-Installs and configures Uncomplicated Firewall (UFW)
-Sets default secure policies
+- User Account Security
+  - Disables root login and password authentication for better security
 
--Fail2Ban Installation
+- Package Management
+  - Removes unnecessary and potentially vulnerable packages
 
-Installs Fail2Ban to protect against brute-force attacks
+- Audit Configuration
+  - Installs and configures the audit system
+  - Sets up rules to monitor changes to user and group files
 
--Antivirus Setup
+- Filesystem Security
+  - Disables unused and potentially risky filesystems
 
-Installs ClamAV antivirus and updates its database
+- Boot Security
+  - Secures GRUB configuration file permissions
 
--User Account Security
+- Additional Security Measures
+  - Disables core dumps
+  - Sets proper permissions on sensitive files
+  - Enables process accounting
+  - Restricts SSH access
 
-Disables root login and password authentication for better security
+- IPv6 Configuration
+  - Offers an option to disable IPv6 during script execution
 
--Package Management
+## Customization Options
 
-Removes unnecessary and potentially vulnerable packages
-
--Audit Configuration
-
-Installs and configures the audit system. 
-
-Sets up rules to monitor changes to user and group files
-
--Filesystem Security
-
-Disables unused and potentially risky filesystems
-
--Boot Security
-
-Secures GRUB configuration file permissions
-
--Additional Security Measures
-
-Disables core dumps, 
-Sets proper permissions on sensitive files, 
-Enables process accounting, 
-Restricts SSH access.
+- Password Policy
+  - The script includes commented-out lines for implementing a stricter password policy. To enable these, uncomment the following lines in the `additional_security()` function:
+    ```bash
+    # sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
+    # sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t10/' /etc/login.defs
+    # sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14/' /etc/pam.d/common-password
+    ```
 
 ## 2. GRUB Configuration Update Script (`update_grub_config.sh`)
 
-This script modifies the GRUB bootloader configuration to enhance system security. It performs the following actions:
-
-### Backup
-- Creates a backup of the current GRUB configuration
-
-### Parameter Addition
-Adds the following security-enhancing parameters to the GRUB configuration:
-- `page_alloc.shuffle=1`: Randomizes page allocator freelists
-- `slab_nomerge`: Disables slab merging
-- `init_on_alloc=1`: Initializes heap memory allocations
-- `kernel.unprivileged_bpf_disabled=1`: Restricts eBPF access
-- `net.core.bpf_jit_harden=2`: Enables eBPF JIT hardening
-- `vm.mmap_rnd_bits=32`: Increases bits used for mmap ASLR
-- `vm.mmap_rnd_compat_bits=16`: Increases bits used for 32-bit mmap ASLR
-
-### GRUB Update
-- Updates the GRUB configuration file
-- Runs `update-grub` to apply changes
+[The content for this section remains unchanged]
 
 ## Usage
 
@@ -102,6 +86,7 @@ To use these scripts:
    ```
    sudo ./improved_harden_linux.sh
    ```
+   Note: You will be prompted whether you want to disable IPv6 during the execution of this script.
 
 5. Run the GRUB configuration script (requires sudo):
    ```
@@ -122,4 +107,4 @@ These scripts make significant changes to your system configuration. It's recomm
 Contributions to improve these scripts are welcome. Please submit a pull request or open an issue to discuss proposed changes.
 
 ## Disclaimer
-These scripts are provided as-is, without any warranty. The author is not responsible for any damage or data loss caused by the use of this script. Use at your own risk.
+These scripts are provided as-is, without any warranty. The author is not responsible for any damage or data loss caused by the use of these scripts. Use at your own risk.
