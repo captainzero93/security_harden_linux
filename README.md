@@ -93,7 +93,7 @@ To use these scripts ( once in the folder in a Terminal ) :
 1. Ensure you have sudo privileges.
 2. Make the script executable:
    ```
-   chmod +x update_grub_config.sh
+   sudo chmod +x update_grub_config.sh
    ```
 3. Run the script with sudo:
    ```
