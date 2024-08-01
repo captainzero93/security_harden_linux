@@ -234,3 +234,6 @@ main() {
 # Run the main function
 main
 
+# Run the main function
+main
+
