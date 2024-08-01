@@ -31,7 +31,7 @@ Installs ClamAV antivirus and updates its database
 
 -User Account Security
 
-Disables root login for better security
+Disables root login and password authentication for better security
 
 -Package Management
 
@@ -56,7 +56,7 @@ Secures GRUB configuration file permissions
 Disables core dumps, 
 Sets proper permissions on sensitive files, 
 Enables process accounting, 
-Restricts SSH access (disables root login and password authentication) 
+Restricts SSH access.
 
 ## 2. GRUB Configuration Update Script (`update_grub_config.sh`)
 
