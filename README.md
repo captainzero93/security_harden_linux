@@ -85,7 +85,7 @@ To use these scripts:
 
 1. Clone this repository:
    ```
-   git clone https://github.com/captainzero93/linux-hardening-scripts.git
+   git clone https://github.com/captainzero93/security_harden_linux.git
    ```
 
 2. Navigate to the script directory:
