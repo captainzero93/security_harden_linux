@@ -178,7 +178,7 @@ configure_ipv6() {
     esac
 }
 
-# Modified additional_security function
+# Additional Security Measures
 additional_security() {
     log "Applying additional security measures..."
     
@@ -233,3 +233,4 @@ main() {
 
 # Run the main function
 main
+
