@@ -61,46 +61,53 @@ Features:
 
 ## 2. GRUB Configuration Update Script (`update_grub_config.sh`)
 
-[The content for this section remains unchanged]
+This script modifies the GRUB bootloader configuration to enhance system security. It performs the following actions:
 
-## Usage
+### Backup
+- Creates a backup of the current GRUB configuration file before making any changes.
 
-To use these scripts:
+### Parameter Addition
+Adds the following security-enhancing parameters to the GRUB configuration:
 
-1. Clone this repository:
-   ```
-   git clone https://github.com/captainzero93/security_harden_linux.git
-   ```
+- `page_alloc.shuffle=1`: Randomizes page allocator freelists, improving security against certain types of attacks.
+- `slab_nomerge`: Disables slab merging, which can help mitigate certain kernel exploits.
+- `init_on_alloc=1`: Initializes heap memory allocations, helping to prevent information leaks.
+- `kernel.unprivileged_bpf_disabled=1`: Disables unprivileged eBPF, which can be a source of security vulnerabilities.
+- `net.core.bpf_jit_harden=2`: Enables BPF JIT hardening, improving security against JIT spraying attacks.
+- `vm.mmap_rnd_bits=32`: Increases the bits used for mmap ASLR (Address Space Layout Randomization) on 64-bit systems, enhancing protection against memory corruption vulnerabilities.
+- `vm.mmap_rnd_compat_bits=16`: Increases the bits used for mmap ASLR on 32-bit systems.
 
-2. Navigate to the script directory:
-   ```
-   cd security_harden_linux
-   ```
+### GRUB Update
+- Updates the GRUB configuration file with the new parameters.
+- Runs `update-grub` to apply changes (or `grub2-mkconfig` on systems that use it).
 
-3. Make the scripts executable:
-   ```
-   chmod +x improved_harden_linux.sh update_grub_config.sh
-   ```
+### Error Handling
+- Provides warnings if the GRUB configuration file is not found or if the update command is not available.
 
-4. Run the main hardening script (requires sudo):
-   ```
-   sudo ./improved_harden_linux.sh
-   ```
-   Note: You will be prompted whether you want to disable IPv6 during the execution of this script.
+### Logging
+- Logs all actions and any warnings or errors to help with troubleshooting.
 
-5. Run the GRUB configuration script (requires sudo):
+### Usage
+To use this script:
+
+1. Ensure you have sudo privileges.
+2. Make the script executable:
+   ```
+   chmod +x update_grub_config.sh
+   ```
+3. Run the script with sudo:
    ```
    sudo ./update_grub_config.sh
    ```
+4. Reboot your system for the changes to take effect.
 
-6. Reboot your system for all changes to take effect.
+### Caution
+This script modifies your system's boot configuration. It's recommended to:
+- Run this script in a test environment first.
+- Understand the implications of each kernel parameter being added.
+- Have a backup or recovery method in place before running on a production system.
 
-## Caution
-
-These scripts make significant changes to your system configuration. It's recommended to:
-- Run these scripts in a test environment first
-- Understand each change being made
-- Have a backup or recovery method in place before running on a production system
+Note: Some of these parameters may have performance implications or may not be suitable for all systems. Please research each parameter and its effects on your specific use case before applying.
 
 ## Contributing
 
