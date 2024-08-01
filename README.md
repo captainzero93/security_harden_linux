@@ -41,8 +41,7 @@ Removes unnecessary and potentially vulnerable packages
 
 -Audit Configuration
 
-Installs and configures the audit system
-Sets up rules to monitor changes to user and group files
+Installs and configures the audit system. Sets up rules to monitor changes to user and group files
 
 -Filesystem Security
 
