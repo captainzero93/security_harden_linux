@@ -85,7 +85,7 @@ To use these scripts:
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/linux-hardening-scripts.git
+   git clone https://github.com/captainzero93/linux-hardening-scripts.git
    ```
 
 2. Navigate to the script directory:
