@@ -42,9 +42,10 @@ setup_firewall() {
     sudo apt-get install ufw -y || handle_error "UFW installation failed"
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
-    sudo ufw allow ssh
-    sudo ufw allow http
-    sudo ufw allow https
+    sudo ufw limit ssh comment 'Allow SSH with rate limiting'
+    sudo ufw allow 80/tcp comment 'Allow HTTP'
+    sudo ufw allow 443/tcp comment 'Allow HTTPS'
+    sudo ufw logging on
     sudo ufw --force enable
 }
 
