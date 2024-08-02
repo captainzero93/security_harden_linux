@@ -127,6 +127,10 @@ This (semi) comprehensive script applies various security measures to harden you
   - Sets proper permissions on sensitive files
   - Enables process accounting
   - Restricts SSH access
+- AppArmor
+  - Unobtrusive basic config
+  - Begins collecting information about potential policy violations, which can be reviewed later to fine-tune the security setup.
+  - It provides some immediate security benefits by enforcing a few safe profiles 
 - IPv6 Configuration
   - Offers an option to disable IPv6 during script execution
 
