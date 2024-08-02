@@ -158,6 +158,36 @@ configure_ipv6() {
     esac
 }
 
+# New function to set up AppArmor with minimal disruption
+setup_apparmor() {
+    log "Setting up AppArmor..."
+    
+    # Check if AppArmor is already installed
+    if ! command -v apparmor_status &> /dev/null; then
+        sudo apt-get install apparmor apparmor-utils -y || handle_error "AppArmor installation failed"
+    else
+        log "AppArmor is already installed. Skipping installation."
+    fi
+
+    # Enable and start AppArmor service
+    sudo systemctl enable apparmor
+    sudo systemctl start apparmor
+
+    # Set all profiles to complain mode instead of enforce
+    sudo aa-complain /etc/apparmor.d/*
+
+    # Enable some basic, well-tested profiles in enforce mode
+    for profile in /etc/apparmor.d/usr.{bin.ping,sbin.dhclient,sbin.klogd,sbin.syslogd}; do
+        if [ -f "$profile" ]; then
+            sudo aa-enforce "$profile"
+            log "Enforced AppArmor profile: $profile"
+        fi
+    done
+
+    log "AppArmor setup complete. Most profiles are in complain mode for safety."
+    log "Monitor /var/log/syslog and /var/log/auth.log for any AppArmor-related issues."
+}
+
 # Additional Security Measures
 additional_security() {
     log "Applying additional security measures..."
@@ -208,6 +238,7 @@ main() {
     disable_filesystems
     secure_boot
     additional_security
+    setup_apparmor
     
     log "Enhanced Security Configuration executed! https://github.com/captainzero93"
 }
