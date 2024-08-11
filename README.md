@@ -24,8 +24,8 @@ To use these scripts, follow these steps in order:
 
 First, run the GRUB configuration update script:
 
-1. Open a terminal in the folder containing the scripts.
-2. Ensure you have sudo privileges.
+1. Ensure you have sudo privileges.
+2. Open a terminal in the folder containing the scripts.
 3. Make the script executable:
    ```bash
    sudo chmod +x update_grub_config.sh
