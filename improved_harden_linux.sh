@@ -228,7 +228,7 @@ additional_security() {
 main() {
     check_permissions
     backup_files
-    update_system
+#    update_system
     setup_firewall
     setup_fail2ban
     setup_clamav
