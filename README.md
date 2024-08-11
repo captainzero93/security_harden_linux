@@ -74,4 +74,4 @@ This script is provided as-is, without any warranty. The author is not responsib
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
