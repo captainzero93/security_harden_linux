@@ -1,4 +1,4 @@
-# Ubuntu Linux Security Hardening Scripts
+# Ubuntu Linux Security Hardening Scripts ( Debian ) 
 
 ## Overview
 
