@@ -72,11 +72,6 @@ Contributions to improve the script are welcome. Please submit pull requests or 
 
 This script is provided as-is, without any warranty. The author is not responsible for any damage or data loss that may occur from using this script. Use at your own risk and always back up your system before making significant changes.
 
-## Author
-
-Original script by captainzero93
-Improvements and README by Claude
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
