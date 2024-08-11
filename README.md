@@ -6,7 +6,6 @@ These scripts are designed to enhance the security of ( Debian) Ubuntu Linux sys
 
 ## Features
 
-- System update and upgrade
 - Firewall (UFW) configuration
 - Fail2Ban installation and setup
 - ClamAV antivirus installation and update
