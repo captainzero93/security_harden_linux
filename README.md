@@ -25,7 +25,7 @@ These scripts are designed to enhance the security of ( Debian) Ubuntu Linux sys
 
 ## Prerequisites
 
-- Ubuntu Linux system (tested on Ubuntu 20.04 LTS and later)
+- Ubuntu / Linux system (tested on Ubuntu 20.04 LTS and later) - Debian based.
 - Root or sudo access
 - Internet connection for package installation and updates
 
