@@ -39,7 +39,7 @@ First, run the GRUB configuration update script:
    sudo reboot
    ```
 
-### 2. Run the Main Hardening Script
+### 2. Run the 'Main Hardening Script'
 
 After your system has rebooted, run the main hardening script:
 
