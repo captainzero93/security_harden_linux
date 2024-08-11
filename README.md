@@ -116,7 +116,7 @@ This (semi) comprehensive script applies various security measures to harden you
 - Package Management
   - Removes unnecessary and potentially vulnerable packages
 - Audit Configuration
-  - Installs and configures the audit system
+  - Installs and configures an audit system
   - Sets up rules to monitor changes to user and group files
 - Filesystem Security
   - Disables unused and potentially risky filesystems
