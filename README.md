@@ -2,7 +2,7 @@
 
 ## Overview
 
-These scripts are designed to enhance the security of Ubuntu Linux systems. It implements a variety of security measures and best practices to harden your system against common threats. The script is intended for use on Ubuntu systems but may be adaptable to other Debian-based distributions.
+These scripts are designed to enhance the security of ( Debian) Ubuntu Linux systems. It implements a variety of security measures and best practices to harden your system against common threats. The script is intended for use on Ubuntu systems but may be adaptable to other Debian-based distributions.
 
 ## Features
 
