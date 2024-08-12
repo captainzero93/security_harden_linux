@@ -76,4 +76,12 @@ Contributions to improve the script are welcome. Please submit pull requests or 
 This script is provided as-is, without any warranty. The author is not responsible for any damage or data loss that may occur from using this script. Use at your own risk and always back up your system before making significant changes.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
+This means:
+
+Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+NonCommercial — You may not use the material for commercial purposes.
+ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+For more details, see the full license text at: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+This license allows others to use, modify, and share the script for non-commercial purposes, as long as they give credit and share their modifications under the same terms. It prevents others from using the script for commercial purposes without your permission.
