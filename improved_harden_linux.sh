@@ -1,10 +1,16 @@
 #!/bin/bash
 
-# Improved Ubuntu Linux Security Script
+# Enhanced Ubuntu Linux Security Script
+
+# Global variables
+verbose=false
+backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
 
 # Function for logging
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S'): $1" | sudo tee -a /var/log/security_hardening.log
+    local message="$(date '+%Y-%m-%d %H:%M:%S'): $1"
+    echo "$message" | sudo tee -a /var/log/security_hardening.log
+    $verbose && echo "$message"
 }
 
 # Function for error handling
@@ -13,9 +19,14 @@ handle_error() {
     exit 1
 }
 
+# Function to install packages
+install_package() {
+    log "Installing $1..."
+    sudo apt-get install -y "$1" || handle_error "$1 installation failed"
+}
+
 # Backup important files
 backup_files() {
-    local backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
     sudo mkdir -p "$backup_dir" || handle_error "Failed to create backup directory"
     
     local files_to_backup=(
@@ -37,6 +48,18 @@ backup_files() {
     log "Backup created in $backup_dir"
 }
 
+# Restore from backup
+restore_backup() {
+    if [ -d "$backup_dir" ]; then
+        for file in "$backup_dir"/*; do
+            sudo cp "$file" "$(dirname "$(readlink -f "$file")")" || log "Warning: Failed to restore $(basename "$file")"
+        done
+        log "Restored configurations from $backup_dir"
+    else
+        log "Backup directory not found. Cannot restore."
+    fi
+}
+
 check_permissions() {
     if [ "$EUID" -ne 0 ]; then
         echo "This script must be run with sudo privileges."
@@ -55,7 +78,7 @@ update_system() {
 # Install and Configure Firewall
 setup_firewall() {
     log "Installing and Configuring Firewall..."
-    sudo apt-get install ufw -y || handle_error "UFW installation failed"
+    install_package "ufw"
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
     sudo ufw limit ssh comment 'Allow SSH with rate limiting'
@@ -69,7 +92,7 @@ setup_firewall() {
 # Install and Configure Fail2Ban
 setup_fail2ban() {
     log "Installing and Configuring Fail2Ban..."
-    sudo apt-get install fail2ban -y || handle_error "Fail2Ban installation failed"
+    install_package "fail2ban"
     sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
     sudo sed -i 's/bantime  = 10m/bantime  = 1h/' /etc/fail2ban/jail.local
     sudo sed -i 's/maxretry = 5/maxretry = 3/' /etc/fail2ban/jail.local
@@ -81,7 +104,8 @@ setup_fail2ban() {
 # Install and Update ClamAV
 setup_clamav() {
     log "Installing and Updating ClamAV..."
-    sudo apt-get install clamav clamav-daemon -y || handle_error "ClamAV installation failed"
+    install_package "clamav"
+    install_package "clamav-daemon"
     sudo systemctl stop clamav-freshclam
     sudo freshclam || log "Warning: ClamAV database update failed"
     sudo systemctl start clamav-freshclam
@@ -107,7 +131,7 @@ remove_packages() {
 # Configure audit rules
 setup_audit() {
     log "Configuring audit rules..."
-    sudo apt-get install auditd -y || handle_error "Auditd installation failed"
+    install_package "auditd"
     
     local audit_rules=(
         "-w /etc/passwd -p wa -k identity"
@@ -200,7 +224,8 @@ setup_apparmor() {
     log "Setting up AppArmor..."
     
     if ! command -v apparmor_status &> /dev/null; then
-        sudo apt-get install apparmor apparmor-utils -y || handle_error "AppArmor installation failed"
+        install_package "apparmor"
+        install_package "apparmor-utils"
     else
         log "AppArmor is already installed. Skipping installation."
     fi
@@ -214,6 +239,67 @@ setup_apparmor() {
     log "Monitor /var/log/syslog and /var/log/auth.log for any AppArmor-related issues."
 }
 
+setup_ntp() {
+    log "Setting up NTP..."
+    install_package "ntp"
+    sudo systemctl enable ntp
+    sudo systemctl start ntp
+    log "NTP setup complete"
+}
+
+setup_aide() {
+    log "Setting up AIDE..."
+    install_package "aide"
+    sudo aideinit
+    sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+    log "AIDE setup complete"
+}
+
+configure_sysctl() {
+    log "Configuring sysctl settings..."
+    
+    local sysctl_config=(
+        "# IP Spoofing protection"
+        "net.ipv4.conf.all.rp_filter = 1"
+        "net.ipv4.conf.default.rp_filter = 1"
+        ""
+        "# Ignore ICMP broadcast requests"
+        "net.ipv4.icmp_echo_ignore_broadcasts = 1"
+        ""
+        "# Disable source packet routing"
+        "net.ipv4.conf.all.accept_source_route = 0"
+        "net.ipv6.conf.all.accept_source_route = 0"
+        ""
+        "# Ignore send redirects"
+        "net.ipv4.conf.all.send_redirects = 0"
+        "net.ipv4.conf.default.send_redirects = 0"
+        ""
+        "# Block SYN attacks"
+        "net.ipv4.tcp_syncookies = 1"
+        "net.ipv4.tcp_max_syn_backlog = 2048"
+        "net.ipv4.tcp_synack_retries = 2"
+        "net.ipv4.tcp_syn_retries = 5"
+        ""
+        "# Log Martians"
+        "net.ipv4.conf.all.log_martians = 1"
+        "net.ipv4.icmp_ignore_bogus_error_responses = 1"
+        ""
+        "# Ignore ICMP redirects"
+        "net.ipv4.conf.all.accept_redirects = 0"
+        "net.ipv6.conf.all.accept_redirects = 0"
+        ""
+        "# Ignore Directed pings"
+        "net.ipv4.icmp_echo_ignore_all = 1"
+        ""
+        "# Enable ASLR"
+        "kernel.randomize_va_space = 2"
+    )
+    
+    printf "%s\n" "${sysctl_config[@]}" | sudo tee -a /etc/sysctl.conf
+    sudo sysctl -p
+    log "sysctl settings configured"
+}
+
 additional_security() {
     log "Applying additional security measures..."
     
@@ -225,7 +311,7 @@ additional_security() {
     sudo chmod 600 /etc/gshadow
     
     # Enable process accounting
-    sudo apt-get install acct -y
+    install_package "acct"
     sudo /usr/sbin/accton on
     
     # Restrict SSH
@@ -239,53 +325,27 @@ additional_security() {
     sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/' /etc/login.defs
     sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14 remember=5/' /etc/pam.d/common-password
     
-    # Enable address space layout randomization (ASLR)
-    echo "kernel.randomize_va_space = 2" | sudo tee -a /etc/sysctl.conf
-    
-    # Additional sysctl hardening
-    cat << EOF | sudo tee -a /etc/sysctl.conf
-# IP Spoofing protection
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.default.rp_filter = 1
-
-# Ignore ICMP broadcast requests
-net.ipv4.icmp_echo_ignore_broadcasts = 1
-
-# Disable source packet routing
-net.ipv4.conf.all.accept_source_route = 0
-net.ipv6.conf.all.accept_source_route = 0 
-
-# Ignore send redirects
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.send_redirects = 0
-
-# Block SYN attacks
-net.ipv4.tcp_syncookies = 1
-net.ipv4.tcp_max_syn_backlog = 2048
-net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_syn_retries = 5
-
-# Log Martians
-net.ipv4.conf.all.log_martians = 1
-net.ipv4.icmp_ignore_bogus_error_responses = 1
-
-# Ignore ICMP redirects
-net.ipv4.conf.all.accept_redirects = 0
-net.ipv6.conf.all.accept_redirects = 0
-
-# Ignore Directed pings
-net.ipv4.icmp_echo_ignore_all = 1
-EOF
-
-    # Apply sysctl changes
-    sudo sysctl -p
-    
     log "Additional security measures applied"
+}
+
+setup_automatic_updates() {
+    log "Setting up automatic security updates..."
+    install_package "unattended-upgrades"
+    sudo dpkg-reconfigure -plow unattended-upgrades
+    log "Automatic security updates configured"
 }
 
 main() {
     check_permissions
     backup_files
+
+    # Ask user for verbose mode
+    read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
+    case $enable_verbose in
+        [Yy]* ) verbose=true;;
+        * ) verbose=false;;
+    esac
+
     update_system
     setup_firewall
     setup_fail2ban
@@ -297,9 +357,25 @@ main() {
     secure_boot
     configure_ipv6
     setup_apparmor
+    setup_ntp
+    setup_aide
+    configure_sysctl
     additional_security
+    setup_automatic_updates
     
     log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
+
+    # Ask user if they want to restart
+    read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
+    case $restart_now in
+        [Yy]* ) 
+            log "Restarting system..."
+            sudo reboot
+            ;;
+        * ) 
+            log "Please restart your system manually to apply all changes."
+            ;;
+    esac
 }
 
 # Run the main function
