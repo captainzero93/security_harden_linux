@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Enhanced (Ubuntu / Debian ) Linux Security Script
+# Enhanced Ubuntu Linux Security Script
 
 # Global variables
 verbose=false
