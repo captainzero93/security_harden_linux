@@ -8,7 +8,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 2. `update_grub_config.sh`: A script to update GRUB configuration with additional security parameters
 
 ## Features
-- System update and upgrade
+- System update and upgrade ( optional )
 - Firewall (UFW) configuration
 - Fail2Ban installation and setup
 - ClamAV antivirus installation and update
