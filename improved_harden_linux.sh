@@ -272,9 +272,29 @@ setup_apparmor() {
     sudo systemctl enable apparmor
     sudo systemctl start apparmor
 
-    sudo aa-enforce /etc/apparmor.d/*
+    # Enforce only the default profiles
+    sudo aa-enforce /etc/apparmor.d/usr.bin.firefox
+    sudo aa-enforce /etc/apparmor.d/usr.sbin.cupsd
+    sudo aa-enforce /etc/apparmor.d/usr.sbin.mysqld
+    sudo aa-enforce /etc/apparmor.d/usr.sbin.ntpd
+    sudo aa-enforce /etc/apparmor.d/usr.sbin.tcpdump
 
-    log "AppArmor setup complete. All profiles are in enforce mode."
+    if [ "$non_interactive" = false ]; then
+        read -p "Do you want to enforce all AppArmor profiles? This may affect system functionality. (y/N): " enforce_all
+        case $enforce_all in
+            [Yy]* )
+                sudo aa-enforce /etc/apparmor.d/*
+                log "All AppArmor profiles set to enforce mode."
+                ;;
+            * )
+                log "Only default AppArmor profiles set to enforce mode."
+                ;;
+        esac
+    else
+        log "Running in non-interactive mode. Only default AppArmor profiles set to enforce mode."
+    fi
+
+    log "AppArmor setup complete."
     log "Monitor /var/log/syslog and /var/log/auth.log for any AppArmor-related issues."
 }
 
