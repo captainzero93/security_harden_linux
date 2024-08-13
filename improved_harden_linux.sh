@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# Enhanced Ubuntu Linux Security Script
+# Enhanced Ubuntu/Debian Linux Security Script
 
 # Global variables
 verbose=false
 backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
+log_file="/var/log/security_hardening.log"
 
 # Function for logging
 log() {
     local message="$(date '+%Y-%m-%d %H:%M:%S'): $1"
-    echo "$message" | sudo tee -a /var/log/security_hardening.log
+    echo "$message" | sudo tee -a "$log_file"
     $verbose && echo "$message"
 }
 
@@ -22,7 +23,7 @@ handle_error() {
 # Function to install packages
 install_package() {
     log "Installing $1..."
-    sudo apt-get install -y "$1" || handle_error "$1 installation failed"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$1" || handle_error "$1 installation failed"
 }
 
 # Backup important files
@@ -72,7 +73,7 @@ check_permissions() {
 update_system() {
     log "Updating System..."
     sudo apt-get update -y || handle_error "System update failed"
-    sudo apt-get upgrade -y || handle_error "System upgrade failed"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || handle_error "System upgrade failed"
 }
 
 # Install and Configure Firewall
@@ -142,6 +143,15 @@ setup_audit() {
         "-w /sbin/insmod -p x -k modules"
         "-w /sbin/rmmod -p x -k modules"
         "-w /sbin/modprobe -p x -k modules"
+        "-w /etc/ssh/sshd_config -p wa -k sshd_config"
+        "-w /etc/crontab -p wa -k crontab"
+        "-w /etc/cron.allow -p wa -k cron_allow"
+        "-w /etc/cron.deny -p wa -k cron_deny"
+        "-w /etc/cron.d/ -p wa -k cron_d"
+        "-w /etc/cron.daily/ -p wa -k cron_daily"
+        "-w /etc/cron.hourly/ -p wa -k cron_hourly"
+        "-w /etc/cron.monthly/ -p wa -k cron_monthly"
+        "-w /etc/cron.weekly/ -p wa -k cron_weekly"
     )
     
     for rule in "${audit_rules[@]}"; do
@@ -156,7 +166,7 @@ setup_audit() {
 # Disable Unused Filesystems
 disable_filesystems() {
     log "Disabling Unused Filesystems..."
-    local filesystems=("cramfs" "freevxfs" "jffs2" "hfs" "hfsplus" "squashfs" "udf" "vfat")
+    local filesystems=("cramfs" "freevxfs" "jffs2" "hfs" "hfsplus" "squashfs" "udf")
     
     for fs in "${filesystems[@]}"; do
         echo "install $fs /bin/true" | sudo tee -a /etc/modprobe.d/CIS.conf
@@ -183,7 +193,7 @@ secure_boot() {
         sudo cp /etc/default/grub /etc/default/grub.bak
         
         # Add or modify kernel parameters
-        sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="audit=1 ipv6.disable=1 net.ipv4.conf.all.rp_filter=1 net.ipv4.conf.all.accept_redirects=0 net.ipv4.conf.all.send_redirects=0"/' /etc/default/grub
+        sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="audit=1 net.ipv4.conf.all.rp_filter=1 net.ipv4.conf.all.accept_redirects=0 net.ipv4.conf.all.send_redirects=0 ipv6.disable=1 quiet splash"/' /etc/default/grub
         
         # Update GRUB
         if command -v update-grub &> /dev/null; then
@@ -241,10 +251,10 @@ setup_apparmor() {
 
 setup_ntp() {
     log "Setting up NTP..."
-    install_package "ntp"
-    sudo systemctl enable ntp
-    sudo systemctl start ntp
-    log "NTP setup complete"
+    install_package "systemd-timesyncd"
+    sudo systemctl enable systemd-timesyncd
+    sudo systemctl start systemd-timesyncd
+    log "NTP (systemd-timesyncd) setup complete"
 }
 
 setup_aide() {
@@ -289,15 +299,51 @@ configure_sysctl() {
         "net.ipv6.conf.all.accept_redirects = 0"
         ""
         "# Ignore Directed pings"
-        "net.ipv4.icmp_echo_ignore_all = 1"
+        "net.ipv4.icmp_echo_ignore_all = 0"
         ""
         "# Enable ASLR"
         "kernel.randomize_va_space = 2"
+        ""
+        "# Increase system file descriptor limit"
+        "fs.file-max = 65535"
+        ""
+        "# Allow for more PIDs"
+        "kernel.pid_max = 65536"
+        ""
+        "# Protect against SACK exploitation"
+        "net.ipv4.tcp_sack = 0"
     )
     
     printf "%s\n" "${sysctl_config[@]}" | sudo tee -a /etc/sysctl.conf
     sudo sysctl -p
     log "sysctl settings configured"
+}
+
+configure_password_expiration() {
+    log "Configuring password expiration policy..."
+    
+    local enable_expiration
+    local max_days
+    local warn_days
+    
+    read -p "Do you want to enable password expiration? (y/N): " enable_expiration
+    case $enable_expiration in
+        [Yy]* )
+            read -p "Enter the maximum number of days before password expiration (default 90): " max_days
+            max_days=${max_days:-90}
+            
+            read -p "Enter the number of days to warn before password expires (default 7): " warn_days
+            warn_days=${warn_days:-7}
+            
+            sudo sed -i "s/PASS_MAX_DAYS\t[0-9]*/PASS_MAX_DAYS\t$max_days/" /etc/login.defs
+            sudo sed -i "s/PASS_WARN_AGE\t[0-9]*/PASS_WARN_AGE\t$warn_days/" /etc/login.defs
+            
+            log "Password expiration policy set: Max age $max_days days, Warning at $warn_days days"
+            ;;
+        * )
+            log "Password expiration policy not changed"
+            ;;
+    esac
 }
 
 additional_security() {
@@ -317,66 +363,4 @@ additional_security() {
     # Restrict SSH
     sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
-    sudo systemctl restart sshd
-    
-    # Configure strong password policy
-    sudo sed -i 's/PASS_MAX_DAYS\t99999/PASS_MAX_DAYS\t90/' /etc/login.defs
-    sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/' /etc/login.defs
-    sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14 remember=5/' /etc/pam.d/common-password
-    
-    log "Additional security measures applied"
-}
-
-setup_automatic_updates() {
-    log "Setting up automatic security updates..."
-    install_package "unattended-upgrades"
-    sudo dpkg-reconfigure -plow unattended-upgrades
-    log "Automatic security updates configured"
-}
-
-main() {
-    check_permissions
-    backup_files
-
-    # Ask user for verbose mode
-    read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
-    case $enable_verbose in
-        [Yy]* ) verbose=true;;
-        * ) verbose=false;;
-    esac
-
-    update_system
-    setup_firewall
-    setup_fail2ban
-    setup_clamav
-    disable_root
-    remove_packages
-    setup_audit
-    disable_filesystems
-    secure_boot
-    configure_ipv6
-    setup_apparmor
-    setup_ntp
-    setup_aide
-    configure_sysctl
-    additional_security
-    setup_automatic_updates
-    
-    log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
-
-    # Ask user if they want to restart
-    read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
-    case $restart_now in
-        [Yy]* ) 
-            log "Restarting system..."
-            sudo reboot
-            ;;
-        * ) 
-            log "Please restart your system manually to apply all changes."
-            ;;
-    esac
-}
-
-# Run the main function
-main
+    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/ssh
