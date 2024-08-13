@@ -257,3 +257,13 @@ A17: Check the backup directory created by the script (`/root/security_backup_[t
 A18: This could be due to increased logging, stricter firewall rules, or AppArmor profiles. Review the changes made by the script and consider adjusting settings that might be impacting performance.
 
 ## Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security best practices and vulnerabilities.
+
+
+## Citation
+If you use my concepts or code, as software or protection concepts in your research or projects, please cite it as follows:
+```
+[captainzero93]. (2024). #GitHub. https://github.com/captainzero93/security_harden_linux
+```
+
+## License
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). See the [LICENSE](LICENSE) file for details.
