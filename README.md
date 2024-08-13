@@ -53,6 +53,10 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
    ```
    sudo ./improved_harden_linux.sh
    ```
+   For non-interactive mode (use with caution):
+   ```
+   sudo ./improved_harden_linux.sh --non-interactive
+   ```
 4. Follow the prompts during script execution, including options for verbose mode, IPv6 configuration, password expiration policy, and system restart.
 
 ### GRUB Configuration Script
@@ -71,15 +75,16 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 
 ## Important Notes
 - These scripts make significant changes to your system. It is strongly recommended to run them on a test system or VM before applying to production environments.
-- A backup of important configuration files is created before changes are made. The main script creates backups in `/root/security_backup_[timestamp]`, and the GRUB script backs up to `/etc/default/grub.bak`.
+- A backup of important configuration files is created before changes are made. The main script creates backups in `/root/security_backup_[timestamp]`, and the GRUB script backs up to `/etc/default/grub.bak.[timestamp]`.
 - Some changes, particularly to network settings, AppArmor, and GRUB, may impact system functionality. Be prepared to troubleshoot if issues arise.
 - The main script log is saved to `/var/log/security_hardening.log` for review and troubleshooting.
 - You can enable verbose mode for more detailed logging during the main script execution.
-- The script now uses `DEBIAN_FRONTEND=noninteractive` for package installations to prevent interactive prompts.
+- The script offers both interactive and non-interactive modes. Use non-interactive mode with caution.
 
 ## Recent Updates and Fixes
+- Added non-interactive mode for automated deployments
 - Enhanced logging functionality with a dedicated log file
-- Improved package installation process to prevent interactive prompts
+- Improved package installation process with options for interactive and non-interactive modes
 - Added more comprehensive audit rules
 - Updated the list of disabled filesystems
 - Implemented user-configurable password expiration policy
@@ -87,7 +92,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Fixed redundant SSH protocol configuration
 - Updated NTP setup to use systemd-timesyncd instead of the traditional NTP daemon
 - Added protection against SACK exploitation
-- Improved GRUB configuration with additional security parameters
+- Improved GRUB configuration with additional security parameters including vsyscall disabling, debugfs disabling, and module signature enforcement
 
 ## Customization
 You may want to review and customize the scripts before running them, particularly:
