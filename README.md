@@ -116,7 +116,18 @@ Contributions to improve the scripts are welcome. Please submit pull requests or
 These scripts are provided as-is, without any warranty. The authors are not responsible for any damage or data loss that may occur from using these scripts. Use at your own risk and always back up your system before making significant changes.
 
 ## License
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). For commercial requests, please email joe.faulkner.0@gmail.com.
+
+This project is available under a dual license:
+
+1. **Non-Commercial Use**: For non-commercial purposes, this project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). This allows for sharing and adaptation of the scripts for non-commercial purposes, with appropriate attribution.
+
+2. **Commercial Use**: Any commercial use, including but not limited to selling the scripts, incorporating them into commercial products or services, or any revenue-generating activities, requires a separate commercial license. You must contact the project owner to discuss terms and potential payment.
+
+Please see the [LICENSE](LICENSE) file for full details on both licenses.
+
+For commercial licensing inquiries, please contact: joe.faulkner.0@gmail.com
+
+By using this project, you agree to abide by the terms of the appropriate license based on your intended use.
 
 ## Frequently Asked Questions (FAQ)
 
@@ -240,7 +251,10 @@ A20: This could be due to increased logging, stricter firewall rules, or securit
 Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
 ## Citation
-If you use these concepts or code in your research or projects, please cite it as follows:
+
+If you use these scripts or concepts in your non-commercial research or projects, please cite it as follows:
 ```
-[captainzero93]. (2024). #GitHub. https://github.com/captainzero93/security_harden_linux
+[captainzero93]. (2024). Ubuntu / Debian Linux Security Hardening Scripts. GitHub. https://github.com/captainzero93/security_harden_linux
 ```
+
+For commercial use, please contact joe.faulkner.0@gmail.com to discuss licensing terms.
