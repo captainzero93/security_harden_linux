@@ -52,13 +52,13 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Internet connection for package installation and updates
 
 ## Usage
-### Main Hardening Script
+### Main Hardening Scripteee
 1. Download the script:
    ```
    wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/improved_harden_linux.sh
    ```
-2. Make the script executable:
-   ```
+2. Make the script executable:e
+   ``
    chmod +x improved_harden_linux.sh
    ```
 3. Run the script with sudo privileges:
