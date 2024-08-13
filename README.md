@@ -101,7 +101,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 * Updated SSH hardening measures
 * Added GRUB configuration script for additional boot-time security
 
-These updates bring our scripts closer to alignment with several industry-standard security benchmarks and guidelines, including:
+Recent updates bring our scripts closer to alignment with several industry-standard security benchmarks and guidelines, including:
 
 * CIS (Center for Internet Security) Benchmarks: Our enhanced configurations for SSH, firewall rules, and system auditing are moving towards CIS recommendations for Ubuntu Linux.
 * NIST (National Institute of Standards and Technology) SP 800-53: Improvements in access control (root login disabling) and system hardening align with several NIST controls.
