@@ -8,7 +8,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 2. `update_grub_config.sh`: A script to update GRUB configuration with additional security parameters
 
 ## Features
-- System update and upgrade ( optional )
+- System update and upgrade (optional)
 - Firewall (UFW) configuration
 - Fail2Ban installation and setup
 - ClamAV antivirus installation and update
@@ -18,7 +18,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Disabling of unused filesystems
 - Boot settings security enhancements
 - IPv6 configuration options
-- AppArmor setup and enforcement
+- AppArmor setup with customizable enforcement levels
 - Network Time Protocol (NTP) setup using systemd-timesyncd
 - Advanced Intrusion Detection Environment (AIDE) setup
 - Enhanced sysctl security parameter configuration
@@ -35,7 +35,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
   - Protection against SACK exploitation
 
 ## Prerequisites
-- Ubuntu / Debian-based Linux system (tested on Ubuntu 20.04 LTS and later)
+- Ubuntu / Debian-based Linux system
 - Root or sudo access
 - Internet connection for package installation and updates
 
@@ -57,7 +57,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
    ```
    sudo ./improved_harden_linux.sh --non-interactive
    ```
-4. Follow the prompts during script execution, including options for verbose mode, IPv6 configuration, password expiration policy, and system restart.
+4. Follow the prompts during script execution, including options for verbose mode, system upgrade, IPv6 configuration, AppArmor enforcement, password expiration policy, and system restart.
 
 ### GRUB Configuration Script
 1. Download the script:
@@ -82,7 +82,8 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - The script offers both interactive and non-interactive modes. Use non-interactive mode with caution.
 
 ## Recent Updates and Fixes
-- Added non-interactive mode for automated deployments
+- Added optional system upgrade prompt
+- Implemented non-interactive mode for automated deployments
 - Enhanced logging functionality with a dedicated log file
 - Improved package installation process with options for interactive and non-interactive modes
 - Added more comprehensive audit rules
@@ -92,7 +93,8 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Fixed redundant SSH protocol configuration
 - Updated NTP setup to use systemd-timesyncd instead of the traditional NTP daemon
 - Added protection against SACK exploitation
-- Improved GRUB configuration with additional security parameters including vsyscall disabling, debugfs disabling, and module signature enforcement
+- Improved GRUB configuration with additional security parameters
+- Enhanced AppArmor setup with options for default or comprehensive profile enforcement
 
 ## Customization
 You may want to review and customize the scripts before running them, particularly:
