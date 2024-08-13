@@ -14,22 +14,25 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - ClamAV antivirus installation and update
 - Root login disabling
 - Removal of unnecessary packages
-- Audit system configuration
+- Comprehensive audit system configuration
 - Disabling of unused filesystems
 - Boot settings security enhancements
 - IPv6 configuration options
 - AppArmor setup and enforcement
-- Network Time Protocol (NTP) setup
+- Network Time Protocol (NTP) setup using systemd-timesyncd
 - Advanced Intrusion Detection Environment (AIDE) setup
-- Sysctl security parameter configuration
+- Enhanced sysctl security parameter configuration
 - Automatic security updates setup
 - GRUB configuration hardening
 - Additional security measures including:
   - Core dump disabling
-  - SSH hardening
+  - SSH hardening with key-based authentication
+  - Configurable password expiration policy
   - Strong password policy configuration
   - ASLR enablement
   - Process accounting enablement
+  - Increased system file descriptor limits
+  - Protection against SACK exploitation
 
 ## Prerequisites
 - Ubuntu / Debian-based Linux system (tested on Ubuntu 20.04 LTS and later)
@@ -50,7 +53,7 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
    ```
    sudo ./improved_harden_linux.sh
    ```
-4. Follow the prompts during script execution, including options for verbose mode and system restart.
+4. Follow the prompts during script execution, including options for verbose mode, IPv6 configuration, password expiration policy, and system restart.
 
 ### GRUB Configuration Script
 1. Download the script:
@@ -72,6 +75,19 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Some changes, particularly to network settings, AppArmor, and GRUB, may impact system functionality. Be prepared to troubleshoot if issues arise.
 - The main script log is saved to `/var/log/security_hardening.log` for review and troubleshooting.
 - You can enable verbose mode for more detailed logging during the main script execution.
+- The script now uses `DEBIAN_FRONTEND=noninteractive` for package installations to prevent interactive prompts.
+
+## Recent Updates and Fixes
+- Enhanced logging functionality with a dedicated log file
+- Improved package installation process to prevent interactive prompts
+- Added more comprehensive audit rules
+- Updated the list of disabled filesystems
+- Implemented user-configurable password expiration policy
+- Enhanced sysctl configurations for improved security
+- Fixed redundant SSH protocol configuration
+- Updated NTP setup to use systemd-timesyncd instead of the traditional NTP daemon
+- Added protection against SACK exploitation
+- Improved GRUB configuration with additional security parameters
 
 ## Customization
 You may want to review and customize the scripts before running them, particularly:
@@ -81,6 +97,7 @@ You may want to review and customize the scripts before running them, particular
 - Sysctl parameters in the `configure_sysctl` function
 - Automatic update settings in the `setup_automatic_updates` function
 - GRUB parameters in the `PARAMS` array of the `update_grub_config.sh` script
+- Password expiration policy in the `configure_password_expiration` function
 
 ## Contributing
 Contributions to improve the scripts are welcome. Please submit pull requests or open issues on the GitHub repository.
