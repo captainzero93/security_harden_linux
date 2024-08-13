@@ -91,14 +91,24 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - You can enable verbose mode for more detailed logging during the main script execution.
 
 ## Recent Updates and Fixes
-- Improved root login disabling with checks for existing sudo users
-- Enhanced error handling and logging throughout the main script
-- Non-interactive package installation to prevent hanging in automated environments
-- Updated firewall configuration with additional rules
-- Improved AppArmor setup
-- Enhanced sysctl configurations for improved security
-- Updated SSH hardening measures
-- Added GRUB configuration script for additional boot-time security
+
+* Improved root login disabling with checks for existing sudo users
+* Enhanced error handling and logging throughout the main script
+* Non-interactive package installation to prevent hanging in automated environments
+* Updated firewall configuration with additional rules
+* Improved AppArmor setup
+* Enhanced sysctl configurations for improved security
+* Updated SSH hardening measures
+* Added GRUB configuration script for additional boot-time security
+
+These updates bring our scripts closer to alignment with several industry-standard security benchmarks and guidelines, including:
+
+* CIS (Center for Internet Security) Benchmarks: Our enhanced configurations for SSH, firewall rules, and system auditing are moving towards CIS recommendations for Ubuntu Linux.
+* NIST (National Institute of Standards and Technology) SP 800-53: Improvements in access control (root login disabling) and system hardening align with several NIST controls.
+* DISA STIG (Defense Information Systems Agency Security Technical Implementation Guides): Our GRUB configuration hardening and AppArmor improvements are steps towards meeting DISA STIG requirements.
+* OWASP (Open Web Application Security Project) Security Principles: While primarily for web applications, our system hardening measures align with OWASP's defense-in-depth approach.
+
+Please note that while we're working towards these standards, full compliance is not guaranteed. Users are encouraged to review their specific security requirements and adjust the scripts as needed.
 
 ## Customization
 You may want to review and customize the scripts before running them, particularly:
