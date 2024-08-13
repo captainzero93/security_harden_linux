@@ -4,6 +4,7 @@
 
 # Global variables
 verbose=false
+non_interactive=false
 backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
 log_file="/var/log/security_hardening.log"
 
@@ -23,7 +24,11 @@ handle_error() {
 # Function to install packages
 install_package() {
     log "Installing $1..."
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$1" || handle_error "$1 installation failed"
+    if [ "$non_interactive" = true ]; then
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$1" || handle_error "$1 installation failed"
+    else
+        sudo apt-get install -y "$1" || handle_error "$1 installation failed"
+    fi
 }
 
 # Backup important files
@@ -73,7 +78,22 @@ check_permissions() {
 update_system() {
     log "Updating System..."
     sudo apt-get update -y || handle_error "System update failed"
-    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || handle_error "System upgrade failed"
+
+    if [ "$non_interactive" = true ]; then
+        log "Upgrading system in non-interactive mode..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || handle_error "System upgrade failed"
+    else
+        read -p "Do you want to upgrade the system? (y/N): " do_upgrade
+        case $do_upgrade in
+            [Yy]* )
+                sudo apt-get upgrade -y || handle_error "System upgrade failed"
+                log "System upgraded successfully"
+                ;;
+            * )
+                log "System upgrade skipped"
+                ;;
+        esac
+    fi
 }
 
 # Install and Configure Firewall
@@ -213,21 +233,30 @@ secure_boot() {
 }
 
 configure_ipv6() {
-    local disable_ipv6
-    read -p "Do you want to disable IPv6? (y/N): " disable_ipv6
-    case $disable_ipv6 in
-        [Yy]* )
-            log "Disabling IPv6..."
-            echo "net.ipv6.conf.all.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
-            echo "net.ipv6.conf.default.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
-            echo "net.ipv6.conf.lo.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
-            sudo sysctl -p
-            log "IPv6 has been disabled"
-            ;;
-        * )
-            log "IPv6 will remain enabled"
-            ;;
-    esac
+    if [ "$non_interactive" = true ]; then
+        log "Disabling IPv6 in non-interactive mode..."
+        echo "net.ipv6.conf.all.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+        echo "net.ipv6.conf.default.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+        echo "net.ipv6.conf.lo.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+        sudo sysctl -p
+        log "IPv6 has been disabled"
+    else
+        local disable_ipv6
+        read -p "Do you want to disable IPv6? (y/N): " disable_ipv6
+        case $disable_ipv6 in
+            [Yy]* )
+                log "Disabling IPv6..."
+                echo "net.ipv6.conf.all.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+                echo "net.ipv6.conf.default.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+                echo "net.ipv6.conf.lo.disable_ipv6 = 1" | sudo tee -a /etc/sysctl.conf
+                sudo sysctl -p
+                log "IPv6 has been disabled"
+                ;;
+            * )
+                log "IPv6 will remain enabled"
+                ;;
+        esac
+    fi
 }
 
 setup_apparmor() {
@@ -320,30 +349,36 @@ configure_sysctl() {
 }
 
 configure_password_expiration() {
-    log "Configuring password expiration policy..."
-    
-    local enable_expiration
-    local max_days
-    local warn_days
-    
-    read -p "Do you want to enable password expiration? (y/N): " enable_expiration
-    case $enable_expiration in
-        [Yy]* )
-            read -p "Enter the maximum number of days before password expiration (default 90): " max_days
-            max_days=${max_days:-90}
-            
-            read -p "Enter the number of days to warn before password expires (default 7): " warn_days
-            warn_days=${warn_days:-7}
-            
-            sudo sed -i "s/PASS_MAX_DAYS\t[0-9]*/PASS_MAX_DAYS\t$max_days/" /etc/login.defs
-            sudo sed -i "s/PASS_WARN_AGE\t[0-9]*/PASS_WARN_AGE\t$warn_days/" /etc/login.defs
-            
-            log "Password expiration policy set: Max age $max_days days, Warning at $warn_days days"
-            ;;
-        * )
-            log "Password expiration policy not changed"
-            ;;
-    esac
+    if [ "$non_interactive" = true ]; then
+        log "Setting default password expiration policy in non-interactive mode..."
+        sudo sed -i "s/PASS_MAX_DAYS\t[0-9]*/PASS_MAX_DAYS\t90/" /etc/login.defs
+        sudo sed -i "s/PASS_WARN_AGE\t[0-9]*/PASS_WARN_AGE\t7/" /etc/login.defs
+        log "Password expiration policy set: Max age 90 days, Warning at 7 days"
+    else
+        log "Configuring password expiration policy..."
+        
+        local enable_expiration
+        local max_days
+        local warn_days
+        read -p "Do you want to enable password expiration? (y/N): " enable_expiration
+        case $enable_expiration in
+            [Yy]* )
+                read -p "Enter the maximum number of days before password expiration (default 90): " max_days
+                max_days=${max_days:-90}
+                
+                read -p "Enter the number of days to warn before password expires (default 7): " warn_days
+                warn_days=${warn_days:-7}
+                
+                sudo sed -i "s/PASS_MAX_DAYS\t[0-9]*/PASS_MAX_DAYS\t$max_days/" /etc/login.defs
+                sudo sed -i "s/PASS_WARN_AGE\t[0-9]*/PASS_WARN_AGE\t$warn_days/" /etc/login.defs
+                
+                log "Password expiration policy set: Max age $max_days days, Warning at $warn_days days"
+                ;;
+            * )
+                log "Password expiration policy not changed"
+                ;;
+        esac
+    fi
 }
 
 additional_security() {
@@ -363,9 +398,6 @@ additional_security() {
     # Restrict SSH
     sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
-    sudo systemctl restart sshd  
-
     sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
     sudo systemctl restart sshd
     
@@ -390,12 +422,18 @@ main() {
     check_permissions
     backup_files
 
-    # Ask user for verbose mode
-    read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
-    case $enable_verbose in
-        [Yy]* ) verbose=true;;
-        * ) verbose=false;;
-    esac
+    # Check for non-interactive mode
+    if [[ "$1" == "--non-interactive" ]]; then
+        non_interactive=true
+        log "Running in non-interactive mode"
+    else
+        # Ask user for verbose mode
+        read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
+        case $enable_verbose in
+            [Yy]* ) verbose=true;;
+            * ) verbose=false;;
+        esac
+    fi
 
     update_system
     setup_firewall
@@ -416,18 +454,26 @@ main() {
     
     log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
 
-    # Ask user if they want to restart
-    read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
-    case $restart_now in
-        [Yy]* ) 
-            log "Restarting system..."
-            sudo reboot
-            ;;
-        * ) 
-            log "Please restart your system manually to apply all changes."
-            ;;
-    esac
+    if [ "$non_interactive" = false ]; then
+        # Ask user if they want to restart
+        read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
+        case $restart_now in
+            [Yy]* ) 
+                log "Restarting system..."
+                sudo reboot
+                ;;
+            * ) 
+                log "Please restart your system manually to apply all changes."
+                ;;
+        esac
+    else
+        log "System hardening complete. A reboot is recommended to apply all changes."
+    fi
 }
 
 # Run the main function
-main
+if [[ "$1" == "--non-interactive" ]]; then
+    main --non-interactive
+else
+    main
+fi
