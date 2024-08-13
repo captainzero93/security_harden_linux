@@ -256,7 +256,7 @@ A17: Check the backup directory created by the script (`/root/security_backup_[t
 #### Q18: The system seems slower after running the script. What could be the cause?
 A18: This could be due to increased logging, stricter firewall rules, or AppArmor profiles. Review the changes made by the script and consider adjusting settings that might be impacting performance.
 
-## Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security best practices and vulnerabilities.
+## Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
 
 ## Citation
