@@ -5,12 +5,21 @@ log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
 }
 
+# Check for root privileges
+if [ "$(id -u)" -ne 0 ]; then
+    log "Error: This script must be run as root. Please use sudo."
+    exit 1
+fi
+
 # Backup the original file
-if [ -f /etc/default/grub ]; then
-    sudo cp /etc/default/grub /etc/default/grub.bak
-    log "Backup created: /etc/default/grub.bak"
+GRUB_CONFIG="/etc/default/grub"
+BACKUP_FILE="${GRUB_CONFIG}.bak.$(date +%Y%m%d_%H%M%S)"
+
+if [ -f "$GRUB_CONFIG" ]; then
+    cp "$GRUB_CONFIG" "$BACKUP_FILE"
+    log "Backup created: $BACKUP_FILE"
 else
-    log "Error: /etc/default/grub not found. Exiting."
+    log "Error: $GRUB_CONFIG not found. Exiting."
     exit 1
 fi
 
@@ -19,14 +28,19 @@ PARAMS=(
     "page_alloc.shuffle=1"
     "slab_nomerge"
     "init_on_alloc=1"
+    "init_on_free=1"
+    "randomize_kstack_offset=1"
     "kernel.unprivileged_bpf_disabled=1"
     "net.core.bpf_jit_harden=2"
+    "kernel.kptr_restrict=2"
+    "kernel.dmesg_restrict=1"
+    "kernel.perf_event_paranoid=3"
     "vm.mmap_rnd_bits=32"
     "vm.mmap_rnd_compat_bits=16"
 )
 
 # Read the current GRUB_CMDLINE_LINUX_DEFAULT value
-CURRENT_VALUE=$(grep GRUB_CMDLINE_LINUX_DEFAULT /etc/default/grub | cut -d'"' -f2)
+CURRENT_VALUE=$(grep GRUB_CMDLINE_LINUX_DEFAULT "$GRUB_CONFIG" | cut -d'"' -f2)
 
 # Add new parameters
 for param in "${PARAMS[@]}"; do
@@ -39,15 +53,15 @@ for param in "${PARAMS[@]}"; do
 done
 
 # Update the GRUB configuration file
-sudo sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="'"$CURRENT_VALUE"'"/' /etc/default/grub
-log "Updated GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub"
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="'"$CURRENT_VALUE"'"/' "$GRUB_CONFIG"
+log "Updated GRUB_CMDLINE_LINUX_DEFAULT in $GRUB_CONFIG"
 
 # Update GRUB
 if command -v update-grub &> /dev/null; then
-    sudo update-grub
+    update-grub
     log "GRUB configuration updated using update-grub"
 elif command -v grub2-mkconfig &> /dev/null; then
-    sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+    grub2-mkconfig -o /boot/grub2/grub.cfg
     log "GRUB configuration updated using grub2-mkconfig"
 else
     log "Warning: Neither update-grub nor grub2-mkconfig found. Please update GRUB manually."
