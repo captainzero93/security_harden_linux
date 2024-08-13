@@ -363,4 +363,71 @@ additional_security() {
     # Restrict SSH
     sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/ssh
+    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
+    sudo systemctl restart sshd  
+
+    sudo sed -i 's/^#Protocol.*/Protocol 2/' /etc/ssh/sshd_config
+    sudo systemctl restart sshd
+    
+    # Configure strong password policy
+    sudo sed -i 's/PASS_MIN_DAYS\t0/PASS_MIN_DAYS\t7/' /etc/login.defs
+    sudo sed -i 's/password.*pam_unix.so.*/password    [success=1 default=ignore]    pam_unix.so obscure sha512 minlen=14 remember=5/' /etc/pam.d/common-password
+    
+    # Call the new function to configure password expiration
+    configure_password_expiration
+    
+    log "Additional security measures applied"
+}
+
+setup_automatic_updates() {
+    log "Setting up automatic security updates..."
+    install_package "unattended-upgrades"
+    sudo dpkg-reconfigure -plow unattended-upgrades
+    log "Automatic security updates configured"
+}
+
+main() {
+    check_permissions
+    backup_files
+
+    # Ask user for verbose mode
+    read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
+    case $enable_verbose in
+        [Yy]* ) verbose=true;;
+        * ) verbose=false;;
+    esac
+
+    update_system
+    setup_firewall
+    setup_fail2ban
+    setup_clamav
+    disable_root
+    remove_packages
+    setup_audit
+    disable_filesystems
+    secure_boot
+    configure_ipv6
+    setup_apparmor
+    setup_ntp
+    setup_aide
+    configure_sysctl
+    additional_security
+    setup_automatic_updates
+    
+    log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
+
+    # Ask user if they want to restart
+    read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
+    case $restart_now in
+        [Yy]* ) 
+            log "Restarting system..."
+            sudo reboot
+            ;;
+        * ) 
+            log "Please restart your system manually to apply all changes."
+            ;;
+    esac
+}
+
+# Run the main function
+main
