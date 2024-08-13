@@ -15,6 +15,7 @@
 - [Disclaimer](#disclaimer)
 - [License](#license)
 - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+- [Citation](#citation)
 
 ## Overview
 This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process.
@@ -52,13 +53,13 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 - Internet connection for package installation and updates
 
 ## Usage
-### Main Hardening Scripteee
+### Main Hardening Script
 1. Download the script:
    ```
    wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/improved_harden_linux.sh
    ```
-2. Make the script executable:e
-   ``
+2. Make the script executable:
+   ```
    chmod +x improved_harden_linux.sh
    ```
 3. Run the script with sudo privileges:
