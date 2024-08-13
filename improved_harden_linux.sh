@@ -464,7 +464,7 @@ main() {
     setup_audit
     disable_filesystems
     secure_boot
-    # configure_ipv6
+    configure_ipv6
     setup_apparmor
     setup_ntp
     setup_aide
