@@ -189,17 +189,19 @@ sudo aa-complain /path/to/binary
 
 ### Password and Account Security
 
-#### Q12: How do I check the current password policy?
-A12: You can view the current password policy settings in `/etc/login.defs`. For specific user info:
-```
-sudo chage -l username
-```
-
 #### Q13: How do I modify the password policy after running the script?
-A13: You can modify `/etc/login.defs` for global settings, or use the `chage` command for individual users:
+A13: You can modify `/etc/login.defs` for global settings, or use the `chage` command for individual users. For example:
+
 ```
 sudo chage -M 60 -W 7 username
 ```
+
+This command modifies the password policy for a specific user:
+- It sets the password to expire after 60 days (-M 60)
+- It sets a 7-day warning period before the password expires (-W 7)
+- Replace 'username' with the actual username you want to modify
+
+You can adjust these values based on your security requirements. For a stricter policy, you might use shorter periods, while for a more lenient policy, you could use longer periods.
 
 ### System Updates and Package Management
 
