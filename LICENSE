@@ -1,8 +1,12 @@
-## License
+# Dual License for Ubuntu / Debian Linux Security Hardening Scripts
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+This project is available under a dual license:
 
-This means that you are free to:
+## 1. Non-Commercial License
+
+For non-commercial use, this project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+
+This license allows you to:
 
 - Share — copy and redistribute the material in any medium or format
 - Adapt — remix, transform, and build upon the material
@@ -12,16 +16,27 @@ Under the following terms:
 - Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
 - NonCommercial — You may not use the material for commercial purposes.
 
-For commercial use, please contact the author for permission.
-
 For more details, see the full license text at: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+## 2. Commercial License
+
+For any commercial use, including but not limited to:
+- Selling the scripts or any derivatives of the scripts
+- Using the scripts in a commercial product or service
+- Any use of the scripts that generates revenue
+
+You must contact the project owner to discuss licensing terms and potential payment.
+
+For commercial licensing inquiries, please contact: joe.faulkner.0@gmail.com
 
 ## Citation
 
-If you use security_harden_linux in your research or project, please cite it as follows:
+If you use these scripts or concepts in your non-commercial research or projects, please cite it as follows:
 
 ```
-[captainzero93]. (2024). PixelGuard AI. GitHub. https://github.com/captainzero93/security_harden_linux
+[captainzero93]. (2024). Ubuntu / Debian Linux Security Hardening Scripts. GitHub. https://github.com/captainzero93/security_harden_linux
 ```
 
-For commercial inquiries, please contact joe.faulkner.0@gmail.com
+For commercial use, please contact joe.faulkner.0@gmail.com to discuss licensing terms.
+
+By using this project, you agree to abide by the terms of the appropriate license based on your intended use.
