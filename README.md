@@ -254,6 +254,6 @@ A16: First, check the service status using `systemctl status service_name`. Then
 A17: Check the backup directory created by the script (`/root/security_backup_[timestamp]`), find the original configuration file, and replace the current file with the backup. Always make sure you understand the implications of reverting changes before doing so.
 
 #### Q18: The system seems slower after running the script. What could be the cause?
-A18: This could be due to increased logging, stricter firewall rules, or AppArmor profiles. Review the changes made by the script and consider adjusting settings that might be impacting performance.
+A18: ( It is unlikely on a modern system these protections caused it. ) This could be due to increased logging, stricter firewall rules, or AppArmor profiles. Review the changes made by the script and consider adjusting settings that might be impacting performance.
 
 Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security best practices and vulnerabilities.
