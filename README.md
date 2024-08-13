@@ -18,7 +18,7 @@
 - [Citation](#citation)
 
 ## Overview
-This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process.
+This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process. NOTE: these scripts try to be accessible to average users and therefore are not as strict as some auditing / standards you may expect to see, please open a PR if you are able to help. 
 
 ## Scripts
 1. `improved_harden_linux.sh`: The main security hardening script
