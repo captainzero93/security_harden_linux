@@ -110,7 +110,7 @@ You may want to review and customize the scripts before running them, particular
 - GRUB parameters in the `PARAMS` array of the `update_grub_config.sh` script
 
 ## Contributing
-Contributions to improve the scripts are welcome. Please submit pull requests or open issues on the GitHub repository.
+Contributions to improve the scripts are welcome. Please submit pull requests or open issues on the GitHub repository. Explicitly mapping the implemented measures to standards like CIS benchmarks or DISA STIGs would enhance credibility for instance.
 
 ## Disclaimer
 These scripts are provided as-is, without any warranty. The authors are not responsible for any damage or data loss that may occur from using these scripts. Use at your own risk and always back up your system before making significant changes.
