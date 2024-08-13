@@ -1,188 +1,258 @@
-# PixelGuard AI (AI IMAGE PROTECT)
+# Ubuntu / Debian Linux Security Hardening Scripts
 
-## Introduction
-AI scraping involves the automated collection of images from the internet for training AI models. This practice can lead to unauthorized use of personal or copyrighted images. PixelGuard AI aims to protect your images from such scraping and other AI training (like 'deepfakes') by applying various invisible techniques that interfere with AI processing while preserving the visual quality for human viewers (as much as possible).
+## Table of Contents
+- [Overview](#overview)
+- [Scripts](#scripts)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+  - [Main Hardening Script](#main-hardening-script)
+  - [GRUB Configuration Script](#grub-configuration-script)
+- [Important Notes](#important-notes)
+- [Recent Updates and Fixes](#recent-updates-and-fixes)
+- [Customization](#customization)
+- [Contributing](#contributing)
+- [Disclaimer](#disclaimer)
+- [License](#license)
+- [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+- [Citation](#citation)
 
-## Example Results
+## Overview
+This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process.
 
-Here's an example of PixelGuard AI in action:
+Our goal is to provide a tool that balances robust security measures with accessibility for average users. While the scripts implement professional-grade security standards, we've aimed to make the process as user-friendly as possible for desktop machines.
 
-| Unprotected Image | Protected Image |
-|:-----------------:|:---------------:|
-| ![Unprotected](efcsdzecvzdscz.png) | ![Protected](protected_efcsdzecvzdscz.png) |
-
-As you can see, the protected image looks virtually identical to the human eye, but contains invisible protections against AI scraping and processing.
+## Scripts
+1. `improved_harden_linux.sh`: The main security hardening script
+2. `update_grub_config.sh`: A script to update GRUB configuration with additional security parameters
 
 ## Features
-- **Multiple 'Invisible' Protection Techniques**:
-  - DCT (Discrete Cosine Transform) Watermarking
-  - Wavelet-based Watermarking
-  - Fourier Transform Watermarking
-  - Adversarial Perturbation
-  - Colour Jittering
-  - Invisible QR Code Embedding
-  - Steganography
-- **Digital Signature and Hash Verification** for tamper detection
-- **Perceptual Hash** for content change detection
-- **Timestamp Verification** to check the age of protection
-- **Support for Multiple Image Formats**: JPEG, PNG, BMP, TIFF, WebP
-- **Batch Processing**
-- **User-friendly GUI** for easy interaction
-- **Verification Tool** to check if an image has been protected and/or tampered with
+- System update and upgrade (optional)
+- Firewall (UFW) configuration
+- Fail2Ban installation and setup
+- ClamAV antivirus installation and update
+- Root login disabling with safety checks
+- Removal of unnecessary packages
+- Comprehensive audit system configuration
+- Disabling of unused filesystems
+- Boot settings security enhancements
+- IPv6 configuration options
+- AppArmor setup
+- Network Time Protocol (NTP) setup
+- Advanced Intrusion Detection Environment (AIDE) setup
+- Enhanced sysctl security parameter configuration
+- Automatic security updates setup
+- GRUB configuration hardening for secure boot process
+- Additional security measures including:
+  - Core dump disabling
+  - SSH hardening
+  - Strong password policy configuration
+  - Process accounting enablement
 
-## System Requirements
-- Python 3.7 or higher, but Python <= 3.11 is required
-- Compatible with Windows, macOS, and Linux
-
-## Installation
-1. Ensure you have Python 3.7 - 3.11 installed. Python 3.11 is the latest supported version. You can check your Python version by running:
-   ```
-   python --version
-   ```
-
-2. Clone this repository:
-   ```
-   git clone https://github.com/captainzero93/Protect-Images-from-AI-PixelGuard.git
-   cd Protect-Images-from-AI-PixelGuard
-   ```
-
-3. Set up a virtual environment:
-   - For Windows:
-     ```
-     python -m venv venv
-     venv\Scripts\activate
-     ```
-   - For macOS and Linux:
-     ```
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-
-4. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-Again: This project is not currently compatible with Python 3.12 or later due to dependency constraints. Please use Python 3.11 or earlier.
+## Prerequisites
+- Ubuntu / Debian-based Linux system
+- Root or sudo access
+- Internet connection for package installation and updates
 
 ## Usage
-Activate your virtual environment (if not already activated), then run the script:
-```
-python imgprotect.py
-```
-This will open a GUI with three main options:
-1. **Protect Single Image**: Select a single image to protect.
-2. **Batch Protect Images**: Select multiple images to protect in batch.
-3. **Verify Image**: Check if an image has been protected and if it has been tampered with.
+### Main Hardening Script
+1. Download the script:
+   ```
+   wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/improved_harden_linux.sh
+   ```
+2. Make the script executable:
+   ```
+   chmod +x improved_harden_linux.sh
+   ```
+3. Run the script with sudo privileges:
+   ```
+   sudo ./improved_harden_linux.sh
+   ```
+4. Follow the prompts during script execution, including options for verbose mode, IPv6 configuration, and system restart.
 
-### Protecting Images
-1. Click on "Protect Single Image" or "Batch Protect Images".
-2. Select the image(s) you want to protect.
-3. Choose an output directory for the protected images.
-4. Wait for the process to complete. A success message will appear when done.
+### GRUB Configuration Script
+1. Download the script:
+   ```
+   wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/update_grub_config.sh
+   ```
+2. Make the script executable:
+   ```
+   chmod +x update_grub_config.sh
+   ```
+3. Run the script with sudo privileges:
+   ```
+   sudo ./update_grub_config.sh
+   ```
+4. The script will automatically update the GRUB configuration with additional security parameters.
 
-### Verifying Images
-1. Click on "Verify Image".
-2. Select the image you want to verify.
-3. The tool will check if the image contains protection information, if it has been tampered with, and how long ago it was protected.
+## Important Notes
+- These scripts make significant changes to your system. It is strongly recommended to run them on a test system or VM before applying to production environments.
+- Backups of important configuration files are created before changes are made. The main script creates backups in `/root/security_backup_[timestamp]`, and the GRUB script backs up to `/etc/default/grub.bak`.
+- Some changes may impact system functionality. Be prepared to troubleshoot if issues arise.
+- The main script log is saved to `/var/log/security_hardening.log` for review and troubleshooting.
+- You can enable verbose mode for more detailed logging during the main script execution.
+
+## Recent Updates and Fixes
+- Improved root login disabling with checks for existing sudo users
+- Enhanced error handling and logging throughout the main script
+- Non-interactive package installation to prevent hanging in automated environments
+- Updated firewall configuration with additional rules
+- Improved AppArmor setup
+- Enhanced sysctl configurations for improved security
+- Updated SSH hardening measures
+- Added GRUB configuration script for additional boot-time security
+- Improved accessibility for average users while maintaining strong security standards
 
 ## Customization
-The GUI allows users to adjust the strength of each protection technique. Use the sliders to fine-tune the balance between protection effectiveness and image quality.
-
-## How It Works
-1. **DCT Watermarking**: Embeds a watermark in the frequency domain of the blue channel.
-2. **Wavelet-based Watermarking**: Embeds a watermark in the wavelet domain of the green channel.
-3. **Fourier Transform Watermarking**: Applies a watermark in the frequency domain of the red channel.
-4. **Adversarial Perturbation**: Adds minor perturbations to the image that are designed to confuse AI models.
-5. **Color Jittering**: Randomly adjusts brightness, contrast, and saturation to add another layer of protection.
-6. **Invisible QR Code**: Embeds an invisible QR code containing image information.
-7. **Steganography**: Hides additional protection data within the image itself.
-8. **Digital Signature**: Signs the entire image to detect any tampering.
-9. **Hash Verification**: Uses both a cryptographic hash and a perceptual hash to check if the image has been altered.
-10. **Timestamp Verification**: Checks when the image was protected and suggests re-protection if it's too old.
-
-These techniques work together to create multiple layers of protection that are extremely difficult for AI training algorithms to remove or ignore, while remaining imperceptible to human viewers.
-
-## Security Analysis
-
-1. **Robustness**: The combination of multiple techniques provides a strong defense against AI scraping. However, determined adversaries with significant resources might still find ways to remove or bypass some protections. Regular updates to the protection algorithms will help stay ahead of potential threats.
-
-2. **Cryptographic Security**: The use of RSA-2048 for digital signatures provides strong security. However, key management is a potential weak point as keys are generated per session. Future versions could implement a more robust key management system.
-
-3. **Steganography**: The current implementation uses a simple Least Significant Bit (LSB) steganography technique. While effective for casual protection, it may be detectable by advanced statistical analysis. Future versions could implement more sophisticated steganography techniques for increased security.
-
-4. **Reversibility**: Most of the protection techniques applied are not easily reversible. This is generally a positive aspect for security but may be a limitation in some use cases where users need to recover the original, unprotected image.
-
-5. **Perceptual Impact**: While the techniques aim to be imperceptible to humans, there may ( mostly always ) be slight visual changes, especially at higher protection strengths. Users should balance protection strength with acceptable visual quality.
-
-6. **Metadata Preservation**: The current implementation may not preserve all original image metadata. Future versions could focus on maintaining important metadata while still applying protections.
-
-## Potential Improvements
-
-1. **Modular Architecture**: Refactoring the protection techniques into separate modules could improve maintainability and allow for easier addition of new techniques or updates to existing ones.
-
-2. **Advanced Steganography**: Implementing more sophisticated steganography techniques could improve the hiding of metadata and increase resistance to statistical analysis.
-
-3. **GPU Acceleration**: Given the computational intensity of some protection techniques, implementing GPU acceleration could significantly improve performance, especially for batch processing of large images.
-
-4. **Adaptive Protection**: Developing a system that analyzes images and automatically adjusts protection strength based on content may optimize the balance between protection effectiveness and visual quality.
-
-5. **Comprehensive Testing Suite**: Adding a suite of unit and integration tests would improve reliability, ease future development, and help quickly identify any regressions when making updates.
-
-6. **Enhanced Key Management**: Implementing a more robust key management system could improve the overall security of the cryptographic operations.
-
-7. **Machine Learning Integration**: Incorporating machine learning models to detect and adapt to new AI scraping techniques could provide more dynamic and future-proof protection.
-
-8. **API Development**: Creating an API for the core functionality would allow for easier integration with other software or web services.
-
-## Updating
-To update PixelGuard AI to the latest version:
-1. Pull the latest changes from the repository:
-   ```
-   git pull origin main
-   ```
-2. Reinstall requirements in case of any changes:
-   ```
-   pip install -r requirements.txt
-   ```
-
-## Troubleshooting
-- If you encounter "ModuleNotFoundError", ensure all dependencies are correctly installed.
-- For image format errors, check that your image is in one of the supported formats.
-- If protection seems too strong or weak, adjust the settings using the GUI sliders.
-
-## Limitations
-While PixelGuard AI significantly increases protection against AI scraping, it may not be 100% effective against all current and future AI technologies. It's designed to strike a balance between protection and maintaining image quality.
+You may want to review and customize the scripts before running them, particularly:
+- Firewall rules in the `setup_firewall` function of the main script
+- Audit rules in the `setup_audit` function of the main script
+- AppArmor setup in the `setup_apparmor` function of the main script
+- Sysctl parameters in the `configure_sysctl` function of the main script
+- SSH configuration in the `additional_security` function of the main script
+- GRUB parameters in the `PARAMS` array of the `update_grub_config.sh` script
 
 ## Contributing
-We welcome contributions! If you'd like to contribute:
-1. Fork the repository
-2. Create a new branch for your feature
-3. Commit your changes
-4. Push to your branch
-5. Create a new Pull Request
+Contributions to improve the scripts are welcome. Please submit pull requests or open issues on the GitHub repository. We especially encourage contributions that:
+- Enhance user-friendliness without compromising security
+- Improve documentation and user guidance
+- Explicitly map implemented measures to standards like CIS benchmarks or DISA STIGs to enhance credibility
 
-Please ensure your code adheres to our coding standards and includes appropriate tests.
-
-## Caution
-While these protection methods significantly increase the difficulty of using the images for AI training, no protection method is perfect. Always be cautious about sharing personal images online.
-
-## Citation
-If you use PixelGuard AI, as software or protection concepts in your research or projects, please cite it as follows:
-```
-[captainzero93]. (2024). PixelGuard AI. GitHub. https://github.com/captainzero93/Protect-Images-from-AI-PixelGuard
-```
+## Disclaimer
+These scripts are provided as-is, without any warranty. The authors are not responsible for any damage or data loss that may occur from using these scripts. Use at your own risk and always back up your system before making significant changes.
 
 ## License
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). For commercial requests, please email joe.faulkner.0@gmail.com.
 
-This project is available under a dual license:
+## Frequently Asked Questions (FAQ)
 
-1. **Non-Commercial Use**: For non-commercial purposes, this project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). This allows for sharing and adaptation of the code for non-commercial purposes, with appropriate attribution.
+### General Questions
 
-2. **Commercial Use**: Any commercial use, including but not limited to selling the code, using it in commercial products or services, or any revenue-generating activities, requires a separate commercial license. You must contact the project owner to discuss terms and potential payment.
+#### Q1: How do I check if the scripts ran successfully?
+A1: For the main script, check the log file at `/var/log/security_hardening.log`. For the GRUB script, check if the file `/etc/default/grub` has been updated with new parameters.
 
-Please see the [LICENSE](LICENSE) file for full details on both licenses.
+#### Q2: How can I undo the changes made by the scripts?
+A2: The main script creates backups in `/root/security_backup_[timestamp]`, and the GRUB script creates a backup at `/etc/default/grub.bak`. You can manually restore these files, but be cautious as it may revert security improvements.
 
-For commercial licensing inquiries, please contact: joe.faulkner.0@gmail.com
+#### Q3: Is it safe to run these scripts on a production system?
+A3: While the scripts are designed to be as safe as possible, it's always recommended to test them on a non-production system first. They make significant changes to your system configuration.
 
-By using this project, you agree to abide by the terms of the appropriate license based on your intended use.
+### Firewall and Network Security
+
+#### Q4: How do I check if the firewall is properly configured?
+A4: You can check the UFW status using the command:
+```
+sudo ufw status verbose
+```
+
+#### Q5: How can I modify the firewall rules after running the script?
+A5: You can add or remove rules using the `ufw` command. For example:
+```
+sudo ufw allow 8080/tcp
+sudo ufw reload
+```
+
+#### Q6: How do I check if IPv6 is disabled?
+A6: You can check the IPv6 status using:
+```
+cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+```
+If it returns 1, IPv6 is disabled.
+
+### System Auditing and Logging
+
+#### Q7: How do I check the audit logs?
+A7: The audit logs are typically located in `/var/log/audit/audit.log`. You can view them using:
+```
+sudo ausearch -ts today -i
+```
+
+#### Q8: How do I know if the audit rules are active?
+A8: You can list all active audit rules using:
+```
+sudo auditctl -l
+```
+
+#### Q9: How often does AIDE check for system file changes?
+A9: By default, AIDE doesn't run automatic checks. You need to run it manually or set up a cron job:
+```
+sudo aide --check
+```
+
+### AppArmor
+
+#### Q10: How do I check which AppArmor profiles are enforced?
+A10: You can see the status of AppArmor profiles using:
+```
+sudo aa-status
+```
+
+#### Q11: How can I disable an AppArmor profile if it's causing issues?
+A11: You can set a profile to complain mode instead of enforce mode:
+```
+sudo aa-complain /path/to/binary
+```
+
+### Password and Account Security
+
+#### Q12: How do I check the current password policy?
+A12: You can view the current password policy settings in `/etc/login.defs`. For specific user info:
+```
+sudo chage -l username
+```
+
+#### Q13: How do I modify the password policy after running the script?
+A13: You can modify `/etc/login.defs` for global settings, or use the `chage` command for individual users. For example:
+
+```
+sudo chage -M 60 -W 7 username
+```
+
+This command modifies the password policy for a specific user:
+- It sets the password to expire after 60 days (-M 60)
+- It sets a 7-day warning period before the password expires (-W 7)
+- Replace 'username' with the actual username you want to modify
+
+You can adjust these values based on your security requirements. For a stricter policy, you might use shorter periods, while for a more lenient policy, you could use longer periods.
+
+### System Updates and Package Management
+
+#### Q14: How do I check if automatic updates are working?
+A14: Check the status of the unattended-upgrades service:
+```
+systemctl status unattended-upgrades
+```
+
+#### Q15: How can I modify which updates are installed automatically?
+A15: Edit the configuration file at `/etc/apt/apt.conf.d/50unattended-upgrades`.
+
+### GRUB Configuration
+
+#### Q16: How do I verify that the GRUB configuration has been updated securely?
+A16: After running the update_grub_config.sh script, check the GRUB configuration file:
+```
+cat /etc/default/grub
+```
+Look for the added security parameters in the GRUB_CMDLINE_LINUX_DEFAULT line.
+
+#### Q17: What do the new GRUB parameters do?
+A17: The new parameters enhance kernel security. For example, "page_alloc.shuffle=1" randomizes memory allocation, and "init_on_alloc=1" initializes memory on allocation.
+
+### Troubleshooting
+
+#### Q18: What should I do if a service stops working after running the scripts?
+A18: Check the service status, review logs, and if it's AppArmor-related, you might need to adjust the AppArmor profile.
+
+#### Q19: How can I revert a specific change made by the scripts?
+A19: Use the backup files created by the scripts to restore specific configurations. Always understand the implications before reverting changes.
+
+#### Q20: The system seems slower after running the scripts. What could be the cause?
+A20: This could be due to increased logging, stricter firewall rules, or security measures. Review and adjust settings as needed.
+
+Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
+
+## Citation
+If you use these concepts or code in your research or projects, please cite it as follows:
+```
+[Joe Faulkner] (captainzero93). (2024). PixelGuard AI. GitHub. https://github.com/captainzero93/Protect-Images-from-AI-PixelGuard
+```
