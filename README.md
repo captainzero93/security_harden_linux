@@ -18,7 +18,7 @@
 - [Citation](#citation)
 
 ## Overview
-This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process. This latest version as of writing adhered more closely to DISA STIG and CIS Compliance. 
+This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process. This latest version as of writing adheres more closely to DISA STIG and CIS Compliance. 
 
 The goal is to provide a tool that balances robust security measures with accessibility for average users. While the scripts implement professional-grade security standards, I've aimed to make the process as user-friendly as possible for desktop machines.
 
