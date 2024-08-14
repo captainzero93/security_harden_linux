@@ -85,6 +85,23 @@ setup_firewall() {
     sudo ufw limit ssh comment 'Allow SSH with rate limiting' || handle_error "Failed to configure SSH in UFW"
     sudo ufw allow 80/tcp comment 'Allow HTTP' || handle_error "Failed to allow HTTP in UFW"
     sudo ufw allow 443/tcp comment 'Allow HTTPS' || handle_error "Failed to allow HTTPS in UFW"
+    
+    local apply_ipv6_rules
+    read -p "Do you want to apply IPv6-specific firewall rules? (y/N): " apply_ipv6_rules
+    case $apply_ipv6_rules in
+        [Yy]* )
+            log "Applying IPv6-specific firewall rules..."
+            sudo ufw allow in on lo || handle_error "Failed to allow loopback traffic"
+            sudo ufw allow out on lo || handle_error "Failed to allow loopback traffic"
+            sudo ufw deny in from ::/0 || handle_error "Failed to deny all incoming IPv6 traffic"
+            sudo ufw allow out to ::/0 || handle_error "Failed to allow all outgoing IPv6 traffic"
+            log "IPv6 firewall rules applied"
+            ;;
+        * )
+            log "Skipping IPv6-specific firewall rules"
+            ;;
+    esac
+    
     sudo ufw logging on || handle_error "Failed to enable UFW logging"
     sudo ufw --force enable || handle_error "Failed to enable UFW"
     log "Firewall configured and enabled"
@@ -213,7 +230,22 @@ secure_boot() {
         sudo cp /etc/default/grub /etc/default/grub.bak || handle_error "Failed to backup grub file"
         
         # Add or modify kernel parameters
-        sudo sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="audit=1 ipv6.disable=1 net.ipv4.conf.all.rp_filter=1 net.ipv4.conf.all.accept_redirects=0 net.ipv4.conf.all.send_redirects=0"/' /etc/default/grub || handle_error "Failed to modify kernel parameters"
+        local kernel_params="audit=1 net.ipv4.conf.all.rp_filter=1 net.ipv4.conf.all.accept_redirects=0 net.ipv4.conf.all.send_redirects=0"
+        
+        # Ask if user wants to disable SACK
+        local disable_sack
+        read -p "Do you want to disable TCP SACK? This is generally not recommended. (y/N): " disable_sack
+        case $disable_sack in
+            [Yy]* )
+                kernel_params+=" net.ipv4.tcp_sack=0"
+                log "TCP SACK will be disabled"
+                ;;
+            * )
+                log "TCP SACK will remain enabled"
+                ;;
+        esac
+        
+        sudo sed -i "s/GRUB_CMDLINE_LINUX=\"\"/GRUB_CMDLINE_LINUX=\"$kernel_params\"/" /etc/default/grub || handle_error "Failed to modify kernel parameters"
         
         # Update GRUB
         if command -v update-grub &> /dev/null; then
@@ -323,7 +355,7 @@ configure_sysctl() {
         ""
         "# Enable ASLR"
         "kernel.randomize_va_space = 2"
-        )
+    )
     
     printf "%s\n" "${sysctl_config[@]}" | sudo tee -a /etc/sysctl.conf || handle_error "Failed to update sysctl.conf"
     sudo sysctl -p || handle_error "Failed to apply sysctl changes"
