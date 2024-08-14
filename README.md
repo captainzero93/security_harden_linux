@@ -18,7 +18,7 @@
 - [Citation](#citation)
 
 ## Overview
-This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process.
+This project consists of two scripts designed to enhance the security of Ubuntu and other Debian-based Linux systems. The main script implements a variety of security measures and best practices to harden your system against common threats, while the GRUB configuration script specifically focuses on securing the boot process. This latest version as of writing adhered more closely to DISA STIG and CIS Compliance. 
 
 The goal is to provide a tool that balances robust security measures with accessibility for average users. While the scripts implement professional-grade security standards, we've aimed to make the process as user-friendly as possible for desktop machines.
 
@@ -254,5 +254,5 @@ Remember, security is an ongoing process. Regularly review your system's securit
 ## Citation
 If you use these concepts or code in your research or projects, please cite it as follows:
 ```
-[Joe Faulkner] (captainzero93). (2024). PixelGuard AI. GitHub. https://github.com/captainzero93/Protect-Images-from-AI-PixelGuard
+[Joe Faulkner] (captainzero93). (2024). https://github.com/captainzero93/security_harden_linux
 ```
