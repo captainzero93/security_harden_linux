@@ -169,7 +169,7 @@ Contributions to improve the scripts are welcome. Please submit pull requests or
 - Explicitly map implemented measures to standards like CIS benchmarks or DISA STIGs to enhance credibility
 
 ## Feedback and Issues
-We welcome feedback and bug reports. Please open an issue on our [GitHub Issues page](https://github.com/captainzero93/security_harden_linux/issues) for any problems, questions, or suggestions.
+I welcome feedback and bug reports. Please open an issue on our [GitHub Issues page](https://github.com/captainzero93/security_harden_linux/issues) for any problems, questions, or suggestions.
 
 ## Disclaimer
 These scripts are provided as-is, without any warranty. The authors are not responsible for any damage or data loss that may occur from using these scripts. Use at your own risk and always back up your system before making significant changes.
