@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Enhanced GRUB Configuration Script
+# Version: 2.0
+# Author: captainzero93 (Joe.Faulkner.0@gmail.com)
+# Last Updated: 2024-08-15
+# Description: This script updates GRUB configuration to enhance system security.
+#              It adds various kernel parameters and enables cryptodisk support.
+
+
 # Global variables
 VERSION="2.0"
 GRUB_CONFIG="/etc/default/grub"
