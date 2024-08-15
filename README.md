@@ -185,7 +185,145 @@ Please see the [LICENSE](LICENSE) file for full details on both licenses.
 
 ## Frequently Asked Questions (FAQ)
 
-[The FAQ section remains the same as in the previous version]
+### General Questions
+
+#### Q1: How do I check if the scripts ran successfully?
+A1: For the main script, check the log file at `/var/log/security_hardening.log`. For the GRUB script, check the log at `/var/log/grub_config_update.log`. These logs will contain details of all actions taken by the scripts.
+
+#### Q2: How can I undo the changes made by the scripts?
+A2: The main script creates backups in `/root/security_backup_[timestamp]`, and the GRUB script creates a backup at `/etc/default/grub.bak.[timestamp]`. You can manually restore these files, but be cautious as it may revert security improvements. For the main script, you can also use the --restore option:
+```
+sudo ./improved_harden_linux.sh --restore
+```
+
+#### Q3: Is it safe to run these scripts on a production system?
+A3: While the scripts are designed to be as safe as possible, it's always recommended to test them on a non-production system first. They make significant changes to your system configuration. Use the --dry-run option to preview changes before applying them.
+
+### Firewall and Network Security
+
+#### Q4: How do I check if the firewall is properly configured?
+A4: You can check the UFW status using the command:
+```
+sudo ufw status verbose
+```
+
+#### Q5: How can I modify the firewall rules after running the script?
+A5: You can add or remove rules using the `ufw` command. For example:
+```
+sudo ufw allow 8080/tcp
+sudo ufw reload
+```
+
+#### Q6: How do I check if IPv6 is disabled?
+A6: You can check the IPv6 status using:
+```
+cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+```
+If it returns 1, IPv6 is disabled.
+
+### System Auditing and Logging
+
+#### Q7: How do I check the audit logs?
+A7: The audit logs are typically located in `/var/log/audit/audit.log`. You can view them using:
+```
+sudo ausearch -ts today -i
+```
+
+#### Q8: How do I know if the audit rules are active?
+A8: You can list all active audit rules using:
+```
+sudo auditctl -l
+```
+
+#### Q9: How often does AIDE check for system file changes?
+A9: By default, AIDE doesn't run automatic checks. You need to run it manually or set up a cron job:
+```
+sudo aide --check
+```
+
+### AppArmor
+
+#### Q10: How do I check which AppArmor profiles are enforced?
+A10: You can see the status of AppArmor profiles using:
+```
+sudo aa-status
+```
+
+#### Q11: How can I disable an AppArmor profile if it's causing issues?
+A11: You can set a profile to complain mode instead of enforce mode:
+```
+sudo aa-complain /path/to/binary
+```
+
+### Password and Account Security
+
+#### Q12: How do I check the current password policy?
+A12: You can view the current password policy settings in `/etc/login.defs`. For specific user info:
+```
+sudo chage -l username
+```
+
+#### Q13: How do I modify the password policy after running the script?
+A13: You can modify `/etc/login.defs` for global settings, or use the `chage` command for individual users. For example:
+
+```
+sudo chage -M 60 -W 7 username
+```
+
+This command modifies the password policy for a specific user:
+- It sets the password to expire after 60 days (-M 60)
+- It sets a 7-day warning period before the password expires (-W 7)
+- Replace 'username' with the actual username you want to modify
+
+You can adjust these values based on your security requirements. For a stricter policy, you might use shorter periods, while for a more lenient policy, you could use longer periods.
+
+### System Updates and Package Management
+
+#### Q14: How do I check if automatic updates are working?
+A14: Check the status of the unattended-upgrades service:
+```
+systemctl status unattended-upgrades
+```
+
+#### Q15: How can I modify which updates are installed automatically?
+A15: Edit the configuration file at `/etc/apt/apt.conf.d/50unattended-upgrades`.
+
+### GRUB Configuration
+
+#### Q16: How do I verify that the GRUB configuration has been updated securely?
+A16: After running the update_grub_config.sh script, check the GRUB configuration file:
+```
+cat /etc/default/grub
+```
+Look for the added security parameters in the GRUB_CMDLINE_LINUX_DEFAULT line.
+
+#### Q17: What do the new GRUB parameters do?
+A17: The new parameters enhance kernel security. For example:
+- "page_alloc.shuffle=1" randomizes memory allocation
+- "init_on_alloc=1" initializes memory on allocation
+- "slab_nomerge" prevents the merging of slabs of similar sizes
+- "randomize_kstack_offset=1" randomizes the kernel stack offset
+- "vsyscall=none" disables the deprecated vsyscall table
+
+### Troubleshooting
+
+#### Q18: What should I do if a service stops working after running the scripts?
+A18: Check the service status, review logs, and if it's AppArmor-related, you might need to adjust the AppArmor profile. You can also try to restore the specific configuration file from the backup created by the script.
+
+#### Q19: How can I revert a specific change made by the scripts?
+A19: Use the backup files created by the scripts to restore specific configurations. Always understand the implications before reverting changes. For example, to restore the original GRUB configuration:
+```
+sudo cp /etc/default/grub.bak.[timestamp] /etc/default/grub
+sudo update-grub
+```
+
+#### Q20: The system seems slower after running the scripts. What could be the cause?
+A20: This could be due to increased logging, stricter firewall rules, or security measures. Review and adjust settings as needed. Common areas to check include:
+- Audit rules (you might reduce the number of events being audited)
+- AppArmor profiles (ensure they're not overly restrictive for your use case)
+- Firewall rules (ensure they're not blocking necessary traffic)
+
+Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
 ## Citation
 If you use these concepts or code in your research or projects, please cite it as follows:
