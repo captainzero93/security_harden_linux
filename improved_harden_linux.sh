@@ -1,17 +1,24 @@
 #!/bin/bash
 
-# Enhanced Ubuntu Linux Security Script
+# Enhanced Ubuntu Linux Security Hardening Script
+# Version: 2.0
+# Author: captainzero93 (Joe Faulkner)
+# Last Updated: 2024-08-15
+# License: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+# For commercial use, please contact: joe.faulkner.0@gmail.com
 
 # Global variables
-verbose=false
-backup_dir="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
-log_file="/var/log/security_hardening.log"
+VERSION="2.0"
+VERBOSE=false
+BACKUP_DIR="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
+LOG_FILE="/var/log/security_hardening.log"
+SCRIPT_NAME=$(basename "$0")
 
 # Function for logging
 log() {
     local message="$(date '+%Y-%m-%d %H:%M:%S'): $1"
-    echo "$message" | sudo tee -a "$log_file"
-    $verbose && echo "$message"
+    echo "$message" | sudo tee -a "$LOG_FILE"
+    $VERBOSE && echo "$message"
 }
 
 # Function for error handling
@@ -26,9 +33,9 @@ install_package() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$1" || handle_error "Failed to install $1"
 }
 
-# Backup important files
+# Function to backup files
 backup_files() {
-    sudo mkdir -p "$backup_dir" || handle_error "Failed to create backup directory"
+    sudo mkdir -p "$BACKUP_DIR" || handle_error "Failed to create backup directory"
     
     local files_to_backup=(
         "/etc/default/grub"
@@ -40,27 +47,28 @@ backup_files() {
     
     for file in "${files_to_backup[@]}"; do
         if [ -f "$file" ]; then
-            sudo cp "$file" "$backup_dir/" || log "Warning: Failed to backup $file"
+            sudo cp "$file" "$BACKUP_DIR/" || log "Warning: Failed to backup $file"
         else
             log "Warning: $file not found, skipping backup"
         fi
     done
     
-    log "Backup created in $backup_dir"
+    log "Backup created in $BACKUP_DIR"
 }
 
-# Restore from backup
+# Function to restore from backup
 restore_backup() {
-    if [ -d "$backup_dir" ]; then
-        for file in "$backup_dir"/*; do
+    if [ -d "$BACKUP_DIR" ]; then
+        for file in "$BACKUP_DIR"/*; do
             sudo cp "$file" "$(dirname "$(readlink -f "$file")")" || log "Warning: Failed to restore $(basename "$file")"
         done
-        log "Restored configurations from $backup_dir"
+        log "Restored configurations from $BACKUP_DIR"
     else
         log "Backup directory not found. Cannot restore."
     fi
 }
 
+# Function to check permissions
 check_permissions() {
     if [ "$EUID" -ne 0 ]; then
         echo "This script must be run with sudo privileges."
@@ -69,14 +77,52 @@ check_permissions() {
     fi
 }
 
-# Update System
+# Function to display help
+display_help() {
+    echo "Usage: sudo ./$SCRIPT_NAME [OPTIONS]"
+    echo "Options:"
+    echo "  -h, --help     Display this help message"
+    echo "  -v, --verbose  Enable verbose output"
+    echo "  --version      Display script version"
+    echo "  --dry-run      Perform a dry run without making changes"
+    echo "  --restore      Restore system from the most recent backup"
+    exit 0
+}
+
+# Function to display version
+display_version() {
+    echo "Enhanced Ubuntu Linux Security Hardening Script v$VERSION"
+    exit 0
+}
+
+# Function to check system requirements
+check_requirements() {
+    if ! command -v lsb_release &> /dev/null; then
+        handle_error "lsb_release command not found. This script requires an Ubuntu-based system."
+    fi
+
+    local os_name=$(lsb_release -si)
+    local os_version=$(lsb_release -sr)
+
+    if [[ "$os_name" != "Ubuntu" && "$os_name" != "Debian" ]]; then
+        handle_error "This script is designed for Ubuntu or Debian-based systems. Detected OS: $os_name"
+    fi
+
+    if [[ $(echo "$os_version < 18.04" | bc) -eq 1 ]]; then
+        handle_error "This script requires Ubuntu 18.04 or later. Detected version: $os_version"
+    fi
+
+    log "System requirements check passed. OS: $os_name $os_version"
+}
+
+# Function to update system
 update_system() {
     log "Updating System..."
     sudo apt-get update -y || handle_error "System update failed"
     sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || handle_error "System upgrade failed"
 }
 
-# Install and Configure Firewall
+# Function to setup firewall
 setup_firewall() {
     log "Installing and Configuring Firewall..."
     install_package "ufw"
@@ -107,7 +153,7 @@ setup_firewall() {
     log "Firewall configured and enabled"
 }
 
-# Install and Configure Fail2Ban
+# Function to setup Fail2Ban
 setup_fail2ban() {
     log "Installing and Configuring Fail2Ban..."
     install_package "fail2ban"
@@ -119,7 +165,7 @@ setup_fail2ban() {
     log "Fail2Ban configured and started"
 }
 
-# Install and Update ClamAV
+# Function to setup ClamAV
 setup_clamav() {
     log "Installing and Updating ClamAV..."
     install_package "clamav"
@@ -131,7 +177,7 @@ setup_clamav() {
     log "ClamAV installed and updated"
 }
 
-# Disable root login
+# Function to disable root login
 disable_root() {
     log "Checking for non-root users with sudo privileges..."
     
@@ -167,7 +213,7 @@ disable_root() {
     log "Root login has been disabled and SSH root login has been explicitly prohibited."
 }
 
-# Remove unnecessary packages
+# Function to remove unnecessary packages
 remove_packages() {
     log "Removing unnecessary packages..."
     sudo DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y telnetd nis yp-tools rsh-client rsh-redone-client xinetd || log "Warning: Failed to remove some packages"
@@ -175,7 +221,7 @@ remove_packages() {
     log "Unnecessary packages removed"
 }
 
-# Configure audit rules
+# Function to setup audit
 setup_audit() {
     log "Configuring audit rules..."
     install_package "auditd"
@@ -189,10 +235,20 @@ setup_audit() {
         "-w /sbin/insmod -p x -k modules"
         "-w /sbin/rmmod -p x -k modules"
         "-w /sbin/modprobe -p x -k modules"
+        "-w /var/log/faillog -p wa -k logins"
+        "-w /var/log/lastlog -p wa -k logins"
+        "-w /var/run/utmp -p wa -k session"
+        "-w /var/log/wtmp -p wa -k session"
+        "-w /var/log/btmp -p wa -k session"
+        "-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change"
+        "-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change"
+        "-a always,exit -F arch=b64 -S clock_settime -k time-change"
+        "-a always,exit -F arch=b32 -S clock_settime -k time-change"
+        "-w /etc/localtime -p wa -k time-change"
     )
     
     for rule in "${audit_rules[@]}"; do
-        echo "$rule" | sudo tee -a /etc/audit/rules.d/security.rules || handle_error "Failed to add audit rule: $rule"
+        echo "$rule" | sudo tee -a /etc/audit/rules.d/audit.rules > /dev/null || handle_error "Failed to add audit rule: $rule"
     done
     
     sudo systemctl enable auditd || handle_error "Failed to enable auditd service"
@@ -200,18 +256,19 @@ setup_audit() {
     log "Audit rules configured and auditd started"
 }
 
-# Disable Unused Filesystems
+# Function to disable unused filesystems
 disable_filesystems() {
     log "Disabling Unused Filesystems..."
     local filesystems=("cramfs" "freevxfs" "jffs2" "hfs" "hfsplus" "squashfs" "udf" "vfat")
     
     for fs in "${filesystems[@]}"; do
-        echo "install $fs /bin/true" | sudo tee -a /etc/modprobe.d/CIS.conf || handle_error "Failed to disable filesystem: $fs"
+        echo "install $fs /bin/true" | sudo tee -a /etc/modprobe.d/CIS.conf > /dev/null || handle_error "Failed to disable filesystem: $fs"
     done
     
     log "Unused filesystems disabled"
 }
 
+# Function to secure boot settings
 secure_boot() {
     log "Securing Boot Settings..."
     
@@ -264,6 +321,7 @@ secure_boot() {
     log "Boot settings secured"
 }
 
+# Function to configure IPv6
 configure_ipv6() {
     local disable_ipv6
     read -p "Do you want to disable IPv6? (y/N): " disable_ipv6
@@ -282,6 +340,7 @@ configure_ipv6() {
     esac
 }
 
+# Function to setup AppArmor
 setup_apparmor() {
     log "Setting up AppArmor..."
     
@@ -301,6 +360,7 @@ setup_apparmor() {
     log "Monitor /var/log/syslog and /var/log/auth.log for any AppArmor-related issues."
 }
 
+# Function to setup NTP
 setup_ntp() {
     log "Setting up NTP..."
     install_package "ntp"
@@ -309,6 +369,7 @@ setup_ntp() {
     log "NTP setup complete"
 }
 
+# Function to setup AIDE
 setup_aide() {
     log "Setting up AIDE..."
     install_package "aide"
@@ -317,6 +378,7 @@ setup_aide() {
     log "AIDE setup complete"
 }
 
+# Function to configure sysctl
 configure_sysctl() {
     log "Configuring sysctl settings..."
     
@@ -355,6 +417,21 @@ configure_sysctl() {
         ""
         "# Enable ASLR"
         "kernel.randomize_va_space = 2"
+        ""
+        "# Increase system file descriptor limit"
+        "fs.file-max = 65535"
+        ""
+        "# Allow for more PIDs"
+        "kernel.pid_max = 65536"
+        ""
+        "# Protect against kernel pointer leaks"
+        "kernel.kptr_restrict = 1"
+        ""
+        "# Restrict dmesg access"
+        "kernel.dmesg_restrict = 1"
+        ""
+        "# Restrict kernel profiling"
+        "kernel.perf_event_paranoid = 2"
     )
     
     printf "%s\n" "${sysctl_config[@]}" | sudo tee -a /etc/sysctl.conf || handle_error "Failed to update sysctl.conf"
@@ -362,6 +439,7 @@ configure_sysctl() {
     log "sysctl settings configured"
 }
 
+# Function for additional security measures
 additional_security() {
     log "Applying additional security measures..."
     
@@ -390,6 +468,7 @@ additional_security() {
     log "Additional security measures applied"
 }
 
+# Function to setup automatic updates
 setup_automatic_updates() {
     log "Setting up automatic security updates..."
     install_package "unattended-upgrades"
@@ -397,48 +476,79 @@ setup_automatic_updates() {
     log "Automatic security updates configured"
 }
 
+# Main function
 main() {
+    local dry_run=false
+
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                display_help
+                ;;
+            -v|--verbose)
+                VERBOSE=true
+                shift
+                ;;
+            --version)
+                display_version
+                ;;
+            --dry-run)
+                dry_run=true
+                shift
+                ;;
+            --restore)
+                restore_backup
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1"
+                display_help
+                ;;
+        esac
+    done
+
     check_permissions
+    check_requirements
     backup_files
 
-    # Ask user for verbose mode
-    read -p "Do you want to enable verbose mode? (y/N): " enable_verbose
-    case $enable_verbose in
-        [Yy]* ) verbose=true;;
-        * ) verbose=false;;
-    esac
-
-    update_system
-    setup_firewall
-    setup_fail2ban
-    setup_clamav
-    disable_root
-    remove_packages
-    setup_audit
-    disable_filesystems
-    secure_boot
-    configure_ipv6
-    setup_apparmor
-    setup_ntp
-    setup_aide
-    configure_sysctl
-    additional_security
-    setup_automatic_updates
+    if $dry_run; then
+        log "Performing dry run. No changes will be made."
+    else
+        update_system
+        setup_firewall
+        setup_fail2ban
+        setup_clamav
+        disable_root
+        remove_packages
+        setup_audit
+        disable_filesystems
+        secure_boot
+        configure_ipv6
+        setup_apparmor
+        setup_ntp
+        setup_aide
+        configure_sysctl
+        additional_security
+        setup_automatic_updates
+    fi
     
     log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
 
-    # Ask user if they want to restart
-    read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
-    case $restart_now in
-        [Yy]* ) 
-            log "Restarting system..."
-            sudo reboot
-            ;;
-        * ) 
-            log "Please restart your system manually to apply all changes."
-            ;;
-    esac
+    if ! $dry_run; then
+        # Ask user if they want to restart
+        read -p "Do you want to restart the system now to apply all changes? (y/N): " restart_now
+        case $restart_now in
+            [Yy]* ) 
+                log "Restarting system..."
+                sudo reboot
+                ;;
+            * ) 
+                log "Please restart your system manually to apply all changes."
+                ;;
+        esac
+    fi
 }
 
 # Run the main function
-main
+main "$@"
