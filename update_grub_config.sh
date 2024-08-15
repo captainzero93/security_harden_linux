@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Global variables
-VERSION="1.1"
+VERSION="2.0"
 GRUB_CONFIG="/etc/default/grub"
 BACKUP_FILE="${GRUB_CONFIG}.bak.$(date +%Y%m%d_%H%M%S)"
 LOG_FILE="/var/log/grub_config_update.log"
