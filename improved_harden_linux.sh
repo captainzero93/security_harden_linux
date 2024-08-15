@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Enhanced Ubuntu Linux Security Hardening Script
-# Version: 2.0
-# Author: captainzero93 (Joe Faulkner)
-# Last Updated: 2024-08-15
-# License: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
-# For commercial use, please contact: joe.faulkner.0@gmail.com
-
 # Global variables
 VERSION="2.0"
 VERBOSE=false
