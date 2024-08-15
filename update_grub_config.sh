@@ -1,8 +1,31 @@
 #!/bin/bash
 
+# Global variables
+VERSION="1.1"
+GRUB_CONFIG="/etc/default/grub"
+BACKUP_FILE="${GRUB_CONFIG}.bak.$(date +%Y%m%d_%H%M%S)"
+LOG_FILE="/var/log/grub_config_update.log"
+
 # Function to log messages
 log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    local message="$(date '+%Y-%m-%d %H:%M:%S'): $1"
+    echo "$message" | tee -a "$LOG_FILE"
+}
+
+# Function to display help
+display_help() {
+    echo "Usage: sudo $0 [OPTIONS]"
+    echo "Options:"
+    echo "  -h, --help     Display this help message"
+    echo "  --version      Display script version"
+    echo "  --dry-run      Perform a dry run without making changes"
+    exit 0
+}
+
+# Function to display version
+display_version() {
+    echo "Enhanced GRUB Configuration Script v$VERSION"
+    exit 0
 }
 
 # Check for root privileges
@@ -11,13 +34,35 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Backup the original file
-GRUB_CONFIG="/etc/default/grub"
-BACKUP_FILE="${GRUB_CONFIG}.bak.$(date +%Y%m%d_%H%M%S)"
+# Parse command line arguments
+dry_run=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            display_help
+            ;;
+        --version)
+            display_version
+            ;;
+        --dry-run)
+            dry_run=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            display_help
+            ;;
+    esac
+done
 
+# Backup the original file
 if [ -f "$GRUB_CONFIG" ]; then
-    cp "$GRUB_CONFIG" "$BACKUP_FILE"
-    log "Backup created: $BACKUP_FILE"
+    if ! $dry_run; then
+        cp "$GRUB_CONFIG" "$BACKUP_FILE"
+        log "Backup created: $BACKUP_FILE"
+    else
+        log "Dry run: Would create backup: $BACKUP_FILE"
+    fi
 else
     log "Error: $GRUB_CONFIG not found. Exiting."
     exit 1
@@ -57,26 +102,38 @@ for param in "${PARAMS[@]}"; do
 done
 
 # Update the GRUB configuration file
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="'"$CURRENT_VALUE"'"/' "$GRUB_CONFIG"
-log "Updated GRUB_CMDLINE_LINUX_DEFAULT in $GRUB_CONFIG"
+if ! $dry_run; then
+    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=".*"/GRUB_CMDLINE_LINUX_DEFAULT="'"$CURRENT_VALUE"'"/' "$GRUB_CONFIG"
+    log "Updated GRUB_CMDLINE_LINUX_DEFAULT in $GRUB_CONFIG"
+else
+    log "Dry run: Would update GRUB_CMDLINE_LINUX_DEFAULT in $GRUB_CONFIG"
+fi
 
 # Ensure GRUB_ENABLE_CRYPTODISK is set to y
-if grep -q "^GRUB_ENABLE_CRYPTODISK=" "$GRUB_CONFIG"; then
-    sed -i 's/^GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/' "$GRUB_CONFIG"
+if ! $dry_run; then
+    if grep -q "^GRUB_ENABLE_CRYPTODISK=" "$GRUB_CONFIG"; then
+        sed -i 's/^GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/' "$GRUB_CONFIG"
+    else
+        echo "GRUB_ENABLE_CRYPTODISK=y" >> "$GRUB_CONFIG"
+    fi
+    log "Enabled GRUB_ENABLE_CRYPTODISK"
 else
-    echo "GRUB_ENABLE_CRYPTODISK=y" >> "$GRUB_CONFIG"
+    log "Dry run: Would enable GRUB_ENABLE_CRYPTODISK"
 fi
-log "Enabled GRUB_ENABLE_CRYPTODISK"
 
 # Update GRUB
-if command -v update-grub &> /dev/null; then
-    update-grub
-    log "GRUB configuration updated using update-grub"
-elif command -v grub2-mkconfig &> /dev/null; then
-    grub2-mkconfig -o /boot/grub2/grub.cfg
-    log "GRUB configuration updated using grub2-mkconfig"
+if ! $dry_run; then
+    if command -v update-grub &> /dev/null; then
+        update-grub
+        log "GRUB configuration updated using update-grub"
+    elif command -v grub2-mkconfig &> /dev/null; then
+        grub2-mkconfig -o /boot/grub2/grub.cfg
+        log "GRUB configuration updated using grub2-mkconfig"
+    else
+        log "Warning: Neither update-grub nor grub2-mkconfig found. Please update GRUB manually."
+    fi
 else
-    log "Warning: Neither update-grub nor grub2-mkconfig found. Please update GRUB manually."
+    log "Dry run: Would update GRUB configuration"
 fi
 
 log "Script execution completed. Please reboot your system for changes to take effect."
