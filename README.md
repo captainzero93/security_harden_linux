@@ -126,7 +126,7 @@ The main script also supports:
 - Updated SSH hardening measures
 - Improved accessibility for average users while maintaining strong security standards
 
-## Customization
+## Customisation
 You may want to review and customize the scripts before running them, particularly:
 - Firewall rules in the `setup_firewall` function of the main script
 - Audit rules in the `setup_audit` function of the main script
