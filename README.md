@@ -185,8 +185,6 @@ Please see the [LICENSE](LICENSE) file for full details on both licenses.
 
 ## Frequently Asked Questions (FAQ)
 
-### General Questions
-
 #### Q1: How do I check if the scripts ran successfully?
 A1: For the main script, check the log file at `/var/log/security_hardening.log`. For the GRUB script, check the log at `/var/log/grub_config_update.log`. These logs will contain details of all actions taken by the scripts.
 
