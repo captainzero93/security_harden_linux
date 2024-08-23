@@ -526,7 +526,7 @@ main() {
         setup_automatic_updates
     fi
     
-    log "Enhanced Security Configuration executed! Script by captainzero93, improved by Claude"
+    log "Enhanced Security Configuration executed! Script by captainzero93"
 
     if ! $dry_run; then
         # Ask user if they want to restart
