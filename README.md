@@ -324,25 +324,25 @@ A20: This could be due to increased logging, stricter firewall rules, or securit
 
 #### Q21: Will this break common programs from running?
 A21: Generally, no, here's why;
--Firewall (UFW) configuration: Properly configured, it won’t block necessary traffic for games or browsing.
--Fail2Ban: It only acts after multiple failed login attempts, so it won’t affect regular use.
--ClamAV: Runs in the background and scans files, which shouldn’t impact performance significantly.
--Root login disabling: Normal users typically don’t need root access for daily tasks.
--Removal of unnecessary packages: Frees up resources without affecting essential applications.
--Audit system: Logs activities without interfering with normal operations.
--Disabling unused filesystems: Only affects filesystems that aren’t in use.
--Boot settings security: Enhances security without affecting daily use once the system is booted.
--IPv6 configuration: Properly configured, it won’t impact normal internet use.
--AppArmor: Restricts applications but shouldn’t affect well-behaved software.
--NTP setup: Ensures accurate timekeeping without user impact.
--AIDE: Monitors filesystem changes without affecting normal use.
--Sysctl parameters: Enhances security without noticeable impact on performance.
--Automatic security updates: Keeps the system secure without user intervention.
--GRUB hardening: Secures the boot process without affecting normal use.
--Core dump disabling: Prevents exposure of sensitive information without affecting normal use.
--SSH hardening: Enhances security for remote access without affecting local use.
--Strong password policy: Ensures secure passwords without affecting daily tasks.
--Process accounting: Logs user activities without interfering with normal operations.
+- Firewall (UFW) configuration: Properly configured, it won’t block necessary traffic for games or browsing.
+- Fail2Ban: It only acts after multiple failed login attempts, so it won’t affect regular use.
+- ClamAV: Runs in the background and scans files, which shouldn’t impact performance significantly.
+- Root login disabling: Normal users typically don’t need root access for daily tasks.
+- Removal of unnecessary packages: Frees up resources without affecting essential applications.
+- Audit system: Logs activities without interfering with normal operations.
+- Disabling unused filesystems: Only affects filesystems that aren’t in use.
+- Boot settings security: Enhances security without affecting daily use once the system is booted.
+- IPv6 configuration: Properly configured, it won’t impact normal internet use.
+- AppArmor: Restricts applications but shouldn’t affect well-behaved software.
+- NTP setup: Ensures accurate timekeeping without user impact.
+- AIDE: Monitors filesystem changes without affecting normal use.
+- Sysctl parameters: Enhances security without noticeable impact on performance.
+- Automatic security updates: Keeps the system secure without user intervention.
+- GRUB hardening: Secures the boot process without affecting normal use.
+- Core dump disabling: Prevents exposure of sensitive information without affecting normal use.
+- SSH hardening: Enhances security for remote access without affecting local use.
+- Strong password policy: Ensures secure passwords without affecting daily tasks.
+- Process accounting: Logs user activities without interfering with normal operations.
 
 Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
