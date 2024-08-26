@@ -303,7 +303,7 @@ A17: The new parameters enhance kernel security. For example:
 - "randomize_kstack_offset=1" randomizes the kernel stack offset
 - "vsyscall=none" disables the deprecated vsyscall table
 
-#### Q18: Will this break common programs from running?
+#### Q18: Will this break common programs from running or affect common tasks and daily use?
 A18: Generally, no, here's why;
 - Firewall (UFW) configuration: Properly configured, it won’t block necessary traffic for games or browsing.
 - Fail2Ban: It only acts after multiple failed login attempts, so it won’t affect regular use.
