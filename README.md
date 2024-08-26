@@ -322,7 +322,7 @@ A20: This could be due to increased logging, stricter firewall rules, or securit
 - AppArmor profiles (ensure they're not overly restrictive for your use case)
 - Firewall rules (ensure they're not blocking necessary traffic)
 
-## Q21: Will this break common programs from running?
+#### Q21: Will this break common programs from running?
 A21: Generally, no, here's why;
 -Firewall (UFW) configuration: Properly configured, it won’t block necessary traffic for games or browsing.
 -Fail2Ban: It only acts after multiple failed login attempts, so it won’t affect regular use.
