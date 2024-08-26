@@ -303,27 +303,8 @@ A17: The new parameters enhance kernel security. For example:
 - "randomize_kstack_offset=1" randomizes the kernel stack offset
 - "vsyscall=none" disables the deprecated vsyscall table
 
-### Troubleshooting
-
-#### Q18: What should I do if a service stops working after running the scripts?
-A18: Check the service status, review logs, and if it's AppArmor-related, you might need to adjust the AppArmor profile. You can also try to restore the specific configuration file from the backup created by the script.
-
-
-#### Q19: How can I revert a specific change made by the scripts?
-A19: Use the backup files created by the scripts to restore specific configurations. Always understand the implications before reverting changes. For example, to restore the original GRUB configuration:
-```
-sudo cp /etc/default/grub.bak.[timestamp] /etc/default/grub
-sudo update-grub
-```
-
-#### Q20: The system seems slower after running the scripts. What could be the cause?
-A20: This could be due to increased logging, stricter firewall rules, or security measures. Review and adjust settings as needed. Common areas to check include:
-- Audit rules (you might reduce the number of events being audited)
-- AppArmor profiles (ensure they're not overly restrictive for your use case)
-- Firewall rules (ensure they're not blocking necessary traffic)
-
-#### Q21: Will this break common programs from running?
-A21: Generally, no, here's why;
+#### Q18: Will this break common programs from running?
+A18: Generally, no, here's why;
 - Firewall (UFW) configuration: Properly configured, it won’t block necessary traffic for games or browsing.
 - Fail2Ban: It only acts after multiple failed login attempts, so it won’t affect regular use.
 - ClamAV: Runs in the background and scans files, which shouldn’t impact performance significantly.
@@ -343,6 +324,25 @@ A21: Generally, no, here's why;
 - SSH hardening: Enhances security for remote access without affecting local use.
 - Strong password policy: Ensures secure passwords without affecting daily tasks.
 - Process accounting: Logs user activities without interfering with normal operations.
+
+### Troubleshooting
+
+#### Q18: What should I do if a service stops working after running the scripts?
+A18: Check the service status, review logs, and if it's AppArmor-related, you might need to adjust the AppArmor profile. You can also try to restore the specific configuration file from the backup created by the script.
+
+
+#### Q19: How can I revert a specific change made by the scripts?
+A19: Use the backup files created by the scripts to restore specific configurations. Always understand the implications before reverting changes. For example, to restore the original GRUB configuration:
+```
+sudo cp /etc/default/grub.bak.[timestamp] /etc/default/grub
+sudo update-grub
+```
+
+#### Q20: The system seems slower after running the scripts. What could be the cause?
+A20: This could be due to increased logging, stricter firewall rules, or security measures. Review and adjust settings as needed. Common areas to check include:
+- Audit rules (you might reduce the number of events being audited)
+- AppArmor profiles (ensure they're not overly restrictive for your use case)
+- Firewall rules (ensure they're not blocking necessary traffic)
 
 Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
