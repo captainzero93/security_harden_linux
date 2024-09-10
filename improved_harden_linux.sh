@@ -103,6 +103,8 @@ check_requirements() {
 
     if [[ $(echo "$os_version < 18.04" | bc) -eq 1 ]]; then
         handle_error "This script requires Ubuntu 18.04 or later. Detected version: $os_version"
+	elif [[ "$os_name" == "Debian" && $(echo "$os_version < 12.0" | bc) -eq 1 ]]; then
+	handle_error "This script requires Debian 12.0 or later. Detected version: $os_version"
     fi
 
     log "System requirements check passed. OS: $os_name $os_version"
