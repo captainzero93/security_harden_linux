@@ -344,7 +344,7 @@ A20: This could be due to increased logging, stricter firewall rules, or securit
 - AppArmor profiles (ensure they're not overly restrictive for your use case)
 - Firewall rules (ensure they're not blocking necessary traffic)
 
-Remember, security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
+Security is an ongoing process. Regularly review your system's security settings, keep your system updated, and stay informed about new security practices and vulnerabilities.
 
 ## Citation
 If you use these concepts or code in your research or projects, please cite it as follows:
