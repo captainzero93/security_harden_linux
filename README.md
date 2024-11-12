@@ -352,5 +352,5 @@ Security is an ongoing process. Regularly review your system's security settings
 ## Citation
 If you use these concepts or code in your research or projects, please cite it as follows:
 ```
-[Joe Faulkner] (captainzero93). (2024). https://github.com/captainzero93/security_harden_linux
+(captainzero93). (2024). https://github.com/captainzero93/security_harden_linux
 ```
