@@ -70,7 +70,7 @@ Both scripts now include options for:
 ### Main Hardening Script
 1. Download the script:
    ```
-   wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/improved_harden_linux.sh
+   wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
    ```
 2. Make the script executable:
    ```
@@ -85,7 +85,7 @@ Both scripts now include options for:
 ### GRUB Configuration Script
 1. Download the script:
    ```
-   wget https://raw.githubusercontent.com/captainzero93/ubuntu-security-script/main/update_grub_config.sh
+   wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/update_grub_config.sh
    ```
 2. Make the script executable:
    ```
