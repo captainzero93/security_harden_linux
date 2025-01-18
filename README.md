@@ -33,8 +33,8 @@ This project consists of two scripts designed to enhance the security of Ubuntu 
 The goal is to provide a tool that balances robust security measures with accessibility for average users. While the scripts implement many professional-grade security standards, I've aimed to make the process as user-friendly as possible for desktop machines. Check the [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq) if you are having issues.
 
 ## Scripts
-1. `improved_harden_linux.sh` (v2.0): The main security hardening script
-2. `update_grub_config.sh` (v2.0): A script to update GRUB configuration with additional security parameters
+1. `improved_harden_linux.sh`: The main security hardening script
+2. `update_grub_config.sh`: A script to update GRUB configuration with additional security parameters
 
 Both scripts now include options for:
 - Dry run mode (--dry-run): See potential changes without applying them
@@ -352,5 +352,5 @@ Security is an ongoing process. Regularly review your system's security settings
 ## Citation
 If you use these concepts or code in your research or projects, please cite it as follows:
 ```
-(captainzero93). (2024). https://github.com/captainzero93/security_harden_linux
+(captainzero93). (2025). https://github.com/captainzero93/security_harden_linux
 ```
