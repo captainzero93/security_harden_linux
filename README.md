@@ -1,5 +1,5 @@
 # Ubuntu / Debian Linux Security Hardening Scripts
-## New designed for Beginner to Advanced use https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-
+## New better script for intermediate to advanced use https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-
 
 ^ ( For power users but can be configured to be 'lighter').
 
