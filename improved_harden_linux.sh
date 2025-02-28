@@ -357,11 +357,22 @@ setup_apparmor() {
 
 # Function to setup NTP
 setup_ntp() {
-    log "Setting up NTP..."
-    install_package "ntp"
-    sudo systemctl enable ntp || handle_error "Failed to enable NTP service"
-    sudo systemctl start ntp || handle_error "Failed to start NTP service"
-    log "NTP setup complete"
+    log "Setting up time synchronization..."
+    
+    # Check if systemd-timesyncd is available (modern Ubuntu systems)
+    if systemctl list-unit-files | grep -q systemd-timesyncd.service; then
+        log "Using systemd-timesyncd for time synchronization"
+        sudo systemctl enable systemd-timesyncd.service || handle_error "Failed to enable systemd-timesyncd service"
+        sudo systemctl start systemd-timesyncd.service || handle_error "Failed to start systemd-timesyncd service"
+        log "systemd-timesyncd setup complete"
+    else
+        # Fall back to traditional NTP if systemd-timesyncd is not available
+        log "Using traditional NTP for time synchronization"
+        install_package "ntp"
+        sudo systemctl enable ntp || handle_error "Failed to enable NTP service"
+        sudo systemctl start ntp || handle_error "Failed to start NTP service"
+        log "NTP setup complete"
+    fi
 }
 
 # Function to setup AIDE
