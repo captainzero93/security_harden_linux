@@ -586,28 +586,119 @@ module_filesystems() {
 }
 
 # Module: Boot Security
+# Module: Enhanced Boot Security with Comprehensive Kernel Hardening
 module_boot_security() {
-    log INFO "Securing boot configuration..."
+    log INFO "Securing boot configuration with kernel hardening..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure boot"; return 0; }
     
-    # Set GRUB password if not exists
-    if [[ "${INTERACTIVE}" == "true" ]] && [[ "${SECURITY_LEVEL}" != "low" ]]; then
-        read -p "Set GRUB password? (y/N): " -r set_grub_pass
-        if [[ "${set_grub_pass}" =~ ^[Yy]$ ]]; then
-            log INFO "Run: sudo grub-mkpasswd-pbkdf2"
-            log INFO "Then add to /etc/grub.d/40_custom"
+    local grub_config="/etc/default/grub"
+    [[ ! -f "${grub_config}" ]] && { log WARNING "GRUB config not found"; return 0; }
+    
+    # Backup GRUB config
+    sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d)" || return 1
+    
+    # Comprehensive kernel hardening parameters
+    local kernel_params=(
+        # Memory hardening
+        "page_alloc.shuffle=1"
+        "slab_nomerge"
+        "init_on_alloc=1"
+        "init_on_free=1"
+        "randomize_kstack_offset=1"
+        
+        # Kernel security
+        "kernel.unprivileged_bpf_disabled=1"
+        "net.core.bpf_jit_harden=2"
+        "kernel.kptr_restrict=2"
+        "kernel.dmesg_restrict=1"
+        "kernel.perf_event_paranoid=3"
+        
+        # Memory randomization (ASLR enhancement)
+        "vm.mmap_rnd_bits=32"
+        "vm.mmap_rnd_compat_bits=16"
+        
+        # Additional hardening
+        "vsyscall=none"
+        "debugfs=off"
+        "oops=panic"
+        "module.sig_enforce=1"
+        "lockdown=confidentiality"
+    )
+    
+    # Add USB boot restriction only if not desktop or high security
+    if [[ "${IS_DESKTOP}" == "false" ]] || [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
+        kernel_params+=("nousb")
+        log INFO "Added USB boot restriction"
+    fi
+    
+    # Read current GRUB_CMDLINE_LINUX_DEFAULT
+    local current_params=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "${grub_config}" | cut -d'"' -f2)
+    
+    # Add new parameters if not already present
+    local added_count=0
+    for param in "${kernel_params[@]}"; do
+        if [[ ! "${current_params}" =~ ${param%%=*} ]]; then
+            current_params="${current_params} ${param}"
+            added_count=$((added_count + 1))
+            log INFO "Added kernel parameter: ${param}"
+        fi
+    done
+    
+    # Update GRUB_CMDLINE_LINUX_DEFAULT
+    if [[ ${added_count} -gt 0 ]]; then
+        sudo sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"${current_params}\"|" "${grub_config}"
+        log SUCCESS "Added ${added_count} kernel hardening parameters"
+    else
+        log INFO "All kernel parameters already present"
+    fi
+    
+    # Enable cryptodisk support if encrypted system
+    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE | grep -q "crypt"; then
+        if ! grep -q "^GRUB_ENABLE_CRYPTODISK=y" "${grub_config}"; then
+            if grep -q "^GRUB_ENABLE_CRYPTODISK=" "${grub_config}"; then
+                sudo sed -i 's/^GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/' "${grub_config}"
+            else
+                echo "GRUB_ENABLE_CRYPTODISK=y" | sudo tee -a "${grub_config}" > /dev/null
+            fi
+            log INFO "Enabled GRUB cryptodisk support"
         fi
     fi
     
-    # Disable USB boot in GRUB
-    if ! grep -q "nousb" /etc/default/grub 2>/dev/null; then
-        sudo sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="nousb /' /etc/default/grub || true
+    # Set GRUB password (high security levels)
+    if [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]] && [[ "${INTERACTIVE}" == "true" ]]; then
+        read -p "Set GRUB password to prevent boot parameter tampering? (y/N): " -r set_grub_pass
+        if [[ "${set_grub_pass}" =~ ^[Yy]$ ]]; then
+            log INFO "To set GRUB password:"
+            log INFO "1. Run: sudo grub-mkpasswd-pbkdf2"
+            log INFO "2. Copy the generated hash"
+            log INFO "3. Add to /etc/grub.d/40_custom:"
+            log INFO "   set superusers=\"root\""
+            log INFO "   password_pbkdf2 root <your-hash>"
+        fi
     fi
     
-    sudo update-grub 2>/dev/null || true
+    # Disable GRUB timeout for extra security (paranoid mode)
+    if [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
+        if grep -q "^GRUB_TIMEOUT=" "${grub_config}"; then
+            sudo sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' "${grub_config}"
+            log INFO "Set GRUB timeout to 0 (paranoid mode)"
+        fi
+    fi
     
-    log SUCCESS "Boot security configured"
+    # Update GRUB
+    log INFO "Updating GRUB configuration..."
+    if command -v update-grub &> /dev/null; then
+        sudo update-grub || { log ERROR "Failed to update GRUB"; return 1; }
+    elif command -v grub2-mkconfig &> /dev/null; then
+        sudo grub2-mkconfig -o /boot/grub2/grub.cfg || { log ERROR "Failed to update GRUB"; return 1; }
+    else
+        log WARNING "GRUB update command not found. Update GRUB manually."
+        return 1
+    fi
+    
+    log SUCCESS "Boot security configured with kernel hardening"
+    log WARNING "Reboot required for boot security changes to take effect"
 }
 
 # Module: IPv6 Configuration
