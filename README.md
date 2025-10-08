@@ -2,7 +2,7 @@
 
 Security hardening scripts for Ubuntu/Kubuntu/Debian systems implementing DISA STIG and CIS compliance standards.
 
-**Version 3.1** - Now with desktop environment detection and KDE Plasma optimizations!
+**Version 3.1** - Now with desktop environment detection and KDE Plasma optimizations! Better GRUB hardening in main script (old removed).
 
 **Note:** For advanced users, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-) for a more comprehensive solution.
 
