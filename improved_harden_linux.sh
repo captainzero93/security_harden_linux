@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.1
+# Version: 3.1 - Fixed
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+ and Ubuntu 25.10+
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.1"
+readonly VERSION="3.1-fixed"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly BACKUP_DIR="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
@@ -25,6 +25,10 @@ ENABLE_MODULES=""
 DISABLE_MODULES=""
 SECURITY_LEVEL="moderate"
 IS_DESKTOP=false
+
+# Tracking
+declare -a EXECUTED_MODULES=()
+declare -a FAILED_MODULES=()
 
 # Color codes
 readonly RED='\033[0;31m'
@@ -206,6 +210,19 @@ list_modules() {
     exit 0
 }
 
+validate_security_level() {
+    case "${SECURITY_LEVEL}" in
+        low|moderate|high|paranoid)
+            return 0
+            ;;
+        *)
+            log ERROR "Invalid security level: ${SECURITY_LEVEL}"
+            echo "Valid options: low, moderate, high, paranoid"
+            exit 1
+            ;;
+    esac
+}
+
 check_requirements() {
     log INFO "Checking system requirements..."
     
@@ -223,14 +240,16 @@ check_requirements() {
     fi
     
     if [[ "${os_name}" =~ ^(Ubuntu|Kubuntu)$ ]]; then
-        if [[ $(echo "${os_version} < 22.04" | bc 2>/dev/null || echo 0) -eq 1 ]]; then
-            log WARNING "Optimized for Ubuntu/Kubuntu 22.04+. Detected: ${os_version}"
+        if command -v bc &> /dev/null; then
+            if [[ $(echo "${os_version} < 22.04" | bc 2>/dev/null || echo 0) -eq 1 ]]; then
+                log WARNING "Optimized for Ubuntu/Kubuntu 22.04+. Detected: ${os_version}"
+            fi
         fi
     fi
     
     local available_space=$(df /root | awk 'NR==2 {print $4}')
     if [[ ${available_space} -lt 1048576 ]]; then
-        log WARNING "Low disk space. Backup may fail."
+        log WARNING "Low disk space ($(( available_space / 1024 ))MB). Backup may fail."
     fi
     
     if ! ping -c 1 -W 2 8.8.8.8 &> /dev/null; then
@@ -243,7 +262,10 @@ check_requirements() {
 backup_files() {
     log INFO "Creating comprehensive system backup..."
     
-    sudo mkdir -p "${BACKUP_DIR}" || return 1
+    if ! sudo mkdir -p "${BACKUP_DIR}"; then
+        log ERROR "Failed to create backup directory"
+        return 1
+    fi
     
     local files_to_backup=(
         "/etc/default/grub"
@@ -267,15 +289,19 @@ backup_files() {
         "/etc/hosts.deny"
     )
     
+    local backup_count=0
     for item in "${files_to_backup[@]}"; do
         if [[ -e "${item}" ]]; then
-            sudo cp -a "${item}" "${BACKUP_DIR}/" 2>/dev/null || \
+            if sudo cp -a "${item}" "${BACKUP_DIR}/" 2>/dev/null; then
+                backup_count=$((backup_count + 1))
+            else
                 log WARNING "Failed to backup ${item}"
+            fi
         fi
     done
     
-    systemctl list-unit-files --state=enabled > "${BACKUP_DIR}/enabled_services.txt"
-    dpkg -l > "${BACKUP_DIR}/installed_packages.txt"
+    systemctl list-unit-files --state=enabled > "${BACKUP_DIR}/enabled_services.txt" 2>/dev/null || true
+    dpkg -l > "${BACKUP_DIR}/installed_packages.txt" 2>/dev/null || true
     sudo iptables-save > "${BACKUP_DIR}/iptables.rules" 2>/dev/null || true
     sudo ip6tables-save > "${BACKUP_DIR}/ip6tables.rules" 2>/dev/null || true
     
@@ -286,12 +312,18 @@ Security Level: ${SECURITY_LEVEL}
 System: $(lsb_release -ds)
 Kernel: $(uname -r)
 Desktop: ${IS_DESKTOP}
+Files Backed Up: ${backup_count}
 EOF
     
-    sudo tar -czf "${BACKUP_DIR}.tar.gz" -C "$(dirname "${BACKUP_DIR}")" "$(basename "${BACKUP_DIR}")" 2>/dev/null || \
-        log WARNING "Failed to compress backup"
-    
-    log SUCCESS "Backup created: ${BACKUP_DIR}.tar.gz"
+    if sudo tar -czf "${BACKUP_DIR}.tar.gz" -C "$(dirname "${BACKUP_DIR}")" "$(basename "${BACKUP_DIR}")" 2>&1; then
+        # Generate checksum
+        cd "$(dirname "${BACKUP_DIR}")" || return 1
+        sha256sum "$(basename "${BACKUP_DIR}.tar.gz")" > "${BACKUP_DIR}.tar.gz.sha256"
+        log SUCCESS "Backup created: ${BACKUP_DIR}.tar.gz"
+    else
+        log WARNING "Failed to compress backup, keeping uncompressed version"
+        log SUCCESS "Backup created: ${BACKUP_DIR}"
+    fi
 }
 
 restore_backup() {
@@ -302,39 +334,94 @@ restore_backup() {
         return 1
     fi
     
+    # Verify checksum if available
+    if [[ -f "${backup_file}.sha256" ]]; then
+        log INFO "Verifying backup integrity..."
+        if ! sha256sum -c "${backup_file}.sha256" &>/dev/null; then
+            log ERROR "Backup checksum verification failed"
+            return 1
+        fi
+        log SUCCESS "Backup integrity verified"
+    fi
+    
     log INFO "Restoring from ${backup_file}..."
     
     local temp_dir=$(mktemp -d)
-    sudo tar -xzf "${backup_file}" -C "${temp_dir}"
-    
-    local backup_source=$(find "${temp_dir}" -maxdepth 1 -type d -name "security_backup_*" | head -1)
-    
-    if [[ -z "${backup_source}" ]]; then
-        log ERROR "Invalid backup structure"
+    if ! sudo tar -xzf "${backup_file}" -C "${temp_dir}" 2>&1; then
+        log ERROR "Failed to extract backup"
         rm -rf "${temp_dir}"
         return 1
     fi
     
-    sudo cp -a "${backup_source}"/etc/* /etc/ 2>/dev/null || true
+    local backup_source=$(find "${temp_dir}" -maxdepth 1 -type d -name "security_backup_*" | head -1)
     
-    [[ -f "${backup_source}/iptables.rules" ]] && \
-        sudo iptables-restore < "${backup_source}/iptables.rules" 2>/dev/null || true
+    if [[ -z "${backup_source}" ]]; then
+        log ERROR "Invalid backup structure in ${backup_file}"
+        rm -rf "${temp_dir}"
+        return 1
+    fi
     
-    [[ -f "${backup_source}/ip6tables.rules" ]] && \
-        sudo ip6tables-restore < "${backup_source}/ip6tables.rules" 2>/dev/null || true
+    # Restore with verification
+    local restore_errors=0
+    if [[ -d "${backup_source}/etc" ]]; then
+        for item in "${backup_source}"/etc/*; do
+            if [[ -e "$item" ]]; then
+                local target_name=$(basename "$item")
+                if ! sudo cp -a "$item" "/etc/" 2>&1; then
+                    log ERROR "Failed to restore ${target_name}"
+                    restore_errors=$((restore_errors + 1))
+                else
+                    log INFO "Restored /etc/${target_name}"
+                fi
+            fi
+        done
+    fi
+    
+    # Restore iptables rules
+    if [[ -f "${backup_source}/iptables.rules" ]]; then
+        if sudo iptables-restore < "${backup_source}/iptables.rules" 2>&1; then
+            log SUCCESS "Restored iptables rules"
+        else
+            log WARNING "Failed to restore iptables rules"
+        fi
+    fi
+    
+    if [[ -f "${backup_source}/ip6tables.rules" ]]; then
+        if sudo ip6tables-restore < "${backup_source}/ip6tables.rules" 2>&1; then
+            log SUCCESS "Restored ip6tables rules"
+        else
+            log WARNING "Failed to restore ip6tables rules"
+        fi
+    fi
     
     rm -rf "${temp_dir}"
     
-    log SUCCESS "System restored from backup"
+    if [[ $restore_errors -gt 0 ]]; then
+        log WARNING "Restore completed with ${restore_errors} errors"
+        return 1
+    else
+        log SUCCESS "System restored from backup successfully"
+    fi
+}
+
+is_package_installed() {
+    dpkg -l "$1" 2>/dev/null | grep -q "^ii"
 }
 
 install_package() {
     local package="$1"
+    
+    # Check if already installed
+    if is_package_installed "${package}"; then
+        log INFO "${package} already installed"
+        return 0
+    fi
+    
     local max_retries=3
     local retry_count=0
     
     while [[ ${retry_count} -lt ${max_retries} ]]; do
-        if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${package}" 2>/dev/null; then
+        if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${package}" 2>&1 | tee -a "${LOG_FILE}"; then
             log SUCCESS "Installed ${package}"
             return 0
         fi
@@ -344,8 +431,31 @@ install_package() {
         sleep 2
     done
     
-    log ERROR "Failed to install ${package}"
+    log ERROR "Failed to install ${package} after ${max_retries} attempts"
     return 1
+}
+
+resolve_dependencies() {
+    local module="$1"
+    local -a resolved=()
+    
+    if [[ -n "${MODULE_DEPS[$module]:-}" ]]; then
+        for dep in ${MODULE_DEPS[$module]}; do
+            # Check if dependency already executed
+            if [[ ! " ${EXECUTED_MODULES[@]} " =~ " ${dep} " ]]; then
+                # Recursively resolve dependencies
+                local sub_deps=($(resolve_dependencies "${dep}"))
+                for sub_dep in "${sub_deps[@]}"; do
+                    if [[ ! " ${resolved[@]} " =~ " ${sub_dep} " ]]; then
+                        resolved+=("${sub_dep}")
+                    fi
+                done
+                resolved+=("${dep}")
+            fi
+        done
+    fi
+    
+    echo "${resolved[@]}"
 }
 
 # Module: System Update
@@ -354,11 +464,19 @@ module_system_update() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would update packages"; return 0; }
     
-    sudo apt-get update -y || return 1
-    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || return 1
-    sudo DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y || return 1
-    sudo apt-get autoremove -y || true
-    sudo apt-get autoclean -y || true
+    if ! sudo apt-get update -y 2>&1 | tee -a "${LOG_FILE}"; then
+        log ERROR "Failed to update package lists"
+        return 1
+    fi
+    
+    if ! sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y 2>&1 | tee -a "${LOG_FILE}"; then
+        log ERROR "Failed to upgrade packages"
+        return 1
+    fi
+    
+    sudo DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y 2>&1 | tee -a "${LOG_FILE}" || true
+    sudo apt-get autoremove -y 2>&1 | tee -a "${LOG_FILE}" || true
+    sudo apt-get autoclean -y 2>&1 | tee -a "${LOG_FILE}" || true
     
     log SUCCESS "System packages updated"
 }
@@ -376,7 +494,17 @@ module_firewall() {
     sudo ufw default allow outgoing
     sudo ufw default deny routed
     
-    local ssh_port=$(grep "^Port" /etc/ssh/sshd_config 2>/dev/null | awk '{print $2}' || echo "22")
+    # Detect SSH port with validation
+    local ssh_port=$(grep -E "^[[:space:]]*Port[[:space:]]+" /etc/ssh/sshd_config 2>/dev/null | \
+                     tail -1 | awk '{print $2}' | grep -E '^[0-9]+$' || echo "22")
+    
+    # Validate port range
+    if [[ $ssh_port -lt 1 || $ssh_port -gt 65535 ]]; then
+        log WARNING "Invalid SSH port detected: ${ssh_port}, using default 22"
+        ssh_port=22
+    fi
+    
+    log INFO "Configuring SSH access on port ${ssh_port}"
     sudo ufw limit "${ssh_port}/tcp" comment 'SSH rate limited'
     
     # Desktop-friendly: Allow common services
@@ -403,12 +531,29 @@ module_root_access() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would restrict root"; return 0; }
     
+    # Check for non-root sudo users
+    local sudo_users=$(getent group sudo | cut -d: -f4 | tr ',' '\n' | grep -v "^root$" | grep -v "^$")
+    
+    if [[ -z "${sudo_users}" ]]; then
+        log WARNING "No non-root users with sudo privileges found. Skipping root login disable for safety."
+        echo "Please create a non-root user with sudo privileges before disabling root login."
+        return 0
+    fi
+    
+    log INFO "Non-root sudo users found: $(echo ${sudo_users} | tr '\n' ' ')"
+    
     # Disable root password login
-    sudo passwd -l root 2>/dev/null || true
+    if sudo passwd -l root 2>&1; then
+        log SUCCESS "Root password login disabled"
+    else
+        log ERROR "Failed to lock root account"
+        return 1
+    fi
     
     # Restrict su command to sudo group
-    if ! grep -q "^auth.*required.*pam_wheel.so" /etc/pam.d/su; then
+    if ! grep -q "^auth.*required.*pam_wheel.so" /etc/pam.d/su 2>/dev/null; then
         echo "auth required pam_wheel.so use_uid group=sudo" | sudo tee -a /etc/pam.d/su > /dev/null
+        log SUCCESS "Restricted su command to sudo group"
     fi
     
     log SUCCESS "Root access restricted"
@@ -423,7 +568,7 @@ module_ssh_hardening() {
     local sshd_config="/etc/ssh/sshd_config"
     [[ ! -f "${sshd_config}" ]] && { log ERROR "SSH not installed"; return 1; }
     
-    sudo cp "${sshd_config}" "${sshd_config}.backup.$(date +%Y%m%d)"
+    sudo cp "${sshd_config}" "${sshd_config}.backup.$(date +%Y%m%d_%H%M%S)"
     
     local ssh_settings=(
         "Protocol 2"
@@ -446,19 +591,26 @@ module_ssh_hardening() {
     
     for setting in "${ssh_settings[@]}"; do
         local key=$(echo "${setting}" | cut -d' ' -f1)
-        if grep -q "^${key}" "${sshd_config}"; then
-            sudo sed -i "s/^${key}.*/${setting}/" "${sshd_config}"
+        # Escape special characters for sed
+        local escaped_setting=$(echo "${setting}" | sed 's/[\/&]/\\&/g')
+        
+        # Comment out existing entries
+        sudo sed -i "s/^${key}/# &/" "${sshd_config}"
+        
+        # Add new setting
+        if grep -q "^# ${key}" "${sshd_config}"; then
+            sudo sed -i "0,/^# ${key}/s/^# ${key}.*/${escaped_setting}/" "${sshd_config}"
         else
             echo "${setting}" | sudo tee -a "${sshd_config}" > /dev/null
         fi
     done
     
-    if sudo sshd -t; then
+    if sudo sshd -t 2>&1; then
         sudo systemctl restart sshd
-        log SUCCESS "SSH hardened"
+        log SUCCESS "SSH hardened and restarted"
     else
-        log ERROR "SSH config invalid"
-        sudo cp "${sshd_config}.backup.$(date +%Y%m%d)" "${sshd_config}"
+        log ERROR "SSH config validation failed, restoring backup"
+        sudo cp "${sshd_config}.backup.$(date +%Y%m%d_%H%M%S)" "${sshd_config}"
         return 1
     fi
 }
@@ -499,14 +651,16 @@ module_clamav() {
     install_package "clamav" || return 1
     install_package "clamav-daemon" || return 1
     
-    sudo systemctl stop clamav-freshclam
-    sudo freshclam || log WARNING "Failed to update ClamAV database"
+    sudo systemctl stop clamav-freshclam 2>/dev/null || true
+    if sudo freshclam 2>&1 | tee -a "${LOG_FILE}"; then
+        log SUCCESS "ClamAV database updated"
+    else
+        log WARNING "Failed to update ClamAV database"
+    fi
     sudo systemctl start clamav-freshclam
     sudo systemctl enable clamav-freshclam
     
-    # Desktop-friendly: Don't enable realtime scanning by default
-    log INFO "ClamAV installed. Run 'clamscan -r /home' to scan manually"
-    
+    log INFO "ClamAV installed. Run 'sudo clamscan -r /home' to scan manually"
     log SUCCESS "ClamAV installed"
 }
 
@@ -518,13 +672,18 @@ module_packages() {
     
     local packages_to_remove=(
         "telnet"
+        "telnetd"
         "rsh-client"
         "rsh-redone-client"
+        "nis"
+        "yp-tools"
+        "xinetd"
     )
     
     for pkg in "${packages_to_remove[@]}"; do
-        if dpkg -l | grep -q "^ii.*${pkg}"; then
-            sudo apt-get remove -y "${pkg}" 2>/dev/null || true
+        if is_package_installed "${pkg}"; then
+            log INFO "Removing ${pkg}"
+            sudo apt-get remove --purge -y "${pkg}" 2>&1 | tee -a "${LOG_FILE}" || true
         fi
     done
     
@@ -540,13 +699,14 @@ module_audit() {
     install_package "auditd" || return 1
     install_package "audispd-plugins" || return 1
     
-    # Basic audit rules
+    # Create audit rules file
     cat << 'EOF' | sudo tee /etc/audit/rules.d/hardening.rules > /dev/null
 # Monitor authentication
 -w /etc/passwd -p wa -k identity
 -w /etc/group -p wa -k identity
 -w /etc/shadow -p wa -k identity
 -w /etc/sudoers -p wa -k actions
+-w /etc/sudoers.d/ -p wa -k actions
 
 # Monitor network changes
 -w /etc/hosts -p wa -k network
@@ -555,12 +715,21 @@ module_audit() {
 # Monitor system calls
 -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
 -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+
+# Monitor login/logout
+-w /var/log/faillog -p wa -k logins
+-w /var/log/lastlog -p wa -k logins
+-w /var/run/utmp -p wa -k session
+-w /var/log/wtmp -p wa -k session
+-w /var/log/btmp -p wa -k session
 EOF
     
     sudo systemctl enable auditd
-    sudo systemctl restart auditd
-    
-    log SUCCESS "Auditd configured"
+    if sudo systemctl restart auditd 2>&1; then
+        log SUCCESS "Auditd configured and restarted"
+    else
+        log WARNING "Auditd configuration may require manual restart"
+    fi
 }
 
 # Module: Disable Unused Filesystems
@@ -580,12 +749,12 @@ module_filesystems() {
     
     for fs in "${filesystems[@]}"; do
         echo "install ${fs} /bin/true" | sudo tee "/etc/modprobe.d/${fs}.conf" > /dev/null
+        log INFO "Disabled filesystem: ${fs}"
     done
     
     log SUCCESS "Unused filesystems disabled"
 }
 
-# Module: Boot Security
 # Module: Enhanced Boot Security with Comprehensive Kernel Hardening
 module_boot_security() {
     log INFO "Securing boot configuration with kernel hardening..."
@@ -596,7 +765,7 @@ module_boot_security() {
     [[ ! -f "${grub_config}" ]] && { log WARNING "GRUB config not found"; return 0; }
     
     # Backup GRUB config
-    sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d)" || return 1
+    sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d_%H%M%S)" || return 1
     
     # Comprehensive kernel hardening parameters
     local kernel_params=(
@@ -633,15 +802,19 @@ module_boot_security() {
     fi
     
     # Read current GRUB_CMDLINE_LINUX_DEFAULT
-    local current_params=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "${grub_config}" | cut -d'"' -f2)
+    local current_params=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "${grub_config}" | sed 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/\1/')
     
     # Add new parameters if not already present
     local added_count=0
     for param in "${kernel_params[@]}"; do
-        if [[ ! "${current_params}" =~ ${param%%=*} ]]; then
+        local param_name="${param%%=*}"
+        # Use word boundaries and more precise matching
+        if ! echo "${current_params}" | grep -qE "(^|[[:space:]])${param_name}(=|$)"; then
             current_params="${current_params} ${param}"
             added_count=$((added_count + 1))
             log INFO "Added kernel parameter: ${param}"
+        else
+            log INFO "Kernel parameter already present: ${param_name}"
         fi
     done
     
@@ -654,7 +827,7 @@ module_boot_security() {
     fi
     
     # Enable cryptodisk support if encrypted system
-    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE | grep -q "crypt"; then
+    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
         if ! grep -q "^GRUB_ENABLE_CRYPTODISK=y" "${grub_config}"; then
             if grep -q "^GRUB_ENABLE_CRYPTODISK=" "${grub_config}"; then
                 sudo sed -i 's/^GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/' "${grub_config}"
@@ -689,11 +862,21 @@ module_boot_security() {
     # Update GRUB
     log INFO "Updating GRUB configuration..."
     if command -v update-grub &> /dev/null; then
-        sudo update-grub || { log ERROR "Failed to update GRUB"; return 1; }
+        if sudo update-grub 2>&1 | tee -a "${LOG_FILE}"; then
+            log SUCCESS "GRUB updated successfully"
+        else
+            log ERROR "Failed to update GRUB"
+            return 1
+        fi
     elif command -v grub2-mkconfig &> /dev/null; then
-        sudo grub2-mkconfig -o /boot/grub2/grub.cfg || { log ERROR "Failed to update GRUB"; return 1; }
+        if sudo grub2-mkconfig -o /boot/grub2/grub.cfg 2>&1 | tee -a "${LOG_FILE}"; then
+            log SUCCESS "GRUB updated successfully"
+        else
+            log ERROR "Failed to update GRUB"
+            return 1
+        fi
     else
-        log WARNING "GRUB update command not found. Update GRUB manually."
+        log WARNING "GRUB update command not found. Update GRUB manually with 'sudo update-grub'"
         return 1
     fi
     
@@ -707,6 +890,14 @@ module_ipv6() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure IPv6"; return 0; }
     
+    # Check if IPv6 is currently enabled
+    local ipv6_status=$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>/dev/null || echo "1")
+    
+    if [[ "${ipv6_status}" == "1" ]]; then
+        log INFO "IPv6 is already disabled"
+        return 0
+    fi
+    
     if [[ "${INTERACTIVE}" == "true" ]]; then
         read -p "Disable IPv6? (y/N): " -r disable_ipv6
         if [[ "${disable_ipv6}" =~ ^[Yy]$ ]]; then
@@ -716,10 +907,11 @@ net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
             sudo sysctl -p /etc/sysctl.d/60-disable-ipv6.conf
+            log SUCCESS "IPv6 disabled"
+        else
+            log INFO "IPv6 remains enabled"
         fi
     fi
-    
-    log SUCCESS "IPv6 configured"
 }
 
 # Module: AppArmor
@@ -734,9 +926,29 @@ module_apparmor() {
     sudo systemctl enable apparmor
     sudo systemctl start apparmor
     
-    # Set all profiles to enforce mode
-    if [[ "${SECURITY_LEVEL}" == "high" ]] || [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
-        sudo aa-enforce /etc/apparmor.d/* 2>/dev/null || true
+    # Set all profiles to enforce mode (high/paranoid security)
+    if [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
+        log INFO "Enforcing AppArmor profiles..."
+        local failed_profiles=()
+        local enforced_count=0
+        
+        for profile in /etc/apparmor.d/*; do
+            if [[ -f "$profile" ]] && [[ ! "$profile" =~ \.(dpkg|save|disabled) ]]; then
+                local profile_name=$(basename "$profile")
+                if sudo aa-enforce "$profile" 2>&1 | tee -a "${LOG_FILE}"; then
+                    enforced_count=$((enforced_count + 1))
+                else
+                    failed_profiles+=("${profile_name}")
+                fi
+            fi
+        done
+        
+        log SUCCESS "Enforced ${enforced_count} AppArmor profiles"
+        
+        if [[ ${#failed_profiles[@]} -gt 0 ]]; then
+            log WARNING "Failed to enforce ${#failed_profiles[@]} profiles: ${failed_profiles[*]}"
+            log INFO "Run 'sudo aa-complain /etc/apparmor.d/<profile>' to set problematic profiles to complain mode"
+        fi
     fi
     
     log SUCCESS "AppArmor configured"
@@ -749,12 +961,19 @@ module_ntp() {
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure NTP"; return 0; }
     
     # Modern Ubuntu uses systemd-timesyncd
-    sudo systemctl enable systemd-timesyncd
-    sudo systemctl start systemd-timesyncd
-    
-    sudo timedatectl set-ntp true
-    
-    log SUCCESS "Time synchronization configured"
+    if systemctl list-unit-files | grep -q systemd-timesyncd.service; then
+        log INFO "Using systemd-timesyncd"
+        sudo systemctl enable systemd-timesyncd
+        sudo systemctl start systemd-timesyncd
+        sudo timedatectl set-ntp true
+        log SUCCESS "Time synchronization configured (systemd-timesyncd)"
+    else
+        log INFO "Using traditional NTP"
+        install_package "ntp" || return 1
+        sudo systemctl enable ntp
+        sudo systemctl start ntp
+        log SUCCESS "Time synchronization configured (NTP)"
+    fi
 }
 
 # Module: AIDE
@@ -766,10 +985,19 @@ module_aide() {
     install_package "aide" || return 1
     
     log INFO "Initializing AIDE database (this may take several minutes)..."
-    sudo aideinit || log WARNING "AIDE initialization failed"
+    if ! sudo aideinit 2>&1 | tee -a "${LOG_FILE}"; then
+        log ERROR "AIDE initialization failed"
+        return 1
+    fi
     
-    if [[ -f /var/lib/aide/aide.db.new ]]; then
-        sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+    if [[ ! -f /var/lib/aide/aide.db.new ]]; then
+        log ERROR "AIDE database not created after initialization"
+        return 1
+    fi
+    
+    if ! sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db; then
+        log ERROR "Failed to move AIDE database"
+        return 1
     fi
     
     # Create daily check cron
@@ -787,6 +1015,11 @@ module_sysctl() {
     log INFO "Configuring kernel parameters..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure sysctl"; return 0; }
+    
+    # Check if already configured
+    if [[ -f /etc/sysctl.d/99-security-hardening.conf ]]; then
+        log INFO "Sysctl hardening already configured, updating..."
+    fi
     
     cat << 'EOF' | sudo tee /etc/sysctl.d/99-security-hardening.conf > /dev/null
 # IP Forwarding
@@ -807,7 +1040,7 @@ net.ipv4.conf.default.accept_source_route = 0
 net.ipv6.conf.all.accept_source_route = 0
 net.ipv6.conf.default.accept_source_route = 0
 
-# Ignore ICMP pings
+# Ignore ICMP pings (optional - set to 0 for desktop)
 net.ipv4.icmp_echo_ignore_all = 0
 
 # Log suspicious packets
@@ -825,11 +1058,16 @@ fs.suid_dumpable = 0
 
 # Address space layout randomization
 kernel.randomize_va_space = 2
+
+# Core dumps
+kernel.core_uses_pid = 1
 EOF
     
-    sudo sysctl -p /etc/sysctl.d/99-security-hardening.conf
-    
-    log SUCCESS "Kernel parameters hardened"
+    if sudo sysctl -p /etc/sysctl.d/99-security-hardening.conf 2>&1 | tee -a "${LOG_FILE}"; then
+        log SUCCESS "Kernel parameters hardened"
+    else
+        log WARNING "Some kernel parameters may not have been applied"
+    fi
 }
 
 # Module: Password Policy
@@ -843,6 +1081,13 @@ module_password_policy() {
     sudo sed -i 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
     sudo sed -i 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS   7/' /etc/login.defs
     sudo sed -i 's/^PASS_WARN_AGE.*/PASS_WARN_AGE   14/' /etc/login.defs
+    
+    # Check if already configured
+    if [[ -f /etc/security/pwquality.conf.bak ]]; then
+        log INFO "Password quality already configured, updating..."
+    else
+        sudo cp /etc/security/pwquality.conf /etc/security/pwquality.conf.bak 2>/dev/null || true
+    fi
     
     cat << 'EOF' | sudo tee /etc/security/pwquality.conf > /dev/null
 minlen = 12
@@ -880,7 +1125,11 @@ Unattended-Upgrade::Remove-Unused-Dependencies "true";
 Unattended-Upgrade::Automatic-Reboot "false";
 EOF
     
-    sudo dpkg-reconfigure -plow unattended-upgrades
+    if [[ "${INTERACTIVE}" == "true" ]]; then
+        sudo dpkg-reconfigure -plow unattended-upgrades
+    else
+        echo 'APT::Periodic::Unattended-Upgrade "1";' | sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null
+    fi
     
     log SUCCESS "Automatic updates enabled"
 }
@@ -894,10 +1143,11 @@ module_rootkit_scanner() {
     install_package "rkhunter" || return 1
     install_package "chkrootkit" || return 1
     
-    sudo rkhunter --update || true
-    sudo rkhunter --propupd || true
+    sudo rkhunter --update 2>&1 | tee -a "${LOG_FILE}" || true
+    sudo rkhunter --propupd 2>&1 | tee -a "${LOG_FILE}" || true
     
     log SUCCESS "Rootkit scanners installed"
+    log INFO "Run 'sudo rkhunter --check' to scan for rootkits"
 }
 
 # Module: USB Protection
@@ -912,8 +1162,11 @@ ACTION=="add", SUBSYSTEM=="usb", RUN+="/bin/sh -c 'echo USB device: $attr{idVend
 EOF
     
     sudo udevadm control --reload-rules
+    sudo touch /var/log/usb-devices.log
+    sudo chmod 644 /var/log/usb-devices.log
     
     log SUCCESS "USB logging configured"
+    log INFO "USB device connections will be logged to /var/log/usb-devices.log"
 }
 
 # Module: Secure Shared Memory
@@ -922,12 +1175,28 @@ module_secure_shared_memory() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure memory"; return 0; }
     
-    if ! grep -q "tmpfs.*noexec" /etc/fstab; then
-        echo "tmpfs /run/shm tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
-        sudo mount -o remount /run/shm 2>/dev/null || true
+    # Check if /run/shm exists, fallback to /dev/shm
+    local shm_mount="/run/shm"
+    [[ ! -d "$shm_mount" ]] && shm_mount="/dev/shm"
+    
+    if [[ ! -d "$shm_mount" ]]; then
+        log WARNING "Shared memory mount point not found"
+        return 0
     fi
     
-    log SUCCESS "Shared memory secured"
+    if ! grep -q "tmpfs.*${shm_mount}.*noexec" /etc/fstab; then
+        echo "tmpfs ${shm_mount} tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
+        
+        if sudo mount -o remount "${shm_mount}" 2>&1 | tee -a "${LOG_FILE}"; then
+            log SUCCESS "Shared memory remounted with security options"
+        else
+            log WARNING "Failed to remount ${shm_mount}, will take effect after reboot"
+        fi
+    else
+        log INFO "Shared memory already secured"
+    fi
+    
+    log SUCCESS "Shared memory configured"
 }
 
 # Module: Lynis Audit
@@ -937,19 +1206,30 @@ module_lynis_audit() {
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would run Lynis"; return 0; }
     
     if ! command -v lynis &> /dev/null; then
-        install_package "lynis" || return 1
+        log INFO "Installing Lynis..."
+        install_package "lynis" || {
+            log WARNING "Failed to install Lynis from repository"
+            return 1
+        }
     fi
     
-    local audit_log="/var/log/lynis-$(date +%Y%m%d).log"
-    sudo lynis audit system --quick --quiet --log-file "${audit_log}" || true
-    
-    log SUCCESS "Lynis audit completed: ${audit_log}"
+    local audit_log="/var/log/lynis-$(date +%Y%m%d_%H%M%S).log"
+    if sudo lynis audit system --quick --quiet --log-file "${audit_log}" 2>&1 | tee -a "${LOG_FILE}"; then
+        log SUCCESS "Lynis audit completed: ${audit_log}"
+    else
+        log WARNING "Lynis audit completed with warnings"
+    fi
 }
 
 generate_report() {
     log INFO "Generating security report..."
     
-    cat << 'EOF' > "${REPORT_FILE}"
+    local failed_list=""
+    if [[ ${#FAILED_MODULES[@]} -gt 0 ]]; then
+        failed_list="<p><strong>Failed Modules:</strong> ${FAILED_MODULES[*]}</p>"
+    fi
+    
+    cat << EOF > "${REPORT_FILE}"
 <!DOCTYPE html>
 <html>
 <head>
@@ -957,23 +1237,66 @@ generate_report() {
     <title>Security Hardening Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
-        .info-box { background: #e7f3ff; border-left: 4px solid #007bff; padding: 10px; margin: 10px 0; }
+        .info-box { background: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; border-radius: 4px; }
         .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #007bff; color: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #007bff; color: white; font-weight: bold; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Security Hardening Report</h1>
+        <h1>🔒 Security Hardening Report</h1>
+        
         <div class="info-box">
+            <h2>System Information</h2>
             <p><strong>System:</strong> $(lsb_release -ds)</p>
             <p><strong>Kernel:</strong> $(uname -r)</p>
+            <p><strong>Hostname:</strong> $(hostname)</p>
             <p><strong>Date:</strong> $(date)</p>
-            <p><strong>Desktop:</strong> ${IS_DESKTOP}</p>
+            <p><strong>Desktop Environment:</strong> ${IS_DESKTOP}</p>
+            <p><strong>Security Level:</strong> ${SECURITY_LEVEL}</p>
+            <p><strong>Script Version:</strong> ${VERSION}</p>
+        </div>
+        
+        <div class="info-box success">
+            <h2>Executed Modules</h2>
+            <p><strong>Total:</strong> ${#EXECUTED_MODULES[@]}</p>
+            <p><strong>Modules:</strong> ${EXECUTED_MODULES[*]}</p>
+        </div>
+        
+        ${failed_list:+<div class="info-box error">
+            <h2>Failed Modules</h2>
+            ${failed_list}
+        </div>}
+        
+        <div class="info-box">
+            <h2>Backup Information</h2>
+            <p><strong>Backup Location:</strong> ${BACKUP_DIR}.tar.gz</p>
+            <p><strong>Log File:</strong> ${LOG_FILE}</p>
+            <p>To restore from backup, run:<br>
+            <code>sudo ./${SCRIPT_NAME} --restore</code></p>
+        </div>
+        
+        <div class="info-box warning">
+            <h2>⚠️ Important Notes</h2>
+            <ul>
+                <li>A system restart is recommended to apply all changes</li>
+                <li>Keep the backup file safe for recovery purposes</li>
+                <li>Review the log file for detailed information: ${LOG_FILE}</li>
+                <li>Test all critical services before deploying to production</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by Enhanced Linux Security Hardening Script v${VERSION}</p>
+            <p>GitHub: <a href="https://github.com/captainzero93/security_harden_linux">captainzero93/security_harden_linux</a></p>
         </div>
     </div>
 </body>
@@ -993,16 +1316,43 @@ execute_modules() {
         
         if [[ -n "${DISABLE_MODULES}" ]]; then
             IFS=',' read -ra disabled <<< "${DISABLE_MODULES}"
-            for module in "${disabled[@]}"; do
-                modules_to_run=("${modules_to_run[@]/$module}")
+            local filtered=()
+            for module in "${modules_to_run[@]}"; do
+                local skip=false
+                for disabled_mod in "${disabled[@]}"; do
+                    [[ "${module}" == "${disabled_mod}" ]] && skip=true && break
+                done
+                $skip || filtered+=("${module}")
             done
+            modules_to_run=("${filtered[@]}")
         fi
     fi
     
-    local total=${#modules_to_run[@]}
+    # Resolve dependencies and create execution order
+    local -a execution_order=()
+    for module in "${modules_to_run[@]}"; do
+        [[ -z "${module}" ]] && continue
+        
+        # Get dependencies
+        local deps=($(resolve_dependencies "${module}"))
+        for dep in "${deps[@]}"; do
+            if [[ ! " ${execution_order[@]} " =~ " ${dep} " ]]; then
+                execution_order+=("${dep}")
+            fi
+        done
+        
+        # Add module itself
+        if [[ ! " ${execution_order[@]} " =~ " ${module} " ]]; then
+            execution_order+=("${module}")
+        fi
+    done
+    
+    local total=${#execution_order[@]}
     local current=0
     
-    for module in "${modules_to_run[@]}"; do
+    log INFO "Execution order: ${execution_order[*]}"
+    
+    for module in "${execution_order[@]}"; do
         [[ -z "${module}" ]] && continue
         
         current=$((current + 1))
@@ -1011,55 +1361,97 @@ execute_modules() {
         local func="module_${module}"
         if declare -f "${func}" > /dev/null; then
             if "${func}"; then
+                EXECUTED_MODULES+=("${module}")
                 log SUCCESS "Module ${module} completed"
             else
+                FAILED_MODULES+=("${module}")
                 log ERROR "Module ${module} failed"
+                
+                if [[ "${INTERACTIVE}" == "true" ]]; then
+                    read -p "Continue with remaining modules? (Y/n): " -r continue_exec
+                    [[ "${continue_exec}" =~ ^[Nn]$ ]] && break
+                fi
             fi
+        else
+            log ERROR "Module function ${func} not found"
+            FAILED_MODULES+=("${module}")
         fi
     done
+    
+    echo # New line after progress bar
 }
 
 main() {
+    # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -h|--help) display_help ;;
             -v|--verbose) VERBOSE=true; shift ;;
             -n|--non-interactive) INTERACTIVE=false; shift ;;
             -d|--dry-run) DRY_RUN=true; shift ;;
-            -l|--level) SECURITY_LEVEL="$2"; shift 2 ;;
+            -l|--level) 
+                if [[ ! "$2" =~ ^(low|moderate|high|paranoid)$ ]]; then
+                    echo "Invalid security level: $2"
+                    echo "Valid options: low, moderate, high, paranoid"
+                    exit 1
+                fi
+                SECURITY_LEVEL="$2"
+                shift 2
+                ;;
             -e|--enable) ENABLE_MODULES="$2"; shift 2 ;;
             -x|--disable) DISABLE_MODULES="$2"; shift 2 ;;
-            -r|--restore) check_permissions; restore_backup "$2"; exit $? ;;
-            -R|--report) check_permissions; generate_report; exit 0 ;;
+            -r|--restore) 
+                check_permissions
+                restore_backup "$2"
+                exit $?
+                ;;
+            -R|--report) 
+                check_permissions
+                generate_report
+                exit 0
+                ;;
             -c|--config) CONFIG_FILE="$2"; shift 2 ;;
             --version) echo "v${VERSION}"; exit 0 ;;
             --list-modules) list_modules ;;
-            *) echo "Unknown option: $1"; display_help ;;
+            *) 
+                echo "Unknown option: $1"
+                display_help
+                ;;
         esac
     done
     
     check_permissions
     detect_desktop
     load_config
+    validate_security_level
     check_requirements
     
     sudo touch "${LOG_FILE}"
     sudo chmod 640 "${LOG_FILE}"
     
     log INFO "Starting Security Hardening v${VERSION}"
+    log INFO "Security Level: ${SECURITY_LEVEL}"
+    log INFO "Desktop Mode: ${IS_DESKTOP}"
+    log INFO "Dry Run: ${DRY_RUN}"
     
     [[ "${DRY_RUN}" == "false" ]] && backup_files
     
     execute_modules
     generate_report
     
+    echo
+    log SUCCESS "================================"
     log SUCCESS "Security hardening completed!"
+    log SUCCESS "================================"
+    log INFO "Executed modules: ${#EXECUTED_MODULES[@]}"
+    [[ ${#FAILED_MODULES[@]} -gt 0 ]] && log WARNING "Failed modules: ${#FAILED_MODULES[@]} (${FAILED_MODULES[*]})"
     log INFO "Backup: ${BACKUP_DIR}.tar.gz"
     log INFO "Log: ${LOG_FILE}"
     log INFO "Report: ${REPORT_FILE}"
     
     if [[ "${DRY_RUN}" == "false" ]] && [[ "${INTERACTIVE}" == "true" ]]; then
-        read -p "Restart recommended. Restart now? (y/N): " -r restart
+        echo
+        read -p "Restart recommended to apply all changes. Restart now? (y/N): " -r restart
         [[ "${restart}" =~ ^[Yy]$ ]] && sudo reboot
     fi
 }
