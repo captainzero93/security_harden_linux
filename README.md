@@ -4,8 +4,6 @@ Security hardening scripts for Ubuntu/Kubuntu/Debian systems implementing DISA S
 
 **Version 3.1-fixed** - Production-ready with comprehensive fixes, module dependency resolution, backup verification, and KDE Plasma optimizations!
 
-**Note:** For advanced users, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-) for a more comprehensive solution.
-
 ## What's New in v3.1-fixed
 
 ### Critical Improvements
@@ -1274,6 +1272,9 @@ For production/enterprise environments:
 - Basic hardening features
 
 ---
+
+**Note:** WARNING: this repo needs updating but for advanced users, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-) for a more comprehensive solution that complies more to DISA/STIG/CIS.
+
 
 **Star this repository if you find it useful! ⭐**
 
