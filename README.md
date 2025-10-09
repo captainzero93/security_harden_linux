@@ -59,7 +59,7 @@ wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/
 
 sha256sum improved_harden_linux.sh
 # Compare the output with the official hash from a trusted source (Github)
-30a52499b6221301640f1299fcdfd3925dd44abf04cb17e7225d17865b66662b
+8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E
 
 # Step 3: CRITICAL - Review the code before execution
 less improved_harden_linux.sh
