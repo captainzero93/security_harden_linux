@@ -317,19 +317,19 @@ This script changes that balance - applying enterprise-grade security while main
 
 ---
 
-## ✅ Safety Features Status
+## Safety Features Status
 
 | Feature | Status | Prevents |
 |---------|--------|----------|
-| SSH Key Validation | ✅ v3.4 | Lockouts from disabling passwords without keys |
-| Firewall SSH Protection | ✅ v3.4 | Disconnection during firewall reset |
-| Encryption Detection | ✅ v3.4 | Unbootable systems from `nousb` parameter |
-| GRUB Validation | ✅ v3.4 | Boot failures from invalid configuration |
-| AIDE Timeout | ✅ v3.4 | Script hanging indefinitely |
-| AppArmor Enforcement | ✅ v3.4 | Security regression from complain mode |
-| Automatic Backups | ✅ Always | Data loss from any issues |
-| SHA-256 Verification | ✅ Always | Corrupted backups |
-| One-Command Restore | ✅ Always | Complex recovery procedures |
+| SSH Key Validation |  v3.4 | Lockouts from disabling passwords without keys |
+| Firewall SSH Protection |  v3.4 | Disconnection during firewall reset |
+| Encryption Detection |  v3.4 | Unbootable systems from `nousb` parameter |
+| GRUB Validation |  v3.4 | Boot failures from invalid configuration |
+| AIDE Timeout |  v3.4 | Script hanging indefinitely |
+| AppArmor Enforcement |  v3.4 | Security regression from complain mode |
+| Automatic Backups |  Always | Data loss from any issues |
+| SHA-256 Verification |  Always | Corrupted backups |
+| One-Command Restore |  Always | Complex recovery procedures |
 
 ---
 
@@ -351,7 +351,7 @@ sudo -v
 ### Pre-Flight Checks (Essential for Remote Systems)
 
 ```bash
-# ⚠️ CRITICAL: Ensure SSH keys are configured (prevents lockout)
+# CRITICAL: Ensure SSH keys are configured (prevents lockout)
 ls -la ~/.ssh/authorized_keys
 # If empty, set up keys NOW:
 ssh-keygen -t ed25519
@@ -504,7 +504,7 @@ Advanced:
 ## What Gets Hardened?
 
 <details>
-<summary><b>🔍 Click to view detailed security measures</b></summary>
+<summary><b> Click to view detailed security measures</b></summary>
 
 ### Firewall Configuration
 - Default deny all incoming
@@ -842,7 +842,7 @@ uname -r
 
 ---
 
-## 🎓 Advanced Usage
+## Advanced Usage
 
 <details>
 <summary><b>Server Deployment Pipeline</b></summary>
@@ -976,7 +976,7 @@ sudo lynis show details
 
 ---
 
-## ⚠️ Important Notes
+## ! Important Notes
 
 **This script makes significant system changes.** While v3.4 includes extensive safety checks and automatic backups:
 
@@ -992,7 +992,7 @@ sudo lynis show details
 - Monitor after deployment
 
 <details>
-<summary><b>📜 Full Legal Disclaimer (click to expand)</b></summary>
+<summary><b> Full Legal Disclaimer (click to expand)</b></summary>
 
 **USE AT YOUR OWN RISK**
 
