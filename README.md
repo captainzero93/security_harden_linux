@@ -3,7 +3,7 @@
 One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.
 
 **Version 3.4** - critical SSH lockout prevention and boot failure protection
-**Version 3.5** - Production-ready with critical fixes applied
+**Version 3.5** - Production-ready with critical fixes applied + SHA256 for verifcation
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -14,26 +14,24 @@ One-command security hardening that implements enterprise-grade protections (DIS
 
 ## Table of Contents
 
-- [TL;DR - Quick Commands](#-tldr---quick-commands)
+- [TL;DR - Quick Commands](#tldr---quick-commands)
 - [Quick Start](#quick-start-for-most-users)
 - [Why Harden Your Linux System?](#why-harden-your-linux-system)
 - [What's New in v3.4](#whats-new-in-v34)
-- [Safety Features Status](#-safety-features-status)
+- [Safety Features Status](#safety-features-status)
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
-- [Security Levels](#-security-levels)
+- [Security Levels](#security-levels)
 - [Available Modules](#available-modules)
 - [Emergency Recovery](#emergency-recovery)
 - [Common Questions](#common-questions)
 - [Troubleshooting](#troubleshooting)
-- [Advanced Usage](#-advanced-usage)
+- [Advanced Usage](#advanced-usage)
 - [Version History](#version-history)
 
 ---
 
-##  TL;DR - Quick Commands
-
-## Quick Start (For Most Users)
+## TL;DR - Quick Commands
 
 **Secure your system in 3 steps:**
 
@@ -49,32 +47,6 @@ sudo ./improved_harden_linux.sh --dry-run
 sudo ./improved_harden_linux.sh
 ```
 
-**For most users (desktop/workstation):**
-
-```bash
-# Step 1: Download the script
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-
-# Step 2: Verify the checksum
-
-sha256sum improved_harden_linux.sh
-# Compare the output with the official hash from a trusted source (Github)
-8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E
-
-# Step 3: CRITICAL - Review the code before execution
-
-# Step 4: Make executable
-chmod +x improved_harden_linux.sh
-
-# Step 5: Test in safe mode first (no changes made)
-sudo ./improved_harden_linux.sh --dry-run
-
-# Step 6: Apply hardening (only after reviewing dry-run output)
-sudo ./improved_harden_linux.sh
-```
-
-**Time:** 10 minutes | **Risk:** Low (auto-backup) | **Reboot:** Recommended | **Recovery:** One command
-
 **For servers:**
 ```bash
 sudo ./improved_harden_linux.sh -l high -n  # Non-interactive, high security
@@ -89,24 +61,48 @@ sudo ./improved_harden_linux.sh --report    # Generate report
 ```
 
 **Need help?** Jump to:
--  [Locked out of SSH?](#cant-login-via-ssh)
--  [System won't boot?](#system-wont-boot-after-boot_security-module)
--  [Common questions](#common-questions)
+- [Locked out of SSH?](#cant-login-via-ssh)
+- [System won't boot?](#system-wont-boot-after-boot_security-module)
+- [Common questions](#common-questions)
 
 ---
 
+## Quick Start (For Most Users)
 
+**For desktop/workstation users:**
 
-The script will:
-- ✅ Automatically create a backup
-- ✅ Detect if you're on a desktop (preserves all GUI features)
-- ✅ Apply balanced security settings
-- ✅ Ask before making breaking changes
-- ✅ Generate a detailed report
+```bash
+# Step 1: Download the script
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+
+# Step 2: Verify the checksum
+sha256sum improved_harden_linux.sh
+# Compare the output with the official hash from a trusted source (Github)
+# 8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E
+
+# Step 3: CRITICAL - Review the code before execution
+
+# Step 4: Make executable
+chmod +x improved_harden_linux.sh
+
+# Step 5: Test in safe mode first (no changes made)
+sudo ./improved_harden_linux.sh --dry-run
+
+# Step 6: Apply hardening (only after reviewing dry-run output)
+sudo ./improved_harden_linux.sh
+```
+
+**What the script does:**
+- ✅ Automatically creates a backup
+- ✅ Detects if you're on a desktop (preserves all GUI features)
+- ✅ Applies balanced security settings
+- ✅ Asks before making breaking changes
+- ✅ Generates a detailed report
 
 **Time required:** 5-10 minutes  
 **Reboot required:** Recommended (script will ask)  
-**Risk level:** Low (automatic backups + tested defaults)
+**Risk level:** Low (automatic backups + tested defaults)  
+**Recovery:** One command
 
 ---
 
@@ -136,7 +132,7 @@ The script will:
 ### Why Each Hardening Measure Matters
 
 <details>
-<summary><b> Firewall (UFW) - Blocks Port Scanners</b></summary>
+<summary><b>Firewall (UFW) - Blocks Port Scanners</b></summary>
 
 **Threat:** Port scanners probe your system 24/7 looking for open services to exploit.
 
@@ -148,7 +144,7 @@ The script will:
 </details>
 
 <details>
-<summary><b> SSH Hardening - Stops the #1 Attack Vector</b></summary>
+<summary><b>SSH Hardening - Stops the #1 Attack Vector</b></summary>
 
 **Threat:** SSH is the #1 target for automated attacks. Botnets try millions of username/password combinations.
 
@@ -164,7 +160,7 @@ The script will:
 </details>
 
 <details>
-<summary><b> Kernel Hardening - Defeats Exploitation</b></summary>
+<summary><b>Kernel Hardening - Defeats Exploitation</b></summary>
 
 **Threat:** Kernel exploits bypass all other security. One kernel vulnerability = game over.
 
@@ -193,7 +189,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> Fail2Ban - Blocks Brute Force</b></summary>
+<summary><b>Fail2Ban - Blocks Brute Force</b></summary>
 
 **Threat:** Brute force attacks never stop. Bots will try to login thousands of times per day.
 
@@ -201,7 +197,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> Audit Logging - Evidence & Forensics</b></summary>
+<summary><b>Audit Logging - Evidence & Forensics</b></summary>
 
 **Threat:** If you're compromised, you need to know WHAT the attacker accessed and WHEN.
 
@@ -211,7 +207,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> AppArmor - Application Sandboxing</b></summary>
+<summary><b>AppArmor - Application Sandboxing</b></summary>
 
 **Threat:** If an application is compromised, attackers can access anything that user can.
 
@@ -221,7 +217,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> AIDE - Detects Backdoors</b></summary>
+<summary><b>AIDE - Detects Backdoors</b></summary>
 
 **Threat:** Advanced attackers modify system files (e.g., `/bin/ls`) to hide their presence.
 
@@ -231,7 +227,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> Password Policy - Resists Cracking</b></summary>
+<summary><b>Password Policy - Resists Cracking</b></summary>
 
 **Threat:** Weak passwords cracked in seconds by modern GPUs.
 
@@ -239,7 +235,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> Automatic Updates - Patches Known Vulnerabilities</b></summary>
+<summary><b>Automatic Updates - Patches Known Vulnerabilities</b></summary>
 
 **Threat:** New vulnerabilities discovered daily. Unpatched systems compromised within hours.
 
@@ -247,7 +243,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 </details>
 
 <details>
-<summary><b> Boot Security - Prevents Physical Attacks</b></summary>
+<summary><b>Boot Security - Prevents Physical Attacks</b></summary>
 
 **Threat:** Physical access allows attacker to modify boot parameters, boot into single-user mode.
 
@@ -282,7 +278,6 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 **This script:**
 - Implements 50+ security controls in 10 minutes
 - Based on DISA STIG and CIS Benchmarks (trusted by DoD and Fortune 500)
-- Tested on thousands of systems
 - Automatically handles dependencies
 - Creates backups for safe rollback
 
@@ -298,7 +293,7 @@ This script changes that balance - applying enterprise-grade security while main
 
 ## What's New in v3.4
 
-### ! Critical Safety Fixes
+### Critical Safety Fixes
 
 **Prevents SSH Lockouts**
 - Checks `/root/.ssh` AND `/home/*/.ssh` for SSH keys
@@ -337,32 +332,25 @@ This script changes that balance - applying enterprise-grade security while main
 
 | Feature | Status | Prevents |
 |---------|--------|----------|
-| SSH Key Validation |  v3.4 | Lockouts from disabling passwords without keys |
-| Firewall SSH Protection |  v3.4 | Disconnection during firewall reset |
-| Encryption Detection |  v3.4 | Unbootable systems from `nousb` parameter |
-| GRUB Validation |  v3.4 | Boot failures from invalid configuration |
-| AIDE Timeout |  v3.4 | Script hanging indefinitely |
-| AppArmor Enforcement |  v3.4 | Security regression from complain mode |
-| Automatic Backups |  Always | Data loss from any issues |
-| SHA-256 Verification |  Always | Corrupted backups |
-| One-Command Restore |  Always | Complex recovery procedures |
+| SSH Key Validation | ✅ v3.4 | Lockouts from disabling passwords without keys |
+| Firewall SSH Protection | ✅ v3.4 | Disconnection during firewall reset |
+| Encryption Detection | ✅ v3.4 | Unbootable systems from `nousb` parameter |
+| GRUB Validation | ✅ v3.4 | Boot failures from invalid configuration |
+| AIDE Timeout | ✅ v3.4 | Script hanging indefinitely |
+| AppArmor Enforcement | ✅ v3.4 | Security regression from complain mode |
+| Automatic Backups | ✅ Always | Data loss from any issues |
+| SHA-256 Verification | ✅ Always | Corrupted backups |
+| One-Command Restore | ✅ Always | Complex recovery procedures |
 
 ---
 
-## Installation
+### Known Limitations
 
-### Standard Installation
-
-```bash
-# Download
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-
-# Make executable
-chmod +x improved_harden_linux.sh
-
-# Verify sudo access
-sudo -v
-```
+- **AIDE initialization**: Takes 10-30 minutes on first run (60+ on large systems)
+- **ClamAV updates**: Requires internet; may timeout on slow connections
+- **GRUB updates**: Reboot required for boot security changes
+- **Lynis**: May need manual installation if repositories unavailable
+- **Encrypted systems**: Script detects encryption and skips conflicting settings
 
 ### Pre-Flight Checks (Essential for Remote Systems)
 
@@ -440,7 +428,7 @@ sudo ./improved_harden_linux.sh --report
 
 ---
 
-## 🎚️ Security Levels
+## Security Levels
 
 | Level | Best For | Impact | What It Does |
 |-------|----------|--------|--------------|
@@ -520,7 +508,7 @@ Advanced:
 ## What Gets Hardened?
 
 <details>
-<summary><b> Click to view detailed security measures</b></summary>
+<summary><b>Click to view detailed security measures</b></summary>
 
 ### Firewall Configuration
 - Default deny all incoming
@@ -600,7 +588,7 @@ sha256sum -c /root/security_backup_*.tar.gz.sha256
 
 ### Can't Login via SSH?
 
-**v3.4 prevents this!** Multiple safety checks:
+**v3.5 prevents this!** Multiple safety checks:
 - ✅ Checks `/root/.ssh/authorized_keys` AND `/home/*/.ssh/authorized_keys`
 - ✅ Validates SSH key formats
 - ✅ Warns if no keys found
@@ -624,9 +612,9 @@ ssh-copy-id user@yourserver
 sudo ./improved_harden_linux.sh -e ssh_hardening
 ```
 
-### System Won't Boot After boot_security
+### System Won't Boot After boot_security Module
 
-**v3.4 prevents this!** Automatic checks:
+**v3.5 prevents this!** Automatic checks:
 - ✅ Detects encrypted systems before `nousb`
 - ✅ Validates GRUB configuration
 - ✅ Auto-restores backup if update fails
@@ -693,7 +681,7 @@ sudo aide --check
 <details>
 <summary><b>Will this break my system?</b></summary>
 
-**v3.4 is designed to prevent breakage** with multiple safety mechanisms:
+**v3.5 is designed to prevent breakage** with multiple safety mechanisms:
 - SSH key validation before disabling passwords
 - Firewall SSH rule protection
 - GRUB configuration validation
@@ -737,7 +725,7 @@ Tested by thousands of gamers without issues.
 <details>
 <summary><b>Can I run this multiple times?</b></summary>
 
-**Yes!** v3.4 is fully idempotent:
+**Yes!** v3.5 is fully idempotent:
 - ✅ Safe to re-run after updates
 - ✅ Change security levels anytime
 - ✅ Enable/disable modules freely
@@ -992,7 +980,7 @@ sudo lynis show details
 
 ---
 
-## ! Important Notes
+## Important Notes
 
 **This script makes significant system changes.** While v3.4 includes extensive safety checks and automatic backups:
 
@@ -1008,7 +996,7 @@ sudo lynis show details
 - Monitor after deployment
 
 <details>
-<summary><b> Full Legal Disclaimer (click to expand)</b></summary>
+<summary><b>Full Legal Disclaimer (click to expand)</b></summary>
 
 **USE AT YOUR OWN RISK**
 
@@ -1032,18 +1020,22 @@ For production environments:
 ---
 
 ## Version History
+###Version 3.5 (Current - 2025)
+**"Production-ready" with critical fixes applied + SHA256 for verifcation**
+- Safe cronjob for AIDE 
+- Various improvements 
 
-### v3.4 (Current - 2025)
+### v3.4 (2025)
 **Critical Security & Safety Fixes:**
-- ✅ **SSH lockout prevention:** Better key detection (checks `/root`, validates formats)
-- ✅ **Firewall safety:** Adds SSH rule before reset if in session
-- ✅ **Boot security:** Detects encryption, validates GRUB, auto-restores
-- ✅ **AIDE timeout:** 1-hour limit prevents hangs
-- ✅ **AppArmor fix:** Maintains enforcement (no longer disables)
-- ✅ **Proper cleanup:** Temp directory cleanup on exit
-- ✅ **Sysctl fix:** Removed params from kernel cmdline
-- ✅ **Shared memory:** Warns before remount
-- ✅ **Report security:** 600 permissions
+- **SSH lockout prevention:** Better key detection (checks `/root`, validates formats)
+- **Firewall safety:** Adds SSH rule before reset if in session
+- **Boot security:** Detects encryption, validates GRUB, auto-restores
+- **AIDE timeout:** 1-hour limit prevents hangs
+- **AppArmor fix:** Maintains enforcement (no longer disables)
+- **Proper cleanup:** Temp directory cleanup on exit
+- **Sysctl fix:** Removed params from kernel cmdline
+- **Shared memory:** Warns before remount
+- **Report security:** 600 permissions
 
 **Full Changelog:**
 - Fixed regex escaping for kernel parameters (kernel.*, net.*)
@@ -1099,4 +1091,4 @@ For production environments:
 
 ---
 
-**Note:** (outdated) For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
+**Note:** For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
