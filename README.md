@@ -406,14 +406,14 @@ Contents:
 sudo ./improved_harden_linux.sh --restore
 
 # Restore from specific backup with verification
-sudo ./improved_harden_linux.sh --restore /root/security_backup_20241008_143022.tar.gz
+sudo ./improved_harden_linux.sh --restore /root/security_backup_20251008_143022.tar.gz
 
 # Verify backup integrity before restore
-sha256sum -c /root/security_backup_20241008_143022.tar.gz.sha256
+sha256sum -c /root/security_backup_20251008_143022.tar.gz.sha256
 
 # Manual restore if script unavailable
 cd /
-sudo tar -xzf /root/security_backup_20241008_143022.tar.gz
+sudo tar -xzf /root/security_backup_20251008_143022.tar.gz
 sudo cp -a security_backup_*/etc/* /etc/
 sudo iptables-restore < security_backup_*/iptables.rules
 ```
@@ -1190,12 +1190,12 @@ Contact for commercial licensing terms.
 This script makes significant changes to system security settings. While extensively tested:
 
 ### Before Running
-- ✅ **Backup your data** independently of script backups
-- ✅ **Test in non-production** environment first
-- ✅ **Review changes** with `--dry-run` before applying
-- ✅ **Maintain access** to recovery console if remote
-- ✅ **Understand impact** of each module on your use case
-- ✅ **Have SSH keys** set up if running SSH hardening remotely
+- **Backup your data** independently of script backups
+- **Test in non-production** environment first
+- **Review changes** with `--dry-run` before applying
+- **Maintain access** to recovery console if remote
+- **Understand impact** of each module on your use case
+- **Have SSH keys** set up if running SSH hardening remotely
 
 ### Liability
 The authors and contributors are not responsible for:
@@ -1244,7 +1244,7 @@ For production/enterprise environments:
 - ✅ Comprehensive HTML reports with failed modules
 - ✅ Better logging throughout all modules
 
-### v3.1 (2024)
+### v3.1 (2025)
 - Desktop environment detection
 - KDE Plasma / Kubuntu optimizations
 - Kubuntu 25.10 support
@@ -1255,7 +1255,7 @@ For production/enterprise environments:
 - All modules implemented
 - Improved progress indicators
 
-### v3.0 (2024)
+### v3.0 (2025)
 - Initial modular architecture
 - Security level selection
 - Comprehensive backup system
@@ -1276,6 +1276,6 @@ For production/enterprise environments:
 **Note:** WARNING: this repo needs updating but for advanced users, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-) for a more comprehensive solution that complies more to DISA/STIG/CIS.
 
 
-**Star this repository if you find it useful! ⭐**
+**Star this repository if you find it useful!**
 
 **Report issues and contribute to make Linux security better for everyone.**
