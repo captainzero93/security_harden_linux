@@ -2,7 +2,8 @@
 
 One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.
 
-**Version 3.4** - Production-ready with critical SSH lockout prevention and boot failure protection
+**Version 3.4** - critical SSH lockout prevention and boot failure protection
+**Version 3.5** - Production-ready with critical fixes applied
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
