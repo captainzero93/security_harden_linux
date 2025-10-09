@@ -2,8 +2,7 @@
 
 One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.
 
-**Version 3.4** - critical SSH lockout prevention and boot failure protection
-**Version 3.5** - Production-ready with critical fixes applied + SHA256 for verifcation
+**Version 3.5-fixed** - Production-Ready with Critical Bug Fixes Applied
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -14,10 +13,10 @@ One-command security hardening that implements enterprise-grade protections (DIS
 
 ## Table of Contents
 
-- [TL;DR - Quick Commands](#tldr---quick-commands) , also check out [Quick Start](#quick-start-for-most-users) if you want hash verifcation on the script.
+- [TL;DR - Quick Commands](#tldr---quick-commands) , also check out [Quick Start](#quick-start-for-most-users) if you want hash verification on the script.
 - [Quick Start](#quick-start-for-most-users)
 - [Why Harden Your Linux System?](#why-harden-your-linux-system)
-- [What's New in v3.4](#whats-new-in-v34)
+- [What's New in v3.5](#whats-new-in-v35)
 - [Safety Features Status](#safety-features-status)
 - [Installation](#installation) 
 - [Usage Guide](#usage-guide)
@@ -141,7 +140,7 @@ sudo ./improved_harden_linux.sh
 
 **With Hardening:** Only approved services can accept connections. Rate limiting prevents brute force attacks. Desktop services (KDE Connect, network discovery) still work.
 
-**v3.4:** Adds SSH rule BEFORE firewall reset to prevent disconnection during configuration.
+**v3.5:** Improved SSH port detection excludes commented lines, adds emergency SSH rule before firewall reset during remote sessions.
 </details>
 
 <details>
@@ -157,7 +156,7 @@ sudo ./improved_harden_linux.sh
 - Rate limiting (max 3 attempts before ban)
 - Session timeouts (idle sessions disconnect)
 
-**v3.4:** Checks `/root/.ssh` AND `/home/*/.ssh`, validates key formats, warns if no keys found.
+**v3.5:** Enhanced key detection checks all user directories, validates key formats (ssh-rsa, ssh-ed25519, ecdsa-sha2), requires explicit confirmation if no keys found, prevents lockouts.
 </details>
 
 <details>
@@ -186,7 +185,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 
 **Why This Matters:** Modern exploits rely on knowing memory addresses. ASLR makes every system different, forcing attackers to guess. One wrong guess crashes the exploit.
 
-**v3.4:** Fixed sysctl parameter placement (removed from kernel cmdline, now in `/etc/sysctl.d/`).
+**v3.5:** Improved regex escaping for kernel parameter handling, prevents duplicate/malformed parameters in GRUB config.
 </details>
 
 <details>
@@ -195,6 +194,8 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 **Threat:** Brute force attacks never stop. Bots will try to login thousands of times per day.
 
 **Real Impact:** Blocks 95% of automated attacks. After 3 failed attempts, IP banned for 2 hours.
+
+**v3.5:** Changed backend to "auto" for better system compatibility across different distributions.
 </details>
 
 <details>
@@ -205,6 +206,8 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 **With Hardening:** Comprehensive logs of all authentication, file changes, system calls, network modifications.
 
 **Why This Matters:** Legal evidence, forensics, compliance (GDPR/HIPAA/PCI-DSS), insurance claims.
+
+**v3.5:** Audit module now properly included in dependency tree.
 </details>
 
 <details>
@@ -214,7 +217,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 
 **With Hardening:** Each application runs in security sandbox. Compromised web server can't read SSH keys.
 
-**v3.4:** No longer disables enforcement by setting all profiles to complain mode.
+**v3.5:** Maintains proper enforcement (no longer disables profiles).
 </details>
 
 <details>
@@ -224,7 +227,7 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 
 **With Hardening:** Cryptographic hashes of all system files. Daily checks detect unauthorized changes.
 
-**v3.4:** Added 1-hour timeout to prevent indefinite hangs during initialization.
+**v3.5:** Log directory (`/var/log/aide`) created with secure permissions (750) upfront, prevents permission errors.
 </details>
 
 <details>
@@ -250,10 +253,12 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 
 **With Hardening:** GRUB password protection, kernel lockdown mode, module signature enforcement.
 
-**v3.4 Critical Fixes:** 
-- Detects encrypted systems before adding `nousb` (prevents unbootable systems)
+**v3.5 Critical Fixes:** 
+- Better encryption detection using `compgen` prevents breaking LUKS/dm-crypt systems
+- Improved kernel parameter handling with proper regex escaping
 - Validates GRUB configuration before applying
 - Automatically restores backup if GRUB update fails
+- Warns about `nousb` implications on encrypted systems (can't enter password!)
 </details>
 
 ### What This Script Protects Against
@@ -292,40 +297,53 @@ This script changes that balance - applying enterprise-grade security while main
 
 ---
 
-## What's New in v3.4
+## What's New in v3.5
 
-### Critical Safety Fixes
+### Critical Production Fixes ✅
 
-**Prevents SSH Lockouts**
-- Checks `/root/.ssh` AND `/home/*/.ssh` for SSH keys
-- Validates key formats (ssh-rsa, ssh-ed25519, ecdsa-sha2)
-- Warns loudly if no keys found
-- Requires explicit confirmation before disabling password auth
+**SSH Lockout Prevention Enhanced**
+- Fixed SSH key detection to use proper return codes instead of strings
+- Better validation of SSH key formats in all user directories
+- Improved warning messages when no keys detected
+- Safer password authentication handling
 
-**Firewall Safety for Remote Systems**
-- Detects active SSH sessions (`$SSH_CONNECTION`, `$SSH_CLIENT`, `$SSH_TTY`)
-- Adds SSH rule BEFORE firewall reset
+**Firewall Safety Improvements**
+- Fixed SSH port detection to exclude commented lines in sshd_config
+- Better validation of detected port numbers (1-65535 range check)
+- Emergency SSH rule added BEFORE firewall reset if in SSH session
 
-**Prevents Unbootable Systems**
-- Detects LUKS/dm-crypt encryption
-- Warns before adding `nousb` parameter (USB keyboards won't work!)
-- Validates GRUB config before applying
-- Auto-restores backup if `update-grub` fails
+**Service Compatibility**
+- Fail2Ban backend changed from "systemd" to "auto" for better compatibility
+- Works across Ubuntu, Kubuntu, and Debian without issues
 
-**Fixed Kernel Parameter Bug**
-- Removed sysctl parameters from kernel cmdline
-- Proper placement in `/etc/sysctl.d/` only
+**Process Reliability**
+- ClamAV freshclam now has 600-second timeout to prevent indefinite hangs
+- No more frozen script during virus definition updates
 
-**AIDE Timeout**
-- 1-hour maximum initialization time
-- Progress indication during long operations
+**Encryption Detection Enhanced**
+- Better detection using `compgen` for encrypted filesystems
+- Safer handling of LUKS/dm-crypt systems
+- Prevents adding `nousb` kernel parameter that would break boot on encrypted systems
 
-**Other Improvements**
-- AppArmor no longer disables enforcement
-- Secure report permissions (600 instead of world-readable)
-- Shared memory remount warning
-- Proper temp directory cleanup on exit
-- Circular dependency detection
+**GRUB Parameter Handling Fixed**
+- Improved regex escaping for kernel parameters (kernel.*, net.*, etc.)
+- Prevents duplicate kernel parameters in GRUB config
+- Better detection and updating of existing parameters
+- Validates configuration before applying
+
+**Stability Improvements**
+- AIDE log directory (`/var/log/aide`) created with proper 750 permissions upfront
+- USB logging now includes logrotate configuration to prevent log bloat
+- Shared memory fstab regex more precise, prevents accidental duplicates
+- Backup system uses single timestamp to prevent race conditions
+- Module dependencies properly resolved (audit module added to tree)
+
+**What This Means For You:**
+- ✅ **100% Safe for Remote Servers** - Won't lock you out via SSH
+- ✅ **Works on Encrypted Systems** - Detects LUKS and avoids breaking boot
+- ✅ **No More Hanging** - ClamAV and other processes have timeouts
+- ✅ **Cleaner GRUB Config** - No duplicate or malformed kernel parameters
+- ✅ **More Reliable Backups** - No timestamp race conditions
 
 ---
 
@@ -333,12 +351,15 @@ This script changes that balance - applying enterprise-grade security while main
 
 | Feature | Status | Prevents |
 |---------|--------|----------|
-| SSH Key Validation | ✅ v3.4 | Lockouts from disabling passwords without keys |
-| Firewall SSH Protection | ✅ v3.4 | Disconnection during firewall reset |
-| Encryption Detection | ✅ v3.4 | Unbootable systems from `nousb` parameter |
-| GRUB Validation | ✅ v3.4 | Boot failures from invalid configuration |
-| AIDE Timeout | ✅ v3.4 | Script hanging indefinitely |
-| AppArmor Enforcement | ✅ v3.4 | Security regression from complain mode |
+| SSH Key Validation | ✅ v3.5 | Lockouts from disabling passwords without keys |
+| Firewall SSH Protection | ✅ v3.5 | Disconnection during firewall reset |
+| Encryption Detection | ✅ v3.5 | Unbootable systems from `nousb` parameter |
+| GRUB Validation | ✅ v3.5 | Boot failures from invalid configuration |
+| ClamAV Timeout | ✅ v3.5 | Script hanging indefinitely |
+| Fail2Ban Compatibility | ✅ v3.5 | Service failures across distros |
+| AIDE Permissions | ✅ v3.5 | Log directory permission errors |
+| USB Log Rotation | ✅ v3.5 | Log file bloat |
+| Backup Race Conditions | ✅ v3.5 | Corrupted/incomplete backups |
 | Automatic Backups | ✅ Always | Data loss from any issues |
 | SHA-256 Verification | ✅ Always | Corrupted backups |
 | One-Command Restore | ✅ Always | Complex recovery procedures |
@@ -348,10 +369,10 @@ This script changes that balance - applying enterprise-grade security while main
 ### Known Limitations
 
 - **AIDE initialization**: Takes 10-30 minutes on first run (60+ on large systems)
-- **ClamAV updates**: Requires internet; may timeout on slow connections
+- **ClamAV updates**: Requires internet; v3.5 timeout prevents hangs on slow connections
 - **GRUB updates**: Reboot required for boot security changes
 - **Lynis**: May need manual installation if repositories unavailable
-- **Encrypted systems**: Script detects encryption and skips conflicting settings
+- **Encrypted systems**: v3.5 detects encryption and skips conflicting settings
 
 ### Pre-Flight Checks (Essential for Remote Systems)
 
@@ -516,11 +537,12 @@ Advanced:
 - Rate-limited SSH (prevents brute force)
 - Desktop services preserved (mDNS, KDE Connect)
 - IPv6 protection
-- **v3.4:** SSH rule added before reset
+- **v3.5:** Improved port detection, emergency SSH rule before reset
 
 ### SSH Hardening
-- **v3.4:** Validates keys in `/root` and `/home/*`
-- **v3.4:** Checks formats (ssh-rsa, ed25519, ecdsa)
+- **v3.5:** Enhanced key detection with return code validation
+- **v3.5:** Checks all user directories for authorized_keys
+- **v3.5:** Better format validation (ssh-rsa, ed25519, ecdsa)
 - Key-only authentication
 - Root login disabled
 - Protocol 2 only
@@ -543,7 +565,7 @@ kernel.unprivileged_bpf_disabled=1  # Block BPF (5.0+)
 # ASLR Enhancement
 vm.mmap_rnd_bits=32          # Maximum randomization
 ```
-**v3.4:** Fixed sysctl parameter placement
+**v3.5:** Improved regex escaping, better parameter deduplication
 
 ### Password Policy
 - Minimum 12 characters
@@ -561,8 +583,8 @@ vm.mmap_rnd_bits=32          # Maximum randomization
 - Login/logout tracking
 
 ### Boot Security
-- **v3.4:** Encryption detection
-- **v3.4:** GRUB validation
+- **v3.5:** Better encryption detection using compgen
+- **v3.5:** Improved GRUB parameter handling
 - GRUB password protection
 - Module signature enforcement
 - Kernel lockdown
@@ -591,9 +613,9 @@ sha256sum -c /root/security_backup_*.tar.gz.sha256
 
 **v3.5 prevents this!** Multiple safety checks:
 - ✅ Checks `/root/.ssh/authorized_keys` AND `/home/*/.ssh/authorized_keys`
-- ✅ Validates SSH key formats
-- ✅ Warns if no keys found
-- ✅ Requires explicit confirmation
+- ✅ Validates SSH key formats with proper return code checking
+- ✅ Warns if no keys found with clear messages
+- ✅ Requires explicit confirmation before disabling password auth
 
 **If still locked out (via console/physical access):**
 
@@ -616,9 +638,10 @@ sudo ./improved_harden_linux.sh -e ssh_hardening
 ### System Won't Boot After boot_security Module
 
 **v3.5 prevents this!** Automatic checks:
-- ✅ Detects encrypted systems before `nousb`
-- ✅ Validates GRUB configuration
+- ✅ Detects encrypted systems using compgen before `nousb`
+- ✅ Validates GRUB configuration with proper regex escaping
 - ✅ Auto-restores backup if update fails
+- ✅ Warns about USB keyboard implications on encrypted systems
 
 **If boot fails anyway:**
 
@@ -652,7 +675,7 @@ sudo tail -f /var/log/security_hardening.log
 # Authentication attempts
 sudo tail -f /var/log/auth.log
 
-# HTML report (v3.4: secure 600 permissions)
+# HTML report (v3.5: secure 600 permissions)
 ls -lh /root/security_hardening_report_*.html
 ```
 
@@ -683,11 +706,12 @@ sudo aide --check
 <summary><b>Will this break my system?</b></summary>
 
 **v3.5 is designed to prevent breakage** with multiple safety mechanisms:
-- SSH key validation before disabling passwords
-- Firewall SSH rule protection
-- GRUB configuration validation
-- Encryption detection before `nousb`
+- Enhanced SSH key validation before disabling passwords
+- Firewall SSH rule protection for remote sessions
+- GRUB configuration validation with better regex
+- Encryption detection before adding boot parameters
 - Automatic backup restoration on failures
+- Timeout protection for long-running processes
 
 **Best practices:**
 - ✅ Test with `--dry-run` first
@@ -707,9 +731,8 @@ sudo aide --check
 - ✅ All games work normally
 - ✅ Streaming unaffected
 - ✅ RGB/peripherals work
-- ✅ USB devices work (just logged)
+- ✅ USB devices work (v3.5 adds log rotation)
 
-Tested by thousands of gamers without issues.
 </details>
 
 <details>
@@ -730,7 +753,7 @@ Tested by thousands of gamers without issues.
 - ✅ Safe to re-run after updates
 - ✅ Change security levels anytime
 - ✅ Enable/disable modules freely
-- ✅ Each run creates new backup
+- ✅ Each run creates new backup with unique timestamp
 </details>
 
 <details>
@@ -751,7 +774,8 @@ Script tells you if reboot needed.
 - Dry run: 30 seconds
 - Basic modules: 2-3 minutes  
 - Full hardening: 10-15 minutes
-- With AIDE: 15-45 minutes (v3.4 timeout: 1 hour max)
+- With AIDE: 15-45 minutes (v3.5 timeout: 1 hour max)
+- ClamAV: No more indefinite hangs (v3.5 timeout: 10 minutes)
 
 Server deployments faster (use `-n` flag).
 </details>
@@ -759,14 +783,14 @@ Server deployments faster (use `-n` flag).
 <details>
 <summary><b>What about encrypted systems?</b></summary>
 
-**v3.4 handles this specifically:**
-- ✅ Detects LUKS/dm-crypt
+**v3.5 handles this specifically:**
+- ✅ Better detection using `compgen` for LUKS/dm-crypt
 - ✅ Warns before `nousb` parameter
 - ✅ Explains USB keyboard implications
 - ✅ Requires explicit confirmation
 - ✅ Enables GRUB cryptodisk support
 
-**Critical:** If you need USB keyboard for encryption password, DON'T add `nousb`. Script will warn you.
+**Critical:** If you need USB keyboard for encryption password, DON'T add `nousb`. Script will warn you clearly.
 </details>
 
 ---
@@ -793,7 +817,7 @@ sudo ./improved_harden_linux.sh -x module_name
 sudo systemctl stop clamav-daemon
 sudo systemctl disable clamav-daemon
 
-# Or AIDE daily checks
+# Or AIDE daily checks (v3.5: logs rotate automatically)
 sudo chmod -x /etc/cron.daily/aide-check
 ```
 
@@ -830,7 +854,7 @@ sudo ufw allow 5353/udp comment 'mDNS'
 ### Kernel Parameters Not Applied
 
 ```bash
-# v3.4 fix: Parameters now in /etc/sysctl.d/
+# v3.5: Parameters in /etc/sysctl.d/ with proper regex handling
 
 # Verify settings
 sudo sysctl -a | grep kernel.kptr_restrict
@@ -884,6 +908,7 @@ SECURITY_LEVEL="moderate"
 ENABLE_MODULES="firewall,fail2ban,ssh_hardening,audit"
 VERBOSE=true
 INTERACTIVE=false
+AIDE_ENABLE_CRON="true"
 EOF
 
 # Use custom config
@@ -901,7 +926,7 @@ set -euo pipefail
 SECURITY_LEVEL="high"
 MODULES="system_update,firewall,fail2ban,ssh_hardening,audit"
 
-# Pre-flight check: SSH keys
+# Pre-flight check: SSH keys (v3.5 validates better)
 if [[ "$MODULES" =~ "ssh_hardening" ]]; then
     if ! find /root /home -name "authorized_keys" -type f 2>/dev/null | grep -q .; then
         echo "ERROR: No SSH keys found!" >&2
@@ -937,7 +962,7 @@ fi
 ### Before Running (Critical for Remote Systems)
 
 **✅ Checklist:**
-1. **Set up SSH keys** (v3.4 validates this!)
+1. **Set up SSH keys** (v3.5 validates this better!)
    ```bash
    ssh-keygen -t ed25519
    ssh-copy-id user@yourserver
@@ -983,11 +1008,10 @@ sudo lynis show details
 
 ## Important Notes
 
-**This script makes significant system changes.** While v3.4 includes extensive safety checks and automatic backups:
+**This script makes significant system changes.** While v3.5 includes extensive safety checks and automatic backups:
 
 ✅ **Always test with `--dry-run` first**  
 ✅ **Automatic backups created** (one-command restore)  
-✅ **Tested on thousands of systems**  
 ✅ **Recovery procedures documented**
 
 **For production environments:**
@@ -1001,7 +1025,7 @@ sudo lynis show details
 
 **USE AT YOUR OWN RISK**
 
-This script makes significant system changes. While extensively tested and v3.4 includes numerous safety checks:
+This script makes significant system changes. While extensively tested and v3.5 includes numerous safety checks:
 - Always test in non-production first
 - Maintain console/physical access
 - Keep independent backups
@@ -1021,10 +1045,33 @@ For production environments:
 ---
 
 ## Version History
-###Version 3.5 (Current - 2025)
-**"Production-ready" with critical fixes applied + SHA256 for verifcation**
-- Safe cronjob for AIDE 
-- Various improvements 
+
+### v3.5-fixed (Current - 2025-01-09)
+**"Production-Ready" - All Critical Bugs Fixed**
+
+**Critical Fixes:**
+- ✅ **SSH Lockout Prevention:** Fixed key detection to use return codes instead of strings, validates formats properly
+- ✅ **Firewall Safety:** Improved SSH port detection excludes commented lines, adds emergency rule before reset
+- ✅ **Fail2Ban Compatibility:** Changed backend from "systemd" to "auto" for cross-distro compatibility
+- ✅ **ClamAV Reliability:** Added 600-second timeout to prevent indefinite hangs during freshclam
+- ✅ **Encryption Detection:** Better detection using `compgen`, prevents breaking LUKS/dm-crypt boots
+- ✅ **GRUB Parameter Handling:** Improved regex escaping prevents duplicate/malformed kernel parameters
+- ✅ **AIDE Permissions:** Log directory created with 750 permissions upfront
+- ✅ **USB Logging:** Added logrotate configuration to prevent log bloat
+- ✅ **Shared Memory:** More precise fstab regex prevents duplicate mount entries
+- ✅ **Backup System:** Single timestamp variable prevents race conditions
+- ✅ **Module Dependencies:** Audit module properly added to dependency tree
+
+**What's Fixed:**
+- SSH key validation now uses proper boolean logic
+- Port detection handles edge cases (commented lines, invalid ports)
+- No more service compatibility issues across distributions
+- ClamAV won't hang your script anymore
+- Encrypted systems won't become unbootable
+- GRUB config stays clean without duplicates
+- AIDE logs work without permission errors
+- USB logs rotate automatically
+- Backups are more reliable
 
 ### v3.4 (2025)
 **Critical Security & Safety Fixes:**
@@ -1092,4 +1139,4 @@ For production environments:
 
 ---
 
-**Note:** (OUTDATED) For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
+**Note:** ( OUTDATED) For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
