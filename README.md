@@ -11,12 +11,6 @@ One-command security hardening that implements enterprise-grade protections (DIS
 [![Debian](https://img.shields.io/badge/Debian-11%2B-red.svg)](https://www.debian.org/)
 
 ---
-Note: Due to sudo being re-written into rust it might help compatability to run in Kubuntu
-sudo apt remove --allow-remove-essential rust-coreutils coreutils-from-uutils sudo-rs
----
-Avoid that these packages are removed when executing e.g. `sudo apt autoremove`
-sudo apt install sudo iputils-ping netcat-openbsd
----
 
 ## Table of Contents
 
