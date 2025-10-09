@@ -2,7 +2,7 @@
 
 Security hardening scripts for Ubuntu/Kubuntu/Debian systems implementing DISA STIG and CIS compliance standards with enhanced error handling, dependency resolution, and desktop environment optimizations.
 
-**Version 3.1-fixed** - Production-ready with comprehensive fixes, module dependency resolution, backup verification, and KDE Plasma optimizations!
+**Version 3.1-fixed** - Production-ready with comprehensive fixes, module dependency resolution, backup verification, and KDE Plasma optimisations!
 
 ## What's New in v3.1-fixed
 
