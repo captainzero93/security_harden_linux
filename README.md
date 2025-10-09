@@ -36,10 +36,26 @@ One-command security hardening that implements enterprise-grade protections (DIS
 **For most users (desktop/workstation):**
 
 ```bash
+# Step 1: Download the script
 wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+
+# Step 2: Verify integrity (choose one method)
+
+# Method A: Verify SHA-256 checksum
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh.sha256
+sha256sum = 8582f306336aeecda4b13d98cdff6395c02d8a816c4f3bcf9cfa9bb59d974f3e
+
+# Step 3: CRITICAL - Review the code before execution
+# This script will run with root privileges. Read it thoroughly.
+
+# Step 4: Make executable
 chmod +x improved_harden_linux.sh
-sudo ./improved_harden_linux.sh --dry-run  # Preview (safe, no changes)
-sudo ./improved_harden_linux.sh            # Apply security
+
+# Step 5: Test in safe mode first (no changes made)
+sudo ./improved_harden_linux.sh --dry-run
+
+# Step 6: Apply hardening (only after reviewing dry-run output)
+sudo ./improved_harden_linux.sh
 ```
 
 **Time:** 10 minutes | **Risk:** Low (auto-backup) | **Reboot:** Recommended | **Recovery:** One command
