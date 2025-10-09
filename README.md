@@ -33,6 +33,22 @@ One-command security hardening that implements enterprise-grade protections (DIS
 
 ##  TL;DR - Quick Commands
 
+## Quick Start (For Most Users)
+
+**Secure your system in 3 steps:**
+
+```bash
+# 1. Download the script
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+chmod +x improved_harden_linux.sh
+
+# 2. Preview what it will do (safe, no changes made)
+sudo ./improved_harden_linux.sh --dry-run
+
+# 3. Apply recommended security (works for 95% of users)
+sudo ./improved_harden_linux.sh
+```
+
 **For most users (desktop/workstation):**
 
 ```bash
@@ -81,21 +97,7 @@ sudo ./improved_harden_linux.sh --report    # Generate report
 
 ---
 
-## Quick Start (For Most Users)
 
-**Secure your system in 3 steps:**
-
-```bash
-# 1. Download the script
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
-
-# 2. Preview what it will do (safe, no changes made)
-sudo ./improved_harden_linux.sh --dry-run
-
-# 3. Apply recommended security (works for 95% of users)
-sudo ./improved_harden_linux.sh
-```
 
 The script will:
 - ✅ Automatically create a backup
