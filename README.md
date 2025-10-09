@@ -1,6 +1,6 @@
 # Linux Security Hardening Script
 
-**One-command security hardening for Ubuntu/Kubuntu/Debian systems**
+**One-command security hardening for Ubuntu/Kubuntu/Debian 11+ systems**
 
 Implements DISA STIG and CIS compliance standards with automatic backups, desktop optimizations, and intelligent defaults.
 
@@ -9,12 +9,13 @@ Implements DISA STIG and CIS compliance standards with automatic backups, deskto
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
 [![Kubuntu](https://img.shields.io/badge/Kubuntu-24.04%2B-blue.svg)](https://kubuntu.org/)
+[![Debian](https://img.shields.io/badge/Debian-11%2B-red.svg)](https://www.debian.org/)
 
 ---
 
 ## Quick Start (For Most Users)
 
-**Want to secure your system in 3 steps?**
+**Secure your system in 3 steps?**
 
 ```bash
 # 1. Download the script
@@ -493,7 +494,7 @@ sudo ./improved_harden_linux.sh -e lynis_audit
 
 ---
 
-## ❓ Common Questions
+## Common Questions
 
 <details>
 <summary><b>Will this break my system?</b></summary>
