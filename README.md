@@ -1,7 +1,5 @@
 # Linux Security Hardening Script
 
-**Your Linux system is under attack right now. Here's how to fight back in 10 minutes.**
-
 One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.
 
 **Version 3.4** - Production-ready with critical SSH lockout prevention and boot failure protection
