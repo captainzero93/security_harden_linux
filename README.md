@@ -14,12 +14,12 @@ One-command security hardening that implements enterprise-grade protections (DIS
 
 ## Table of Contents
 
-- [TL;DR - Quick Commands](#tldr---quick-commands)
+- [TL;DR - Quick Commands](#tldr---quick-commands) , also check out [Quick Start](#quick-start-for-most-users) if you want hash verifcation on the script.
 - [Quick Start](#quick-start-for-most-users)
 - [Why Harden Your Linux System?](#why-harden-your-linux-system)
 - [What's New in v3.4](#whats-new-in-v34)
 - [Safety Features Status](#safety-features-status)
-- [Installation](#installation) , also check out [Quick Start](#quick-start-for-most-users) if you want hash verifcation on the script.
+- [Installation](#installation) 
 - [Usage Guide](#usage-guide)
 - [Security Levels](#security-levels)
 - [Available Modules](#available-modules)
