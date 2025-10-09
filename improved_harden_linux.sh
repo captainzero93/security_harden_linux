@@ -1093,44 +1093,57 @@ module_ntp() {
 # FIXED: Added timeout for AIDE initialization
 module_aide() {
     CURRENT_MODULE="aide"
-    log INFO "Setting up AIDE file integrity monitoring..."
+    ENABLE_CRON="${AIDE_ENABLE_CRON:-true}"  # Make configurable
     
+    log INFO "Setting up AIDE file integrity monitoring..."
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would setup AIDE"; return 0; }
     
     install_package "aide" || return 1
     
     log INFO "Initializing AIDE database (this may take 10-30 minutes)..."
-    log INFO "Please be patient, the process is running..."
-    
     if timeout 3600 sudo aideinit 2>&1 | tee -a "${LOG_FILE}"; then
         log SUCCESS "AIDE database initialized"
     else
-        local exit_code=$?
-        if [[ $exit_code -eq 124 ]]; then
-            log ERROR "AIDE initialization timed out after 1 hour"
-        else
-            log ERROR "AIDE initialization failed"
+        log ERROR "AIDE initialization failed or timed out"
+        return 1
+    fi
+    
+    [[ ! -f /var/lib/aide/aide.db.new ]] && { log ERROR "AIDE database not created"; return 1; }
+    sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db || return 1
+    
+    # Only install cron if enabled
+    if [[ "${ENABLE_CRON}" == "true" ]]; then
+        log INFO "Installing AIDE cron job..."
+        
+        # Check mail availability
+        if ! command -v mail &> /dev/null; then
+            log WARNING "Mail not configured - reports will be logged only"
         fi
-        return 1
-    fi
-    
-    if [[ ! -f /var/lib/aide/aide.db.new ]]; then
-        log ERROR "AIDE database not created after initialization"
-        return 1
-    fi
-    
-    if ! sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db; then
-        log ERROR "Failed to move AIDE database"
-        return 1
-    fi
-    
-    cat << 'EOF' | sudo tee /etc/cron.daily/aide-check > /dev/null
+        
+        cat << 'EOF' | sudo tee /etc/cron.daily/aide-check > /dev/null
 #!/bin/bash
-/usr/bin/aide --check | mail -s "AIDE Report for $(hostname)" root
+REPORT="/var/log/aide/aide-report-$(date +%Y%m%d).log"
+mkdir -p /var/log/aide
+
+# Run with lower priority
+nice -n 19 ionice -c3 /usr/bin/aide --check > "$REPORT" 2>&1
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    if command -v mail &> /dev/null; then
+        cat "$REPORT" | mail -s "[ALERT] AIDE Found Changes on $(hostname)" root
+    fi
+    logger -t aide -p user.warning "AIDE detected changes. Report: $REPORT"
+fi
 EOF
-    sudo chmod +x /etc/cron.daily/aide-check
+        sudo chmod +x /etc/cron.daily/aide-check
+        log SUCCESS "AIDE cron job installed"
+    else
+        log INFO "AIDE cron job skipped (AIDE_ENABLE_CRON=false)"
+    fi
     
-    log SUCCESS "AIDE configured"
+    log INFO "To manually check: sudo aide --check"
+    log INFO "After system updates: sudo aideinit && sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db"
 }
 
 module_sysctl() {
