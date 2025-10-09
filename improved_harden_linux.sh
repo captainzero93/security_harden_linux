@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.3 - Critical Fixes Applied
+# Version: 3.4 - Security Fixes Applied
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+ and Ubuntu 25.10+
@@ -9,13 +9,14 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.3-fixed"
+readonly VERSION="3.4-fixed"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly BACKUP_DIR="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
 readonly LOG_FILE="/var/log/security_hardening.log"
 readonly REPORT_FILE="/root/security_hardening_report_$(date +%Y%m%d_%H%M%S).html"
 readonly CONFIG_FILE="${SCRIPT_DIR}/hardening.conf"
+readonly TEMP_DIR=$(mktemp -d -t hardening.XXXXXXXXXX)
 
 # Configuration flags
 VERBOSE=false
@@ -75,9 +76,9 @@ declare -A MODULE_DEPS=(
 trap cleanup EXIT
 
 cleanup() {
-    # Cleanup function - currently no temp directories used
-    # Reserved for future use if needed
-    :
+    if [[ -d "${TEMP_DIR}" ]]; then
+        rm -rf "${TEMP_DIR}"
+    fi
 }
 
 log() {
@@ -224,7 +225,6 @@ validate_security_level() {
     esac
 }
 
-# FIXED: Improved internet connectivity check with multiple fallbacks
 check_internet() {
     local hosts=("8.8.8.8" "1.1.1.1" "208.67.222.222")
     for host in "${hosts[@]}"; do
@@ -442,7 +442,6 @@ install_package() {
     return 1
 }
 
-# NEW: Check for circular dependencies
 check_circular_deps() {
     local module=$1
     shift
@@ -500,7 +499,26 @@ check_kernel_version() {
     return 1
 }
 
-# Module: System Update
+# FIXED: Improved SSH key detection
+check_ssh_keys() {
+    local has_valid_keys=false
+    
+    for user_home in /root /home/*; do
+        [[ ! -d "$user_home" ]] && continue
+        
+        local auth_keys="$user_home/.ssh/authorized_keys"
+        
+        if [[ -f "$auth_keys" ]] && [[ -r "$auth_keys" ]] && [[ -s "$auth_keys" ]]; then
+            if grep -qE '^(ssh-rsa|ssh-ed25519|ecdsa-sha2|ssh-dss) ' "$auth_keys"; then
+                has_valid_keys=true
+                log INFO "Valid SSH keys found in $auth_keys"
+            fi
+        fi
+    done
+    
+    echo "$has_valid_keys"
+}
+
 module_system_update() {
     CURRENT_MODULE="system_update"
     log INFO "Updating system packages..."
@@ -524,7 +542,7 @@ module_system_update() {
     log SUCCESS "System packages updated"
 }
 
-# Module: Firewall
+# FIXED: Prevent SSH lockout during firewall configuration
 module_firewall() {
     CURRENT_MODULE="firewall"
     log INFO "Configuring firewall..."
@@ -533,11 +551,6 @@ module_firewall() {
     
     install_package "ufw" || return 1
     
-    sudo ufw --force reset
-    sudo ufw default deny incoming
-    sudo ufw default allow outgoing
-    sudo ufw default deny routed
-    
     local ssh_port=$(grep -E "^[[:space:]]*Port[[:space:]]+" /etc/ssh/sshd_config 2>/dev/null | \
                      tail -1 | awk '{print $2}' | grep -E '^[0-9]+$' || echo "22")
     
@@ -545,6 +558,17 @@ module_firewall() {
         log WARNING "Invalid SSH port detected: ${ssh_port}, using default 22"
         ssh_port=22
     fi
+    
+    # FIXED: Add SSH rule BEFORE reset if in SSH session
+    if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ -n "${SSH_TTY:-}" ]]; then
+        log WARNING "SSH session detected - ensuring SSH access before firewall reset"
+        sudo ufw allow "${ssh_port}/tcp" comment 'SSH emergency rule' 2>/dev/null || true
+    fi
+    
+    sudo ufw --force reset
+    sudo ufw default deny incoming
+    sudo ufw default allow outgoing
+    sudo ufw default deny routed
     
     log INFO "Configuring SSH access on port ${ssh_port}"
     sudo ufw limit "${ssh_port}/tcp" comment 'SSH rate limited'
@@ -566,7 +590,6 @@ module_firewall() {
     log SUCCESS "Firewall configured"
 }
 
-# Module: Root Access
 module_root_access() {
     CURRENT_MODULE="root_access"
     log INFO "Configuring root access restrictions..."
@@ -598,7 +621,7 @@ module_root_access() {
     log SUCCESS "Root access restricted"
 }
 
-# FIXED: Module: SSH Hardening - Added SSH key verification
+# FIXED: Improved SSH key verification
 module_ssh_hardening() {
     CURRENT_MODULE="ssh_hardening"
     log INFO "Hardening SSH..."
@@ -608,13 +631,13 @@ module_ssh_hardening() {
     local sshd_config="/etc/ssh/sshd_config"
     [[ ! -f "${sshd_config}" ]] && { log ERROR "SSH not installed"; return 1; }
     
-    # FIXED: Check for SSH keys before disabling password authentication
-    local has_ssh_keys=false
-    if find /home -name "authorized_keys" -type f 2>/dev/null | grep -q .; then
-        has_ssh_keys=true
-        log INFO "SSH keys found for users"
+    # FIXED: Better SSH key detection
+    local has_ssh_keys=$(check_ssh_keys)
+    
+    if [[ "${has_ssh_keys}" == "true" ]]; then
+        log INFO "Valid SSH keys detected"
     else
-        log WARNING "No SSH keys found in user directories"
+        log WARNING "No valid SSH keys found in any user directories"
     fi
     
     sudo cp "${sshd_config}" "${sshd_config}.backup.$(date +%Y%m%d_%H%M%S)"
@@ -640,14 +663,17 @@ module_ssh_hardening() {
     # FIXED: Only disable password auth if SSH keys are present or user confirms
     if [[ "${has_ssh_keys}" == "true" ]]; then
         ssh_settings+=("PasswordAuthentication no")
+        log INFO "SSH keys found - password authentication will be disabled"
     else
         if [[ "${INTERACTIVE}" == "true" ]]; then
             echo ""
-            log WARNING "No SSH keys detected. Disabling password authentication without SSH keys will lock you out!"
+            log WARNING "⚠️  CRITICAL: No SSH keys detected!"
+            log WARNING "Disabling password authentication without SSH keys WILL LOCK YOU OUT!"
+            echo ""
             read -p "Do you have SSH keys configured and want to disable password auth? (y/N): " -r disable_pass
             if [[ "${disable_pass}" =~ ^[Yy]$ ]]; then
                 ssh_settings+=("PasswordAuthentication no")
-                log WARNING "Password authentication will be disabled. Ensure SSH keys work before logging out!"
+                log WARNING "⚠️  Password authentication will be disabled. Test SSH key login NOW before logging out!"
             else
                 ssh_settings+=("PasswordAuthentication yes")
                 log INFO "Password authentication remains enabled for safety"
@@ -660,11 +686,7 @@ module_ssh_hardening() {
     
     for setting in "${ssh_settings[@]}"; do
         local key=$(echo "${setting}" | cut -d' ' -f1)
-        
-        # Remove all existing entries for this key (commented or not)
         sudo sed -i "/^[#[:space:]]*${key}[[:space:]]/d" "${sshd_config}"
-        
-        # Add new setting at the end
         echo "${setting}" | sudo tee -a "${sshd_config}" > /dev/null
         log INFO "Set SSH parameter: ${setting}"
     done
@@ -680,7 +702,6 @@ module_ssh_hardening() {
     fi
 }
 
-# Module: Fail2Ban
 module_fail2ban() {
     CURRENT_MODULE="fail2ban"
     log INFO "Configuring Fail2Ban..."
@@ -708,7 +729,6 @@ EOF
     log SUCCESS "Fail2Ban configured"
 }
 
-# Module: ClamAV
 module_clamav() {
     CURRENT_MODULE="clamav"
     log INFO "Installing ClamAV antivirus..."
@@ -731,7 +751,6 @@ module_clamav() {
     log SUCCESS "ClamAV installed"
 }
 
-# Module: Remove Unnecessary Packages
 module_packages() {
     CURRENT_MODULE="packages"
     log INFO "Removing unnecessary packages..."
@@ -758,7 +777,6 @@ module_packages() {
     log SUCCESS "Unnecessary packages removed"
 }
 
-# Module: Auditd
 module_audit() {
     CURRENT_MODULE="audit"
     log INFO "Configuring audit logging..."
@@ -800,7 +818,6 @@ EOF
     fi
 }
 
-# Module: Disable Unused Filesystems
 module_filesystems() {
     CURRENT_MODULE="filesystems"
     log INFO "Disabling unused filesystems..."
@@ -824,7 +841,7 @@ module_filesystems() {
     log SUCCESS "Unused filesystems disabled"
 }
 
-# FIXED: Module: Boot Security - Fixed regex escaping
+# FIXED: Separated kernel cmdline params from sysctl params
 module_boot_security() {
     CURRENT_MODULE="boot_security"
     log INFO "Securing boot configuration with kernel hardening..."
@@ -836,6 +853,7 @@ module_boot_security() {
     
     sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d_%H%M%S)" || return 1
     
+    # FIXED: Only actual kernel cmdline parameters
     local kernel_params=(
         "page_alloc.shuffle=1"
         "slab_nomerge"
@@ -848,32 +866,39 @@ module_boot_security() {
         "module.sig_enforce=1"
     )
     
-    # Add kernel version dependent parameters
     if check_kernel_version "5.4"; then
         kernel_params+=("lockdown=confidentiality")
         log INFO "Added lockdown parameter (kernel 5.4+)"
     fi
     
-    # Add sysctl-style parameters conditionally
-    if check_kernel_version "5.0"; then
-        kernel_params+=(
-            "kernel.unprivileged_bpf_disabled=1"
-            "net.core.bpf_jit_harden=2"
-            "kernel.kptr_restrict=2"
-            "kernel.dmesg_restrict=1"
-            "kernel.perf_event_paranoid=3"
-        )
+    # FIXED: Detect encrypted system before adding nousb
+    local has_encryption=false
+    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
+        has_encryption=true
+        log INFO "Encrypted system detected"
     fi
     
-    # Add memory randomization
-    kernel_params+=(
-        "vm.mmap_rnd_bits=32"
-        "vm.mmap_rnd_compat_bits=16"
-    )
-    
     if [[ "${IS_DESKTOP}" == "false" ]] || [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
-        kernel_params+=("nousb")
-        log INFO "Added USB boot restriction"
+        if [[ "${has_encryption}" == "true" ]]; then
+            log WARNING "⚠️  CRITICAL: Encrypted system detected!"
+            log WARNING "Adding 'nousb' parameter will prevent USB keyboard from working at boot"
+            log WARNING "This means you CANNOT enter your encryption password!"
+            
+            if [[ "${INTERACTIVE}" == "true" ]]; then
+                read -p "Do you understand the risk and want to add 'nousb' anyway? (y/N): " -r add_nousb
+                if [[ "${add_nousb}" =~ ^[Yy]$ ]]; then
+                    kernel_params+=("nousb")
+                    log WARNING "Added 'nousb' parameter - system may not boot if USB keyboard needed!"
+                else
+                    log INFO "Skipping 'nousb' parameter for safety"
+                fi
+            else
+                log INFO "Skipping 'nousb' parameter on encrypted system (non-interactive mode)"
+            fi
+        else
+            kernel_params+=("nousb")
+            log INFO "Added USB boot restriction"
+        fi
     fi
     
     local current_params=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "${grub_config}" | sed 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/\1/')
@@ -885,14 +910,11 @@ module_boot_security() {
         local param_key="${param%%=*}"
         local param_value="${param#*=}"
         
-        # FIXED: Properly escape dots and other regex metacharacters
         local escaped_key=$(printf '%s\n' "$param_key" | sed 's/[.[\*^$]/\\&/g')
         
-        # Check if parameter exists (with any value) using escaped key
         if echo " ${updated_params} " | grep -qE "[[:space:]]${escaped_key}(=[^[:space:]]*)?[[:space:]]"; then
             local existing_value=$(echo " ${updated_params} " | grep -oE "${escaped_key}=[^[:space:]]+" | cut -d= -f2 || echo "")
             if [[ "${existing_value}" != "${param_value}" ]] && [[ -n "${param_value}" ]]; then
-                # Replace using escaped key
                 updated_params=$(echo "${updated_params}" | sed -E "s/${escaped_key}=[^[:space:]]*/${param}/g")
                 log INFO "Updated kernel parameter: ${param} (was: ${param_key}=${existing_value})"
                 added_count=$((added_count + 1))
@@ -914,7 +936,7 @@ module_boot_security() {
         log INFO "All kernel parameters already present with correct values"
     fi
     
-    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
+    if [[ "${has_encryption}" == "true" ]]; then
         if ! grep -q "^GRUB_ENABLE_CRYPTODISK=y" "${grub_config}"; then
             if grep -q "^GRUB_ENABLE_CRYPTODISK=" "${grub_config}"; then
                 sudo sed -i 's/^GRUB_ENABLE_CRYPTODISK=.*/GRUB_ENABLE_CRYPTODISK=y/' "${grub_config}"
@@ -944,7 +966,6 @@ module_boot_security() {
         fi
     fi
     
-    # FIXED: Validate GRUB config before updating
     log INFO "Validating GRUB configuration..."
     if command -v grub-script-check &> /dev/null; then
         if ! sudo grub-script-check "${grub_config}" 2>&1 | tee -a "${LOG_FILE}"; then
@@ -983,7 +1004,6 @@ module_boot_security() {
     log WARNING "Reboot required for boot security changes to take effect"
 }
 
-# Module: IPv6 Configuration
 module_ipv6() {
     CURRENT_MODULE="ipv6"
     log INFO "Configuring IPv6..."
@@ -1013,7 +1033,7 @@ EOF
     fi
 }
 
-# Module: AppArmor
+# FIXED: Don't set all profiles to complain mode
 module_apparmor() {
     CURRENT_MODULE="apparmor"
     log INFO "Configuring AppArmor..."
@@ -1026,35 +1046,29 @@ module_apparmor() {
     sudo systemctl enable apparmor
     sudo systemctl start apparmor
     
-    if [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
-        log INFO "Setting AppArmor profiles to complain mode first..."
-        local complain_count=0
-        local enforce_count=0
-        local failed_profiles=()
-        
-        for profile in /etc/apparmor.d/*; do
-            if [[ -f "$profile" ]] && \
-               [[ ! "$profile" =~ \.(dpkg|save|disabled|cache)$ ]] && \
-               [[ ! "$(basename "$profile")" =~ ^(abstractions|tunables|cache|disable|force-complain|local)$ ]]; then
-                local profile_name=$(basename "$profile")
-                
-                # First set to complain mode
-                if sudo aa-complain "$profile" 2>&1 | tee -a "${LOG_FILE}"; then
-                    complain_count=$((complain_count + 1))
-                fi
-            fi
-        done
-        
-        log SUCCESS "Set ${complain_count} AppArmor profiles to complain mode"
-        log INFO "Monitor /var/log/syslog for AppArmor denials, then run:"
-        log INFO "  sudo aa-enforce /etc/apparmor.d/<profile>"
-        log INFO "to enforce profiles that don't cause issues"
-    fi
+    local enforced_count=0
+    local complain_count=0
     
-    log SUCCESS "AppArmor configured"
+    for profile in /etc/apparmor.d/*; do
+        if [[ -f "$profile" ]] && \
+           [[ ! "$profile" =~ \.(dpkg|save|disabled|cache)$ ]] && \
+           [[ ! "$(basename "$profile")" =~ ^(abstractions|tunables|cache|disable|force-complain|local)$ ]]; then
+            
+            if sudo aa-status | grep -q "$(basename "$profile")"; then
+                enforced_count=$((enforced_count + 1))
+            fi
+        fi
+    done
+    
+    log SUCCESS "AppArmor configured with ${enforced_count} profiles"
+    
+    if [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
+        log INFO "High security mode: Monitor logs with 'sudo aa-status' and 'sudo journalctl -xe | grep apparmor'"
+        log INFO "To enforce a specific profile: sudo aa-enforce /etc/apparmor.d/<profile>"
+        log INFO "To set profile to complain mode: sudo aa-complain /etc/apparmor.d/<profile>"
+    fi
 }
 
-# Module: NTP/Time Sync
 module_ntp() {
     CURRENT_MODULE="ntp"
     log INFO "Configuring time synchronization..."
@@ -1076,7 +1090,7 @@ module_ntp() {
     fi
 }
 
-# Module: AIDE
+# FIXED: Added timeout for AIDE initialization
 module_aide() {
     CURRENT_MODULE="aide"
     log INFO "Setting up AIDE file integrity monitoring..."
@@ -1085,9 +1099,18 @@ module_aide() {
     
     install_package "aide" || return 1
     
-    log INFO "Initializing AIDE database (this may take several minutes)..."
-    if ! sudo aideinit 2>&1 | tee -a "${LOG_FILE}"; then
-        log ERROR "AIDE initialization failed"
+    log INFO "Initializing AIDE database (this may take 10-30 minutes)..."
+    log INFO "Please be patient, the process is running..."
+    
+    if timeout 3600 sudo aideinit 2>&1 | tee -a "${LOG_FILE}"; then
+        log SUCCESS "AIDE database initialized"
+    else
+        local exit_code=$?
+        if [[ $exit_code -eq 124 ]]; then
+            log ERROR "AIDE initialization timed out after 1 hour"
+        else
+            log ERROR "AIDE initialization failed"
+        fi
         return 1
     fi
     
@@ -1110,7 +1133,6 @@ EOF
     log SUCCESS "AIDE configured"
 }
 
-# Module: Sysctl Hardening
 module_sysctl() {
     CURRENT_MODULE="sysctl"
     log INFO "Configuring kernel parameters..."
@@ -1176,7 +1198,6 @@ EOF
     fi
 }
 
-# Module: Password Policy
 module_password_policy() {
     CURRENT_MODULE="password_policy"
     log INFO "Configuring password policies..."
@@ -1210,7 +1231,6 @@ EOF
     log SUCCESS "Password policies configured"
 }
 
-# Module: Automatic Updates
 module_automatic_updates() {
     CURRENT_MODULE="automatic_updates"
     log INFO "Enabling automatic security updates..."
@@ -1241,7 +1261,6 @@ EOF
     log SUCCESS "Automatic updates enabled"
 }
 
-# Module: Rootkit Scanner
 module_rootkit_scanner() {
     CURRENT_MODULE="rootkit_scanner"
     log INFO "Installing rootkit scanners..."
@@ -1258,10 +1277,9 @@ module_rootkit_scanner() {
     log INFO "Run 'sudo rkhunter --check' to scan for rootkits"
 }
 
-# Module: USB Protection
 module_usb_protection() {
     CURRENT_MODULE="usb_protection"
-    log INFO "Configuring USB policies..."
+    log INFO "Configuring USB logging..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure USB"; return 0; }
     
@@ -1277,7 +1295,7 @@ EOF
     log INFO "USB device connections will be logged to /var/log/usb-devices.log"
 }
 
-# Module: Secure Shared Memory
+# FIXED: Added warning about shared memory remount
 module_secure_shared_memory() {
     CURRENT_MODULE="secure_shared_memory"
     log INFO "Securing shared memory..."
@@ -1293,16 +1311,25 @@ module_secure_shared_memory() {
     fi
     
     if ! grep -q "tmpfs.*${shm_mount}.*noexec" /etc/fstab; then
-        # Remove any existing tmpfs entries for this mount point
         sudo sed -i "\|^tmpfs[[:space:]]*${shm_mount}|d" /etc/fstab
-        
-        # Add secure mount
         echo "tmpfs ${shm_mount} tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
         
-        if sudo mount -o remount "${shm_mount}" 2>&1 | tee -a "${LOG_FILE}"; then
-            log SUCCESS "Shared memory remounted with security options"
+        log WARNING "Shared memory will be remounted with security options"
+        log WARNING "This may affect running applications using shared memory"
+        
+        if [[ "${INTERACTIVE}" == "true" ]]; then
+            read -p "Remount now? (will take effect on next boot if no) (y/N): " -r remount_now
+            if [[ "${remount_now}" =~ ^[Yy]$ ]]; then
+                if sudo mount -o remount "${shm_mount}" 2>&1 | tee -a "${LOG_FILE}"; then
+                    log SUCCESS "Shared memory remounted with security options"
+                else
+                    log WARNING "Failed to remount ${shm_mount}, will take effect after reboot"
+                fi
+            else
+                log INFO "Shared memory will be secured after next reboot"
+            fi
         else
-            log WARNING "Failed to remount ${shm_mount}, will take effect after reboot"
+            log INFO "Shared memory will be secured after next reboot"
         fi
     else
         log INFO "Shared memory already secured"
@@ -1311,7 +1338,6 @@ module_secure_shared_memory() {
     log SUCCESS "Shared memory configured"
 }
 
-# Module: Lynis Audit
 module_lynis_audit() {
     CURRENT_MODULE="lynis_audit"
     log INFO "Running Lynis security audit..."
@@ -1334,6 +1360,7 @@ module_lynis_audit() {
     fi
 }
 
+# FIXED: Set secure permissions on report
 generate_report() {
     log INFO "Generating security report..."
     
@@ -1416,6 +1443,9 @@ generate_report() {
 </html>
 EOF
     
+    # FIXED: Set secure permissions on report
+    sudo chmod 600 "${REPORT_FILE}"
+    
     log SUCCESS "Report generated: ${REPORT_FILE}"
 }
 
@@ -1441,7 +1471,6 @@ execute_modules() {
         fi
     fi
     
-    # Check for circular dependencies
     for module in "${modules_to_run[@]}"; do
         if ! check_circular_deps "${module}" "${module}"; then
             log ERROR "Cannot proceed due to circular dependencies"
