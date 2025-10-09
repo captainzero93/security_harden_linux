@@ -80,7 +80,7 @@ sha256sum improved_harden_linux.sh
 # Compare the output with the official hash from a trusted source (Github)
 # 8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E
 
-# Step 3: CRITICAL - Review the code before execution
+# Step 3: CRITICAL - Review the code before execution 
 
 # Step 4: Make executable
 chmod +x improved_harden_linux.sh
