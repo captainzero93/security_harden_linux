@@ -1228,21 +1228,21 @@ For production/enterprise environments:
 ## Version History
 
 ### v3.1-fixed (Current - 2024)
-- ✅ Module dependency resolution
-- ✅ Backup checksum verification (SHA-256)
-- ✅ Enhanced restore functionality with verification
-- ✅ Kernel parameter deduplication
-- ✅ Execution tracking (success/failure monitoring)
-- ✅ Input validation for all parameters
-- ✅ Idempotent operations
-- ✅ Enhanced error handling with remediation hints
-- ✅ AppArmor profile enforcement tracking
-- ✅ SSH configuration validation before restart
-- ✅ Firewall SSH port detection improvements
-- ✅ AIDE initialization verification
-- ✅ Package installation retry logic
-- ✅ Comprehensive HTML reports with failed modules
-- ✅ Better logging throughout all modules
+-  Module dependency resolution
+-  Backup checksum verification (SHA-256)
+-  Enhanced restore functionality with verification
+-  Kernel parameter deduplication
+-  Execution tracking (success/failure monitoring)
+-  Input validation for all parameters
+-  Idempotent operations
+-  Enhanced error handling with remediation hints
+-  AppArmor profile enforcement tracking
+-  SSH configuration validation before restart
+-  Firewall SSH port detection improvements
+-  AIDE initialization verification
+-  Package installation retry logic
+-  Comprehensive HTML reports with failed modules
+-  Better logging throughout all modules
 
 ### v3.1 (2025)
 - Desktop environment detection
