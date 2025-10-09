@@ -36,29 +36,31 @@ One-command security hardening that implements enterprise-grade protections (DIS
 **For most users (desktop/workstation):**
 
 ```bash
-# Step 1: Download script
+# Step 1: Download the script
 wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
 
-# Step 2: Calculate checksum and verify manually
+# Step 2: Verify the checksum
+# Method 1: Automatic verification (if you have a checksum file)
+echo "30a52499b6221301640f1299fcdfd3925dd44abf04cb17e7225d17865b66662b  improved_harden_linux.sh" | sha256sum -c -
+
+# Expected output if valid:
+# improved_harden_linux.sh: OK
+
+# Method 2: Manual verification
 sha256sum improved_harden_linux.sh
+# Compare the output with the official hash from a trusted source
 
-# This should output:
-# 8582f306336aeecda4b13d98cdff6395c02d8a816c4f3bcf9cfa9bb59d974f3e 
-
-# If hashes DON'T match: DELETE the file immediately
-
-# Step 3: Review the actual code
-nano improved_harden_linux.sh
-# Or: vim improved_harden_linux.sh
-# Or: cat improved_harden_linux.sh | less
+# Step 3: CRITICAL - Review the code before execution
+less improved_harden_linux.sh
+# Read through the entire script - this will run with root privileges!
 
 # Step 4: Make executable
 chmod +x improved_harden_linux.sh
 
-# Step 5: Dry run test
+# Step 5: Test in safe mode first (no changes made)
 sudo ./improved_harden_linux.sh --dry-run
 
-# Step 6: Apply (only if dry-run looks good)
+# Step 6: Apply hardening (only after reviewing dry-run output)
 sudo ./improved_harden_linux.sh
 ```
 
