@@ -33,7 +33,7 @@ sudo apt install sudo iputils-ping netcat-openbsd
 - [Common Questions](#common-questions)
 - [Troubleshooting](#troubleshooting)
 - [Advanced Usage](#advanced-usage)
-- [License & Support](#License-&-Support)
+- [License & Support](#license--support)
 - [Version History](#version-history)
 
 ---
