@@ -39,10 +39,6 @@ One-command security hardening that implements enterprise-grade protections (DIS
 # Step 1: Download the script
 wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
 
-# Step 2: Verify integrity (choose one method)
-
-# Method A: Verify SHA-256 checksum
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh.sha256
 sha256sum = 8582f306336aeecda4b13d98cdff6395c02d8a816c4f3bcf9cfa9bb59d974f3e
 
 # Step 3: CRITICAL - Review the code before execution
