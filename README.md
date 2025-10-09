@@ -40,15 +40,9 @@ One-command security hardening that implements enterprise-grade protections (DIS
 wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
 
 # Step 2: Verify the checksum
-# Method 1: Automatic verification (if you have a checksum file)
-echo "30a52499b6221301640f1299fcdfd3925dd44abf04cb17e7225d17865b66662b  improved_harden_linux.sh" | sha256sum -c -
 
-# Expected output if valid:
-# improved_harden_linux.sh: OK
-
-# Method 2: Manual verification
 sha256sum improved_harden_linux.sh
-# Compare the output with the official hash from a trusted source
+# Compare the output with the official hash from a trusted source (Github)
 
 # Step 3: CRITICAL - Review the code before execution
 less improved_harden_linux.sh
