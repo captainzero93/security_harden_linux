@@ -1081,4 +1081,4 @@ For production environments:
 
 ---
 
-**Note:** For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
+**Note:** (outdated) For advanced DISA/STIG/CIS compliance, see [DISA-STIG-CIS-LINUX-HARDENING](https://github.com/captainzero93/DISA-STIG-CIS-LINUX-HARDENING-)
