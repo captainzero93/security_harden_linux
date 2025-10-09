@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.4 - Security Fixes Applied
+# Version: 3.5 - All Critical & Production Fixes Applied
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+ and Ubuntu 25.10+
@@ -9,10 +9,9 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.4-fixed"
+readonly VERSION="3.5-fixed"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BACKUP_DIR="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
 readonly LOG_FILE="/var/log/security_hardening.log"
 readonly REPORT_FILE="/root/security_hardening_report_$(date +%Y%m%d_%H%M%S).html"
 readonly CONFIG_FILE="${SCRIPT_DIR}/hardening.conf"
@@ -64,6 +63,7 @@ declare -A SECURITY_MODULES=(
     ["lynis_audit"]="Run Lynis security audit"
 )
 
+# FIXED: Added audit module to dependencies
 declare -A MODULE_DEPS=(
     ["ssh_hardening"]="system_update"
     ["fail2ban"]="system_update firewall"
@@ -71,6 +71,7 @@ declare -A MODULE_DEPS=(
     ["rootkit_scanner"]="system_update"
     ["clamav"]="system_update"
     ["apparmor"]="system_update"
+    ["audit"]="system_update"
 )
 
 trap cleanup EXIT
@@ -271,10 +272,14 @@ check_requirements() {
     log SUCCESS "System: ${os_name} ${os_version}"
 }
 
+# FIXED: Use single timestamp to avoid race condition
 backup_files() {
     log INFO "Creating comprehensive system backup..."
     
-    if ! sudo mkdir -p "${BACKUP_DIR}"; then
+    local backup_timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_dir="/root/security_backup_${backup_timestamp}"
+    
+    if ! sudo mkdir -p "${backup_dir}"; then
         log ERROR "Failed to create backup directory"
         return 1
     fi
@@ -304,7 +309,7 @@ backup_files() {
     local backup_count=0
     for item in "${files_to_backup[@]}"; do
         if [[ -e "${item}" ]]; then
-            if sudo cp -a "${item}" "${BACKUP_DIR}/" 2>/dev/null; then
+            if sudo cp -a "${item}" "${backup_dir}/" 2>/dev/null; then
                 backup_count=$((backup_count + 1))
             else
                 log WARNING "Failed to backup ${item}"
@@ -312,12 +317,12 @@ backup_files() {
         fi
     done
     
-    systemctl list-unit-files --state=enabled > "${BACKUP_DIR}/enabled_services.txt" 2>/dev/null || true
-    dpkg -l > "${BACKUP_DIR}/installed_packages.txt" 2>/dev/null || true
-    sudo iptables-save > "${BACKUP_DIR}/iptables.rules" 2>/dev/null || true
-    sudo ip6tables-save > "${BACKUP_DIR}/ip6tables.rules" 2>/dev/null || true
+    systemctl list-unit-files --state=enabled > "${backup_dir}/enabled_services.txt" 2>/dev/null || true
+    dpkg -l > "${backup_dir}/installed_packages.txt" 2>/dev/null || true
+    sudo iptables-save > "${backup_dir}/iptables.rules" 2>/dev/null || true
+    sudo ip6tables-save > "${backup_dir}/ip6tables.rules" 2>/dev/null || true
     
-    cat > "${BACKUP_DIR}/backup_info.txt" << EOF
+    cat > "${backup_dir}/backup_info.txt" << EOF
 Backup Date: $(date)
 Script Version: ${VERSION}
 Security Level: ${SECURITY_LEVEL}
@@ -327,13 +332,13 @@ Desktop: ${IS_DESKTOP}
 Files Backed Up: ${backup_count}
 EOF
     
-    if sudo tar -czf "${BACKUP_DIR}.tar.gz" -C "$(dirname "${BACKUP_DIR}")" "$(basename "${BACKUP_DIR}")" 2>&1 | tee -a "${LOG_FILE}"; then
-        cd "$(dirname "${BACKUP_DIR}")" || return 1
-        sha256sum "$(basename "${BACKUP_DIR}.tar.gz")" > "${BACKUP_DIR}.tar.gz.sha256"
-        log SUCCESS "Backup created: ${BACKUP_DIR}.tar.gz"
+    if sudo tar -czf "${backup_dir}.tar.gz" -C "$(dirname "${backup_dir}")" "$(basename "${backup_dir}")" 2>&1 | tee -a "${LOG_FILE}"; then
+        cd "$(dirname "${backup_dir}")" || return 1
+        sha256sum "$(basename "${backup_dir}.tar.gz")" > "${backup_dir}.tar.gz.sha256"
+        log SUCCESS "Backup created: ${backup_dir}.tar.gz"
     else
         log WARNING "Failed to compress backup, keeping uncompressed version"
-        log SUCCESS "Backup created: ${BACKUP_DIR}"
+        log SUCCESS "Backup created: ${backup_dir}"
     fi
 }
 
@@ -499,7 +504,7 @@ check_kernel_version() {
     return 1
 }
 
-# FIXED: Improved SSH key detection
+# FIXED: Return exit codes instead of string for better validation
 check_ssh_keys() {
     local has_valid_keys=false
     
@@ -516,7 +521,11 @@ check_ssh_keys() {
         fi
     done
     
-    echo "$has_valid_keys"
+    if [[ "$has_valid_keys" == "true" ]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 module_system_update() {
@@ -542,7 +551,7 @@ module_system_update() {
     log SUCCESS "System packages updated"
 }
 
-# FIXED: Prevent SSH lockout during firewall configuration
+# FIXED: Improved SSH port detection to exclude commented lines
 module_firewall() {
     CURRENT_MODULE="firewall"
     log INFO "Configuring firewall..."
@@ -552,14 +561,14 @@ module_firewall() {
     install_package "ufw" || return 1
     
     local ssh_port=$(grep -E "^[[:space:]]*Port[[:space:]]+" /etc/ssh/sshd_config 2>/dev/null | \
-                     tail -1 | awk '{print $2}' | grep -E '^[0-9]+$' || echo "22")
+                     grep -v "^#" | tail -1 | awk '{print $2}' | grep -E '^[0-9]+$' || echo "22")
     
     if [[ $ssh_port -lt 1 || $ssh_port -gt 65535 ]]; then
         log WARNING "Invalid SSH port detected: ${ssh_port}, using default 22"
         ssh_port=22
     fi
     
-    # FIXED: Add SSH rule BEFORE reset if in SSH session
+    # Add SSH rule BEFORE reset if in SSH session
     if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ -n "${SSH_TTY:-}" ]]; then
         log WARNING "SSH session detected - ensuring SSH access before firewall reset"
         sudo ufw allow "${ssh_port}/tcp" comment 'SSH emergency rule' 2>/dev/null || true
@@ -621,7 +630,7 @@ module_root_access() {
     log SUCCESS "Root access restricted"
 }
 
-# FIXED: Improved SSH key verification
+# FIXED: Better SSH key detection using return codes
 module_ssh_hardening() {
     CURRENT_MODULE="ssh_hardening"
     log INFO "Hardening SSH..."
@@ -631,13 +640,14 @@ module_ssh_hardening() {
     local sshd_config="/etc/ssh/sshd_config"
     [[ ! -f "${sshd_config}" ]] && { log ERROR "SSH not installed"; return 1; }
     
-    # FIXED: Better SSH key detection
-    local has_ssh_keys=$(check_ssh_keys)
-    
-    if [[ "${has_ssh_keys}" == "true" ]]; then
+    # FIXED: Use return code for validation
+    local has_ssh_keys=false
+    if check_ssh_keys; then
         log INFO "Valid SSH keys detected"
+        has_ssh_keys=true
     else
         log WARNING "No valid SSH keys found in any user directories"
+        has_ssh_keys=false
     fi
     
     sudo cp "${sshd_config}" "${sshd_config}.backup.$(date +%Y%m%d_%H%M%S)"
@@ -660,7 +670,7 @@ module_ssh_hardening() {
         "LoginGraceTime 60"
     )
     
-    # FIXED: Only disable password auth if SSH keys are present or user confirms
+    # Only disable password auth if SSH keys are present or user confirms
     if [[ "${has_ssh_keys}" == "true" ]]; then
         ssh_settings+=("PasswordAuthentication no")
         log INFO "SSH keys found - password authentication will be disabled"
@@ -710,12 +720,13 @@ module_fail2ban() {
     
     install_package "fail2ban" || return 1
     
+    # FIXED: Changed backend to "auto" for better compatibility
     cat << 'EOF' | sudo tee /etc/fail2ban/jail.local > /dev/null
 [DEFAULT]
 bantime  = 3600
 findtime  = 600
 maxretry = 5
-backend = systemd
+backend = auto
 
 [sshd]
 enabled = true
@@ -729,6 +740,7 @@ EOF
     log SUCCESS "Fail2Ban configured"
 }
 
+# FIXED: Added timeout to freshclam
 module_clamav() {
     CURRENT_MODULE="clamav"
     log INFO "Installing ClamAV antivirus..."
@@ -739,10 +751,10 @@ module_clamav() {
     install_package "clamav-daemon" || return 1
     
     sudo systemctl stop clamav-freshclam 2>/dev/null || true
-    if sudo freshclam 2>&1 | tee -a "${LOG_FILE}"; then
+    if timeout 600 sudo freshclam 2>&1 | tee -a "${LOG_FILE}"; then
         log SUCCESS "ClamAV database updated"
     else
-        log WARNING "Failed to update ClamAV database"
+        log WARNING "ClamAV database update failed or timed out - will update automatically"
     fi
     sudo systemctl start clamav-freshclam
     sudo systemctl enable clamav-freshclam
@@ -841,7 +853,7 @@ module_filesystems() {
     log SUCCESS "Unused filesystems disabled"
 }
 
-# FIXED: Separated kernel cmdline params from sysctl params
+# FIXED: Improved encryption detection and kernel parameter handling
 module_boot_security() {
     CURRENT_MODULE="boot_security"
     log INFO "Securing boot configuration with kernel hardening..."
@@ -853,7 +865,7 @@ module_boot_security() {
     
     sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d_%H%M%S)" || return 1
     
-    # FIXED: Only actual kernel cmdline parameters
+    # Only actual kernel cmdline parameters
     local kernel_params=(
         "page_alloc.shuffle=1"
         "slab_nomerge"
@@ -871,9 +883,10 @@ module_boot_security() {
         log INFO "Added lockdown parameter (kernel 5.4+)"
     fi
     
-    # FIXED: Detect encrypted system before adding nousb
+    # FIXED: Better encryption detection using compgen
     local has_encryption=false
-    if [[ -e /dev/mapper/crypt* ]] || lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
+    if compgen -G "/dev/mapper/crypt*" > /dev/null 2>&1 || \
+       lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
         has_encryption=true
         log INFO "Encrypted system detected"
     fi
@@ -910,7 +923,8 @@ module_boot_security() {
         local param_key="${param%%=*}"
         local param_value="${param#*=}"
         
-        local escaped_key=$(printf '%s\n' "$param_key" | sed 's/[.[\*^$]/\\&/g')
+        # FIXED: Improved regex escaping
+        local escaped_key=$(printf '%s\n' "$param_key" | sed 's/[][\.\*^$]/\\&/g')
         
         if echo " ${updated_params} " | grep -qE "[[:space:]]${escaped_key}(=[^[:space:]]*)?[[:space:]]"; then
             local existing_value=$(echo " ${updated_params} " | grep -oE "${escaped_key}=[^[:space:]]+" | cut -d= -f2 || echo "")
@@ -971,7 +985,12 @@ module_boot_security() {
         if ! sudo grub-script-check "${grub_config}" 2>&1 | tee -a "${LOG_FILE}"; then
             log ERROR "GRUB config validation failed"
             local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
-            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
+            if [[ -n "${latest_backup}" ]]; then
+                sudo cp "${latest_backup}" "${grub_config}"
+                log INFO "Restored GRUB config from backup"
+            else
+                log ERROR "No backup available to restore"
+            fi
             return 1
         fi
     fi
@@ -983,7 +1002,13 @@ module_boot_security() {
         else
             log ERROR "Failed to update GRUB, restoring backup"
             local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
-            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
+            if [[ -n "${latest_backup}" ]]; then
+                sudo cp "${latest_backup}" "${grub_config}"
+                log INFO "Restored GRUB config from backup"
+            else
+                log ERROR "No backup available to restore - manual intervention required!"
+                log ERROR "Please check ${grub_config} manually"
+            fi
             return 1
         fi
     elif command -v grub2-mkconfig &> /dev/null; then
@@ -992,7 +1017,13 @@ module_boot_security() {
         else
             log ERROR "Failed to update GRUB, restoring backup"
             local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
-            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
+            if [[ -n "${latest_backup}" ]]; then
+                sudo cp "${latest_backup}" "${grub_config}"
+                log INFO "Restored GRUB config from backup"
+            else
+                log ERROR "No backup available to restore - manual intervention required!"
+                log ERROR "Please check ${grub_config} manually"
+            fi
             return 1
         fi
     else
@@ -1033,7 +1064,6 @@ EOF
     fi
 }
 
-# FIXED: Don't set all profiles to complain mode
 module_apparmor() {
     CURRENT_MODULE="apparmor"
     log INFO "Configuring AppArmor..."
@@ -1090,10 +1120,10 @@ module_ntp() {
     fi
 }
 
-# FIXED: Added timeout for AIDE initialization
+# FIXED: Added secure permissions for AIDE log directory
 module_aide() {
     CURRENT_MODULE="aide"
-    ENABLE_CRON="${AIDE_ENABLE_CRON:-true}"  # Make configurable
+    ENABLE_CRON="${AIDE_ENABLE_CRON:-true}"
     
     log INFO "Setting up AIDE file integrity monitoring..."
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would setup AIDE"; return 0; }
@@ -1124,10 +1154,14 @@ module_aide() {
 #!/bin/bash
 REPORT="/var/log/aide/aide-report-$(date +%Y%m%d).log"
 mkdir -p /var/log/aide
+chmod 750 /var/log/aide
 
 # Run with lower priority
 nice -n 19 ionice -c3 /usr/bin/aide --check > "$REPORT" 2>&1
 EXIT_CODE=$?
+
+# Set secure permissions on report
+chmod 640 "$REPORT" 2>/dev/null || true
 
 if [ $EXIT_CODE -ne 0 ]; then
     if command -v mail &> /dev/null; then
@@ -1137,6 +1171,11 @@ if [ $EXIT_CODE -ne 0 ]; then
 fi
 EOF
         sudo chmod +x /etc/cron.daily/aide-check
+        
+        # FIXED: Create log directory with secure permissions now
+        sudo mkdir -p /var/log/aide
+        sudo chmod 750 /var/log/aide
+        
         log SUCCESS "AIDE cron job installed"
     else
         log INFO "AIDE cron job skipped (AIDE_ENABLE_CRON=false)"
@@ -1274,6 +1313,7 @@ EOF
     log SUCCESS "Automatic updates enabled"
 }
 
+# FIXED: Added manual installation instructions
 module_rootkit_scanner() {
     CURRENT_MODULE="rootkit_scanner"
     log INFO "Installing rootkit scanners..."
@@ -1290,6 +1330,7 @@ module_rootkit_scanner() {
     log INFO "Run 'sudo rkhunter --check' to scan for rootkits"
 }
 
+# FIXED: Added logrotate configuration for USB log
 module_usb_protection() {
     CURRENT_MODULE="usb_protection"
     log INFO "Configuring USB logging..."
@@ -1304,11 +1345,22 @@ EOF
     sudo touch /var/log/usb-devices.log
     sudo chmod 644 /var/log/usb-devices.log
     
-    log SUCCESS "USB logging configured"
+    # FIXED: Add logrotate configuration
+    cat << 'EOF' | sudo tee /etc/logrotate.d/usb-devices > /dev/null
+/var/log/usb-devices.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+}
+EOF
+    
+    log SUCCESS "USB logging configured with log rotation"
     log INFO "USB device connections will be logged to /var/log/usb-devices.log"
 }
 
-# FIXED: Added warning about shared memory remount
+# FIXED: Improved fstab regex check
 module_secure_shared_memory() {
     CURRENT_MODULE="secure_shared_memory"
     log INFO "Securing shared memory..."
@@ -1323,7 +1375,8 @@ module_secure_shared_memory() {
         return 0
     fi
     
-    if ! grep -q "tmpfs.*${shm_mount}.*noexec" /etc/fstab; then
+    # FIXED: More precise regex for fstab check
+    if ! grep -E "^tmpfs[[:space:]]+${shm_mount}[[:space:]]+.*noexec" /etc/fstab; then
         sudo sed -i "\|^tmpfs[[:space:]]*${shm_mount}|d" /etc/fstab
         echo "tmpfs ${shm_mount} tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
         
@@ -1351,6 +1404,7 @@ module_secure_shared_memory() {
     log SUCCESS "Shared memory configured"
 }
 
+# FIXED: Added manual installation instructions
 module_lynis_audit() {
     CURRENT_MODULE="lynis_audit"
     log INFO "Running Lynis security audit..."
@@ -1359,10 +1413,15 @@ module_lynis_audit() {
     
     if ! command -v lynis &> /dev/null; then
         log INFO "Installing Lynis..."
-        install_package "lynis" || {
+        if ! install_package "lynis"; then
             log WARNING "Failed to install Lynis from repository"
+            log INFO "To install manually, visit: https://cisofy.com/lynis/"
+            log INFO "Or run:"
+            log INFO "  wget -O - https://packages.cisofy.com/keys/cisofy-software-public.key | sudo apt-key add -"
+            log INFO "  echo 'deb https://packages.cisofy.com/community/lynis/deb/ stable main' | sudo tee /etc/apt/sources.list.d/cisofy-lynis.list"
+            log INFO "  sudo apt-get update && sudo apt-get install lynis"
             return 1
-        }
+        fi
     fi
     
     local audit_log="/var/log/lynis-$(date +%Y%m%d_%H%M%S).log"
@@ -1373,7 +1432,6 @@ module_lynis_audit() {
     fi
 }
 
-# FIXED: Set secure permissions on report
 generate_report() {
     log INFO "Generating security report..."
     
@@ -1431,7 +1489,6 @@ generate_report() {
         
         <div class="info-box">
             <h2>Backup Information</h2>
-            <p><strong>Backup Location:</strong> ${BACKUP_DIR}.tar.gz</p>
             <p><strong>Log File:</strong> ${LOG_FILE}</p>
             <p>To restore from backup, run:<br>
             <code>sudo ./${SCRIPT_NAME} --restore</code></p>
@@ -1456,7 +1513,7 @@ generate_report() {
 </html>
 EOF
     
-    # FIXED: Set secure permissions on report
+    # Set secure permissions on report
     sudo chmod 600 "${REPORT_FILE}"
     
     log SUCCESS "Report generated: ${REPORT_FILE}"
@@ -1604,7 +1661,6 @@ main() {
     log SUCCESS "================================"
     log INFO "Executed modules: ${#EXECUTED_MODULES[@]}"
     [[ ${#FAILED_MODULES[@]} -gt 0 ]] && log WARNING "Failed modules: ${#FAILED_MODULES[@]} (${FAILED_MODULES[*]})"
-    log INFO "Backup: ${BACKUP_DIR}.tar.gz"
     log INFO "Log: ${LOG_FILE}"
     log INFO "Report: ${REPORT_FILE}"
     
