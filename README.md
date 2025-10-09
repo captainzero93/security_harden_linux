@@ -68,7 +68,7 @@ Security hardening scripts for Ubuntu/Kubuntu/Debian systems implementing DISA S
 
 ### System Requirements
 - **Operating System**: Ubuntu 22.04+, Kubuntu 24.04+, or Debian 11+
-- **Architecture**: x86_64 (AMD64) or ARM (tested on Raspberry Pi)
+- **Architecture**: x86_64 (AMD64) or ARM (such as the Raspberry Pi)
 - **Privileges**: Root/sudo access required
 - **Network**: Internet connection for package installation
 - **Disk Space**: 1GB+ free space recommended for backups
