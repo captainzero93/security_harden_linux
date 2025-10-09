@@ -1247,7 +1247,7 @@ For production/enterprise environments:
 ### v3.1 (2025)
 - Desktop environment detection
 - KDE Plasma / Kubuntu optimizations
-- Kubuntu 25.10 support
+- Kubuntu 25.10 support (beta)
 - Desktop-friendly USB policies
 - KDE Connect firewall support
 - Network discovery preservation
