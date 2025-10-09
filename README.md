@@ -1,4 +1,4 @@
-# Linux Security Hardening Scripts
+# Linux Security Hardening Script ( Debian / Ubuntu / Kubuntu)
 
 Security hardening scripts for Ubuntu/Kubuntu/Debian systems implementing DISA STIG and CIS compliance standards with enhanced error handling, dependency resolution, and desktop environment optimizations.
 
