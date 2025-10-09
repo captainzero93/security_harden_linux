@@ -59,7 +59,7 @@ wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/
 
 sha256sum improved_harden_linux.sh
 # Compare the output with the official hash from a trusted source (Github)
-8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E
+8582F306336AEECDA4B13D98CDFF6395C02D8A816C4F3BCF9CFA9BB59D974F3E 
 
 # Step 3: CRITICAL - Review the code before execution
 less improved_harden_linux.sh
@@ -230,6 +230,45 @@ net.core.bpf_jit_harden=2           # Hardens BPF JIT compiler
 **With Hardening:** Cryptographic hashes of all system files. Daily checks detect unauthorized changes.
 
 **v3.4:** Added 1-hour timeout to prevent indefinite hangs during initialization.
+
+**v3.5:** Configured safe daily cron job with:
+- Low-priority execution (won't impact system performance)
+- Secure log directory (`/var/log/aide/` with 750 permissions)
+- Secure report permissions (640, readable only by root/admin)
+- Automatic email alerts on detected changes (if mail configured)
+- Syslog integration for monitoring
+- Daily reports with timestamp for audit trail
+
+**Cron Job Safety Features:**
+```bash
+# Runs with minimal system impact
+nice -n 19 ionice -c3  # Lowest CPU and I/O priority
+
+# Secure logging
+/var/log/aide/aide-report-YYYYMMDD.log  # Timestamped reports
+chmod 640 /var/log/aide/aide-report-*.log  # Root/admin only
+chmod 750 /var/log/aide/                    # Secure directory
+
+# Automatic alerts
+# Emails root on changes (if mail configured)
+# Logs warnings to syslog for monitoring systems
+```
+
+**Manual Operations:**
+```bash
+# Check for changes manually
+sudo aide --check
+
+# After system updates, rebuild database
+sudo aideinit
+sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+# View recent reports
+ls -lh /var/log/aide/
+
+# Disable daily checks if needed
+sudo chmod -x /etc/cron.daily/aide-check
+```
 </details>
 
 <details>
@@ -344,6 +383,7 @@ This script changes that balance - applying enterprise-grade security while main
 | Encryption Detection |  v3.4 | Unbootable systems from `nousb` parameter |
 | GRUB Validation |  v3.4 | Boot failures from invalid configuration |
 | AIDE Timeout |  v3.4 | Script hanging indefinitely |
+| AIDE Safe Cron |  v3.5 | Performance impact, insecure logs |
 | AppArmor Enforcement |  v3.4 | Security regression from complain mode |
 | Automatic Backups |  Always | Data loss from any issues |
 | SHA-256 Verification |  Always | Corrupted backups |
@@ -502,7 +542,7 @@ Advanced:
 | `audit` | Activity logging | Forensics, compliance, evidence | 1 min | No |
 | `apparmor` | Application sandboxing | Limits compromised app damage | 1-2 min | No |
 | `boot_security` | GRUB hardening | Prevents physical attacks | 1 min | **Yes** |
-| `aide` | File integrity | Detects backdoors, tampering | 5-15 min | No |
+| `aide` | File integrity + daily cron | Detects backdoors, tampering with safe automated checks | 5-15 min | No |
 | `password_policy` | Password rules | Prevents weak passwords | 30 sec | No |
 | `automatic_updates` | Auto patching | Ensures always updated | 1 min | No |
 
@@ -572,6 +612,20 @@ vm.mmap_rnd_bits=32          # Maximum randomization
 - Network configuration changes
 - System call abuse
 - Login/logout tracking
+
+### AIDE File Integrity Monitoring
+- **v3.4:** 1-hour timeout for initialization
+- **v3.5:** Safe daily cron job configuration
+- Cryptographic database of all system files
+- Daily automated checks (low priority, minimal impact)
+- Secure log directory (`/var/log/aide/`, 750 permissions)
+- Secure report files (640 permissions, root-only access)
+- Email alerts on detected changes (if mail configured)
+- Syslog integration for monitoring systems
+- Timestamped reports for audit trail
+- Monitors: `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`, `/etc`, `/lib`, `/lib64`
+
+**Performance Impact:** Minimal - runs at lowest priority (nice -19, ionice class 3)
 
 ### Boot Security
 - **v3.4:** Encryption detection
@@ -1034,6 +1088,7 @@ For production environments:
 ---
 
 ## Version History
+### Version 3.5** - Production-ready with critical fixes applied, adds SHA256 hash to check
 
 ### v3.4 (Current - 2025)
 **Critical Security & Safety Fixes:**
