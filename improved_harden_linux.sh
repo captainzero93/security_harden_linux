@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.2 - Critical Fixes Applied
+# Version: 3.3 - Critical Fixes Applied
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+ and Ubuntu 25.10+
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.2-improved"
+readonly VERSION="3.3-fixed"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly BACKUP_DIR="/root/security_backup_$(date +%Y%m%d_%H%M%S)"
@@ -224,6 +224,17 @@ validate_security_level() {
     esac
 }
 
+# FIXED: Improved internet connectivity check with multiple fallbacks
+check_internet() {
+    local hosts=("8.8.8.8" "1.1.1.1" "208.67.222.222")
+    for host in "${hosts[@]}"; do
+        if ping -c 1 -W 2 "$host" &> /dev/null; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 check_requirements() {
     log INFO "Checking system requirements..."
     
@@ -253,7 +264,7 @@ check_requirements() {
         log WARNING "Low disk space ($(( available_space / 1024 ))MB). Backup may fail."
     fi
     
-    if ! ping -c 1 -W 2 8.8.8.8 &> /dev/null; then
+    if ! check_internet; then
         log WARNING "No internet connectivity. Package installation may fail."
     fi
     
@@ -316,7 +327,6 @@ Desktop: ${IS_DESKTOP}
 Files Backed Up: ${backup_count}
 EOF
     
-    # FIXED: Added tee to capture tar errors in log
     if sudo tar -czf "${BACKUP_DIR}.tar.gz" -C "$(dirname "${BACKUP_DIR}")" "$(basename "${BACKUP_DIR}")" 2>&1 | tee -a "${LOG_FILE}"; then
         cd "$(dirname "${BACKUP_DIR}")" || return 1
         sha256sum "$(basename "${BACKUP_DIR}.tar.gz")" > "${BACKUP_DIR}.tar.gz.sha256"
@@ -430,6 +440,31 @@ install_package() {
     
     log ERROR "Failed to install ${package} after ${max_retries} attempts"
     return 1
+}
+
+# NEW: Check for circular dependencies
+check_circular_deps() {
+    local module=$1
+    shift
+    local -a visited=("$@")
+    
+    if [[ -z "${MODULE_DEPS[$module]:-}" ]]; then
+        return 0
+    fi
+    
+    for dep in ${MODULE_DEPS[$module]}; do
+        if [[ " ${visited[*]} " =~ " ${dep} " ]]; then
+            log ERROR "Circular dependency detected: ${visited[*]} -> ${dep}"
+            return 1
+        fi
+        
+        local -a new_visited=("${visited[@]}" "${dep}")
+        if ! check_circular_deps "${dep}" "${new_visited[@]}"; then
+            return 1
+        fi
+    done
+    
+    return 0
 }
 
 resolve_dependencies() {
@@ -563,7 +598,7 @@ module_root_access() {
     log SUCCESS "Root access restricted"
 }
 
-# Module: SSH Hardening - FIXED for idempotency
+# FIXED: Module: SSH Hardening - Added SSH key verification
 module_ssh_hardening() {
     CURRENT_MODULE="ssh_hardening"
     log INFO "Hardening SSH..."
@@ -573,13 +608,21 @@ module_ssh_hardening() {
     local sshd_config="/etc/ssh/sshd_config"
     [[ ! -f "${sshd_config}" ]] && { log ERROR "SSH not installed"; return 1; }
     
+    # FIXED: Check for SSH keys before disabling password authentication
+    local has_ssh_keys=false
+    if find /home -name "authorized_keys" -type f 2>/dev/null | grep -q .; then
+        has_ssh_keys=true
+        log INFO "SSH keys found for users"
+    else
+        log WARNING "No SSH keys found in user directories"
+    fi
+    
     sudo cp "${sshd_config}" "${sshd_config}.backup.$(date +%Y%m%d_%H%M%S)"
     
     local ssh_settings=(
         "Protocol 2"
         "PermitRootLogin no"
         "PubkeyAuthentication yes"
-        "PasswordAuthentication no"
         "PermitEmptyPasswords no"
         "ChallengeResponseAuthentication no"
         "UsePAM yes"
@@ -594,10 +637,29 @@ module_ssh_hardening() {
         "LoginGraceTime 60"
     )
     
-    # FIXED: Remove all existing entries (commented or not) before adding new ones
+    # FIXED: Only disable password auth if SSH keys are present or user confirms
+    if [[ "${has_ssh_keys}" == "true" ]]; then
+        ssh_settings+=("PasswordAuthentication no")
+    else
+        if [[ "${INTERACTIVE}" == "true" ]]; then
+            echo ""
+            log WARNING "No SSH keys detected. Disabling password authentication without SSH keys will lock you out!"
+            read -p "Do you have SSH keys configured and want to disable password auth? (y/N): " -r disable_pass
+            if [[ "${disable_pass}" =~ ^[Yy]$ ]]; then
+                ssh_settings+=("PasswordAuthentication no")
+                log WARNING "Password authentication will be disabled. Ensure SSH keys work before logging out!"
+            else
+                ssh_settings+=("PasswordAuthentication yes")
+                log INFO "Password authentication remains enabled for safety"
+            fi
+        else
+            ssh_settings+=("PasswordAuthentication yes")
+            log INFO "Password authentication remains enabled (no SSH keys found)"
+        fi
+    fi
+    
     for setting in "${ssh_settings[@]}"; do
         local key=$(echo "${setting}" | cut -d' ' -f1)
-        local escaped_setting=$(echo "${setting}" | sed 's/[\/&]/\\&/g')
         
         # Remove all existing entries for this key (commented or not)
         sudo sed -i "/^[#[:space:]]*${key}[[:space:]]/d" "${sshd_config}"
@@ -762,7 +824,7 @@ module_filesystems() {
     log SUCCESS "Unused filesystems disabled"
 }
 
-# Module: Enhanced Boot Security - FIXED for parameter deduplication
+# FIXED: Module: Boot Security - Fixed regex escaping
 module_boot_security() {
     CURRENT_MODULE="boot_security"
     log INFO "Securing boot configuration with kernel hardening..."
@@ -780,18 +842,33 @@ module_boot_security() {
         "init_on_alloc=1"
         "init_on_free=1"
         "randomize_kstack_offset=1"
-        "kernel.unprivileged_bpf_disabled=1"
-        "net.core.bpf_jit_harden=2"
-        "kernel.kptr_restrict=2"
-        "kernel.dmesg_restrict=1"
-        "kernel.perf_event_paranoid=3"
-        "vm.mmap_rnd_bits=32"
-        "vm.mmap_rnd_compat_bits=16"
         "vsyscall=none"
         "debugfs=off"
         "oops=panic"
         "module.sig_enforce=1"
-        "lockdown=confidentiality"
+    )
+    
+    # Add kernel version dependent parameters
+    if check_kernel_version "5.4"; then
+        kernel_params+=("lockdown=confidentiality")
+        log INFO "Added lockdown parameter (kernel 5.4+)"
+    fi
+    
+    # Add sysctl-style parameters conditionally
+    if check_kernel_version "5.0"; then
+        kernel_params+=(
+            "kernel.unprivileged_bpf_disabled=1"
+            "net.core.bpf_jit_harden=2"
+            "kernel.kptr_restrict=2"
+            "kernel.dmesg_restrict=1"
+            "kernel.perf_event_paranoid=3"
+        )
+    fi
+    
+    # Add memory randomization
+    kernel_params+=(
+        "vm.mmap_rnd_bits=32"
+        "vm.mmap_rnd_compat_bits=16"
     )
     
     if [[ "${IS_DESKTOP}" == "false" ]] || [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
@@ -801,7 +878,6 @@ module_boot_security() {
     
     local current_params=$(grep "^GRUB_CMDLINE_LINUX_DEFAULT=" "${grub_config}" | sed 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/\1/')
     
-    # FIXED: Improved parameter checking and replacement
     local added_count=0
     local updated_params="${current_params}"
     
@@ -809,20 +885,21 @@ module_boot_security() {
         local param_key="${param%%=*}"
         local param_value="${param#*=}"
         
-        # Check if parameter exists (with any value)
-        if echo " ${updated_params} " | grep -qE "[[:space:]]${param_key}(=[^[:space:]]*)?[[:space:]]"; then
-            # Parameter exists, check if value is different
-            local existing_value=$(echo " ${updated_params} " | grep -oE "${param_key}=[^[:space:]]+" | cut -d= -f2 || echo "")
+        # FIXED: Properly escape dots and other regex metacharacters
+        local escaped_key=$(printf '%s\n' "$param_key" | sed 's/[.[\*^$]/\\&/g')
+        
+        # Check if parameter exists (with any value) using escaped key
+        if echo " ${updated_params} " | grep -qE "[[:space:]]${escaped_key}(=[^[:space:]]*)?[[:space:]]"; then
+            local existing_value=$(echo " ${updated_params} " | grep -oE "${escaped_key}=[^[:space:]]+" | cut -d= -f2 || echo "")
             if [[ "${existing_value}" != "${param_value}" ]] && [[ -n "${param_value}" ]]; then
-                # Replace existing parameter with new value
-                updated_params=$(echo "${updated_params}" | sed -E "s/${param_key}=[^[:space:]]*/${param}/g")
+                # Replace using escaped key
+                updated_params=$(echo "${updated_params}" | sed -E "s/${escaped_key}=[^[:space:]]*/${param}/g")
                 log INFO "Updated kernel parameter: ${param} (was: ${param_key}=${existing_value})"
                 added_count=$((added_count + 1))
             else
                 log INFO "Kernel parameter already present: ${param_key}"
             fi
         else
-            # Parameter doesn't exist, add it
             updated_params="${updated_params} ${param}"
             added_count=$((added_count + 1))
             log INFO "Added kernel parameter: ${param}"
@@ -830,7 +907,6 @@ module_boot_security() {
     done
     
     if [[ ${added_count} -gt 0 ]]; then
-        # Clean up extra spaces
         updated_params=$(echo "${updated_params}" | sed 's/  */ /g' | sed 's/^ //;s/ $//')
         sudo sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"${updated_params}\"|" "${grub_config}"
         log SUCCESS "Added/updated ${added_count} kernel hardening parameters"
@@ -868,19 +944,34 @@ module_boot_security() {
         fi
     fi
     
+    # FIXED: Validate GRUB config before updating
+    log INFO "Validating GRUB configuration..."
+    if command -v grub-script-check &> /dev/null; then
+        if ! sudo grub-script-check "${grub_config}" 2>&1 | tee -a "${LOG_FILE}"; then
+            log ERROR "GRUB config validation failed"
+            local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
+            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
+            return 1
+        fi
+    fi
+    
     log INFO "Updating GRUB configuration..."
     if command -v update-grub &> /dev/null; then
         if sudo update-grub 2>&1 | tee -a "${LOG_FILE}"; then
             log SUCCESS "GRUB updated successfully"
         else
-            log ERROR "Failed to update GRUB"
+            log ERROR "Failed to update GRUB, restoring backup"
+            local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
+            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
             return 1
         fi
     elif command -v grub2-mkconfig &> /dev/null; then
         if sudo grub2-mkconfig -o /boot/grub2/grub.cfg 2>&1 | tee -a "${LOG_FILE}"; then
             log SUCCESS "GRUB updated successfully"
         else
-            log ERROR "Failed to update GRUB"
+            log ERROR "Failed to update GRUB, restoring backup"
+            local latest_backup=$(ls -t "${grub_config}.backup."* 2>/dev/null | head -1)
+            [[ -n "${latest_backup}" ]] && sudo cp "${latest_backup}" "${grub_config}"
             return 1
         fi
     else
@@ -892,14 +983,13 @@ module_boot_security() {
     log WARNING "Reboot required for boot security changes to take effect"
 }
 
-# Module: IPv6 Configuration - FIXED for clarity
+# Module: IPv6 Configuration
 module_ipv6() {
     CURRENT_MODULE="ipv6"
     log INFO "Configuring IPv6..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure IPv6"; return 0; }
     
-    # FIXED: Clearer variable naming - 1 means disabled, 0 means enabled
     local ipv6_disabled=$(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>/dev/null || echo "0")
     
     if [[ "${ipv6_disabled}" == "1" ]]; then
@@ -923,7 +1013,7 @@ EOF
     fi
 }
 
-# Module: AppArmor - FIXED with better profile filtering
+# Module: AppArmor
 module_apparmor() {
     CURRENT_MODULE="apparmor"
     log INFO "Configuring AppArmor..."
@@ -937,30 +1027,28 @@ module_apparmor() {
     sudo systemctl start apparmor
     
     if [[ "${SECURITY_LEVEL}" =~ ^(high|paranoid)$ ]]; then
-        log INFO "Enforcing AppArmor profiles..."
+        log INFO "Setting AppArmor profiles to complain mode first..."
+        local complain_count=0
+        local enforce_count=0
         local failed_profiles=()
-        local enforced_count=0
         
-        # FIXED: Better filtering of profiles
         for profile in /etc/apparmor.d/*; do
             if [[ -f "$profile" ]] && \
                [[ ! "$profile" =~ \.(dpkg|save|disabled|cache)$ ]] && \
                [[ ! "$(basename "$profile")" =~ ^(abstractions|tunables|cache|disable|force-complain|local)$ ]]; then
                 local profile_name=$(basename "$profile")
-                if sudo aa-enforce "$profile" 2>&1 | tee -a "${LOG_FILE}"; then
-                    enforced_count=$((enforced_count + 1))
-                else
-                    failed_profiles+=("${profile_name}")
+                
+                # First set to complain mode
+                if sudo aa-complain "$profile" 2>&1 | tee -a "${LOG_FILE}"; then
+                    complain_count=$((complain_count + 1))
                 fi
             fi
         done
         
-        log SUCCESS "Enforced ${enforced_count} AppArmor profiles"
-        
-        if [[ ${#failed_profiles[@]} -gt 0 ]]; then
-            log WARNING "Failed to enforce ${#failed_profiles[@]} profiles: ${failed_profiles[*]}"
-            log INFO "Run 'sudo aa-complain /etc/apparmor.d/<profile>' to set problematic profiles to complain mode"
-        fi
+        log SUCCESS "Set ${complain_count} AppArmor profiles to complain mode"
+        log INFO "Monitor /var/log/syslog for AppArmor denials, then run:"
+        log INFO "  sudo aa-enforce /etc/apparmor.d/<profile>"
+        log INFO "to enforce profiles that don't cause issues"
     fi
     
     log SUCCESS "AppArmor configured"
@@ -1022,7 +1110,7 @@ EOF
     log SUCCESS "AIDE configured"
 }
 
-# Module: Sysctl Hardening - ENHANCED with lockdown mode
+# Module: Sysctl Hardening
 module_sysctl() {
     CURRENT_MODULE="sysctl"
     log INFO "Configuring kernel parameters..."
@@ -1033,7 +1121,6 @@ module_sysctl() {
         log INFO "Sysctl hardening already configured, updating..."
     fi
     
-    # ENHANCED: Added kernel lockdown and module controls
     cat << 'EOF' | sudo tee /etc/sysctl.d/99-security-hardening.conf > /dev/null
 # IP Forwarding
 net.ipv4.ip_forward = 0
@@ -1190,7 +1277,7 @@ EOF
     log INFO "USB device connections will be logged to /var/log/usb-devices.log"
 }
 
-# Module: Secure Shared Memory - FIXED for fstab duplication
+# Module: Secure Shared Memory
 module_secure_shared_memory() {
     CURRENT_MODULE="secure_shared_memory"
     log INFO "Securing shared memory..."
@@ -1205,7 +1292,6 @@ module_secure_shared_memory() {
         return 0
     fi
     
-    # FIXED: Remove any existing entries before adding new one
     if ! grep -q "tmpfs.*${shm_mount}.*noexec" /etc/fstab; then
         # Remove any existing tmpfs entries for this mount point
         sudo sed -i "\|^tmpfs[[:space:]]*${shm_mount}|d" /etc/fstab
@@ -1354,6 +1440,14 @@ execute_modules() {
             modules_to_run=("${filtered[@]}")
         fi
     fi
+    
+    # Check for circular dependencies
+    for module in "${modules_to_run[@]}"; do
+        if ! check_circular_deps "${module}" "${module}"; then
+            log ERROR "Cannot proceed due to circular dependencies"
+            exit 1
+        fi
+    done
     
     local -a execution_order=()
     for module in "${modules_to_run[@]}"; do
