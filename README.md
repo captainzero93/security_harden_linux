@@ -19,7 +19,7 @@ One-command security hardening that implements enterprise-grade protections (DIS
 - [Why Harden Your Linux System?](#why-harden-your-linux-system)
 - [What's New in v3.4](#whats-new-in-v34)
 - [Safety Features Status](#safety-features-status)
-- [Installation](#installation)
+- [Installation](#installation) , also check out [Quick Start](#quick-start-for-most-users) if you want hash verifcation on the script.
 - [Usage Guide](#usage-guide)
 - [Security Levels](#security-levels)
 - [Available Modules](#available-modules)
