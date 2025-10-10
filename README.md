@@ -1,4 +1,4 @@
-⚡ FORTRESS.SH :: Terminal Defense Protocol
+# ⚡ FORTRESS.SH :: Debian Linux Defense Configuration
 
 Does this comply with GDPR/HIPAA/PCI-DSS?</b></summary>
 
@@ -1545,7 +1545,7 @@ apt-config dump | grep 'APT::Periodic::Unattended-Upgrade'
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 **Contributions welcome!** This project improves with community input.
 
@@ -1655,19 +1655,19 @@ log ERROR "Critical failure"
 - 🔴 More comprehensive compliance mapping
 
 **Medium Priority:**
-- 🟡 Better SELinux support (currently AppArmor-focused)
-- 🟡 GUI wrapper (for less technical users)
-- 🟡 Ansible role version
-- 🟡 Docker container hardening module
+-  Better SELinux support (currently AppArmor-focused)
+-  GUI wrapper (for less technical users)
+-  Ansible role version
+-  Docker container hardening module
 
 **Low Priority:**
-- 🟢 Additional language translations
-- 🟢 Video tutorials
-- 🟢 Example configurations library
+-  Additional language translations
+-  Video tutorials
+-  Example configurations library
 
 ---
 
-## 📚 Additional Resources
+##  Additional Resources
 
 ### **Official Documentation**
 
@@ -1700,13 +1700,13 @@ log ERROR "Critical failure"
 
 ## 🌟 Star This Repo!
 
-**If you find this useful, please star the repository!** ⭐
+**If you find this useful, please star the repository!** 
 
 It helps others discover the project and motivates continued development.
 
 ---
 
-## ⚠️ Important Legal Disclaimer
+##  Important Legal Disclaimer
 
 <details>
 <summary><b>Click to read full disclaimer (important!)</b></summary>
