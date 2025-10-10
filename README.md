@@ -17,9 +17,7 @@ Does this comply with GDPR/HIPAA/PCI-DSS?</b></summary>
 - ❌ **Data encryption at rest** (separate LUKS setup)
 - ❌ **Backup procedures** (separate backup solution)
 - ❌ **Business continuity planning** (organizational)
-- ❌ **Staff training** (organizational)
-- ❌ **Third-party assessments** (professional audit)
-- ❌ **Documentation** (policies, procedures)
+- ❌ **More Documentation** (policies, procedures)
 
 **Compliance scoring:**
 - **CIS Benchmarks:** Implements ~70% of Level 1, ~50% of Level 2
