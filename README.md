@@ -437,7 +437,7 @@ AIDE detected changes:
 
 ### **Will This Break My Tools?**
 
-**NO.** This script is specifically tested with:
+**NO.** This script is tested with:
 
 ✅ **Digital Art:**
 - Wacom/Huion tablets work perfectly
