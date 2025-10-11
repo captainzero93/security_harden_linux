@@ -8,7 +8,7 @@ You're absolutely right! Here's the complete README.md with the header, badges, 
 
 ---
 
-# 🛡️ Linux Security Hardening for Everyone
+# Linux Security Hardening for Everyone
 
 **One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.**
 
@@ -25,7 +25,7 @@ You're absolutely right! Here's the complete README.md with the header, badges, 
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [ About Linux Security](#-the-truth-about-linux-security)
 - [Who This Is For](#-who-this-is-for)
@@ -827,7 +827,7 @@ sudo update-grub
 
 ---
 
-## 🚀 Advanced Usage
+## Advanced Usage
 
 ### **Server Deployment Pipeline**
 
@@ -1398,8 +1398,6 @@ This script implements controls from multiple security frameworks:
 - Organizational policies
 - Physical security
 - Network architecture
-- Business continuity
-- Staff training
 - Third-party audits
 
 ---
