@@ -223,7 +223,7 @@ sudo ./improved_harden_linux.sh -l high -n
 
 ---
 
-## 💀 Why This Matters - Real-World Attacks
+## Why This Matters - Real-World Attacks
 
 ### **Without Hardening:**
 
