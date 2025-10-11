@@ -2,7 +2,7 @@
 
 # Linux Security Hardening for Everyone
 
-**One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.**
+**One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense. Whilst allowing the user to decide the level of protection / use trade-off**
 
 **Version 3.6** - Production-Ready with Enhanced Features & All Critical Bug Fixes Applied
 
