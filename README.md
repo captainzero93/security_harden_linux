@@ -431,7 +431,7 @@ AIDE detected changes:
 
 ---
 
-## 🎨 For Creative Professionals
+## For Creative Uses
 
 **Special considerations for artists, designers, musicians, and content creators:**
 
@@ -825,7 +825,7 @@ sudo ./improved_harden_linux.sh -e system_update,firewall
 
 ---
 
-## 🔐 What Gets Hardened?
+## What Gets Hardened?
 
 ### **Network Security:**
 
@@ -933,7 +933,7 @@ sudo ./improved_harden_linux.sh -e system_update,firewall
 
 ---
 
-## 🆘 Emergency Recovery
+## Emergency Recovery
 
 ### **If Something Goes Wrong:**
 
@@ -1006,7 +1006,7 @@ sudo update-grub
 
 ---
 
-## ❓ Common Questions
+##  Common Questions
 
 <details>
 <summary><b>Is this safe to run on my daily driver?</b></summary>
@@ -1693,7 +1693,7 @@ sudo update-grub
 
 ---
 
-## ⚙️ Advanced Usage
+## Advanced Usage
 
 [Content for Advanced Usage section continues exactly as in the original document, including all subsections:
 - Server Deployment Pipeline
@@ -1706,7 +1706,7 @@ sudo update-grub
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 [Content for Requirements section continues exactly as in the original document, including all subsections:
 - System Requirements
@@ -1716,7 +1716,7 @@ sudo update-grub
 
 ---
 
-## 🏛️ Security Compliance
+## Security Compliance
 
 [Content for Security Compliance section continues exactly as in the original document, including all subsections:
 - Standards Implemented
@@ -1733,32 +1733,32 @@ sudo update-grub
 
 ---
 
-## 📜 Version History
+## Version History
 
 ### **v3.6 (Current - 2025-01-11)** 🎉
 **"Production Stable Release" - Enhanced Features & Polish**
 
 **New Features:**
-- ✨ Enhanced help documentation with better examples
-- ✨ Modern, responsive HTML security reports
-- ✨ Improved desktop environment detection
-- ✨ Added Samba file sharing configuration option
-- ✨ Better progress indicators and status messages
-- ✨ More informative console output
-- ✨ Code quality improvements
+- Enhanced help documentation with better examples
+- Modern, responsive HTML security reports
+- Improved desktop environment detection
+- Added Samba file sharing configuration option
+- Better progress indicators and status messages
+- More informative console output
+- Code quality improvements
 
 **All v3.5-fixed Improvements Included:**
-- ✅ SSH key validation using return codes
-- ✅ Firewall SSH port detection excluding comments
-- ✅ Fail2Ban backend auto-detection
-- ✅ ClamAV 600-second timeout
-- ✅ Better encryption detection with compgen
-- ✅ GRUB parameter regex escaping
-- ✅ AIDE log permissions (750)
-- ✅ USB logging with logrotate
-- ✅ Shared memory fstab regex
-- ✅ Backup timestamp race condition fixed
-- ✅ Audit module in dependency tree
+- SSH key validation using return codes
+- Firewall SSH port detection excluding comments
+- Fail2Ban backend auto-detection
+- ClamAV 600-second timeout
+- Better encryption detection with compgen
+- GRUB parameter regex escaping
+- AIDE log permissions (750)
+- USB logging with logrotate
+- Shared memory fstab regex
+- Backup timestamp race condition fixed
+- Audit module in dependency tree
 
 **What's Improved:**
 - Enhanced user experience
@@ -1844,13 +1844,13 @@ sudo update-grub
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 [Content for Contributing section continues exactly as in the original document]
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 [Content for Additional Resources section continues exactly as in the original document]
 
