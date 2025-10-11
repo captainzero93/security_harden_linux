@@ -1,15 +1,16 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.5 - All Critical & Production Fixes Applied
+# Version: 3.6 - Production Stable Release
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+ and Ubuntu 25.10+
+# Last Updated: 2025-01-11
 
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.5-fixed"
+readonly VERSION="3.6"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/security_hardening.log"
@@ -63,7 +64,7 @@ declare -A SECURITY_MODULES=(
     ["lynis_audit"]="Run Lynis security audit"
 )
 
-# FIXED: Added audit module to dependencies
+# Module dependencies
 declare -A MODULE_DEPS=(
     ["ssh_hardening"]="system_update"
     ["fail2ban"]="system_update firewall"
@@ -157,13 +158,14 @@ detect_desktop() {
     if [[ -n "${XDG_CURRENT_DESKTOP:-}" ]] || [[ -n "${DESKTOP_SESSION:-}" ]] || \
        systemctl is-active --quiet display-manager 2>/dev/null; then
         IS_DESKTOP=true
-        log INFO "Desktop environment detected"
+        log INFO "Desktop environment detected: ${XDG_CURRENT_DESKTOP:-Unknown}"
     fi
 }
 
 load_config() {
     if [[ -f "${CONFIG_FILE}" ]]; then
         log INFO "Loading configuration from ${CONFIG_FILE}"
+        # shellcheck source=/dev/null
         source "${CONFIG_FILE}"
     fi
 }
@@ -183,7 +185,7 @@ OPTIONS:
     -l, --level LEVEL      Set security level (low|moderate|high|paranoid)
     -e, --enable MODULES   Enable specific modules (comma-separated)
     -x, --disable MODULES  Disable specific modules (comma-separated)
-    -r, --restore          Restore from most recent backup
+    -r, --restore [FILE]   Restore from backup (optionally specify file)
     -R, --report           Generate security report only
     -c, --config FILE      Use custom configuration file
     --version              Display script version
@@ -196,9 +198,27 @@ SECURITY LEVELS:
     paranoid  - Maximum security (significant impact on usability)
 
 EXAMPLES:
+    # Standard hardening with default (moderate) security
     sudo ./${SCRIPT_NAME}
+    
+    # Non-interactive high security hardening
+    sudo ./${SCRIPT_NAME} -n -l high
+    
+    # Enable only firewall and SSH hardening
     sudo ./${SCRIPT_NAME} -e firewall,ssh_hardening,fail2ban
-    sudo ./${SCRIPT_NAME} -n -l moderate
+    
+    # Harden with all except AIDE and ClamAV
+    sudo ./${SCRIPT_NAME} -x aide,clamav
+    
+    # Dry run to preview changes
+    sudo ./${SCRIPT_NAME} -d -v
+    
+    # Restore from backup
+    sudo ./${SCRIPT_NAME} --restore
+
+DOCUMENTATION:
+    Full documentation: https://github.com/captainzero93/security_harden_linux
+    Report issues: https://github.com/captainzero93/security_harden_linux/issues
 
 EOF
     exit 0
@@ -206,9 +226,15 @@ EOF
 
 list_modules() {
     echo "Available Security Modules:"
-    echo "=========================="
+    echo "============================"
+    echo ""
     for module in "${!SECURITY_MODULES[@]}"; do
         printf "  %-20s - %s\n" "${module}" "${SECURITY_MODULES[${module}]}"
+    done
+    echo ""
+    echo "Dependencies:"
+    for module in "${!MODULE_DEPS[@]}"; do
+        printf "  %-20s requires: %s\n" "${module}" "${MODULE_DEPS[${module}]}"
     done
     exit 0
 }
@@ -247,8 +273,8 @@ check_requirements() {
     local os_name=$(lsb_release -si)
     local os_version=$(lsb_release -sr)
     
-    if [[ ! "${os_name}" =~ ^(Ubuntu|Debian|Kubuntu)$ ]]; then
-        log ERROR "Unsupported OS: ${os_name}. This script supports Ubuntu/Kubuntu/Debian."
+    if [[ ! "${os_name}" =~ ^(Ubuntu|Debian|Kubuntu|LinuxMint|Pop)$ ]]; then
+        log ERROR "Unsupported OS: ${os_name}. This script supports Ubuntu/Kubuntu/Debian/Mint/Pop!_OS."
         exit 1
     fi
     
@@ -272,7 +298,6 @@ check_requirements() {
     log SUCCESS "System: ${os_name} ${os_version}"
 }
 
-# FIXED: Use single timestamp to avoid race condition
 backup_files() {
     log INFO "Creating comprehensive system backup..."
     
@@ -335,6 +360,7 @@ EOF
     if sudo tar -czf "${backup_dir}.tar.gz" -C "$(dirname "${backup_dir}")" "$(basename "${backup_dir}")" 2>&1 | tee -a "${LOG_FILE}"; then
         cd "$(dirname "${backup_dir}")" || return 1
         sha256sum "$(basename "${backup_dir}.tar.gz")" > "${backup_dir}.tar.gz.sha256"
+        sudo rm -rf "${backup_dir}"
         log SUCCESS "Backup created: ${backup_dir}.tar.gz"
     else
         log WARNING "Failed to compress backup, keeping uncompressed version"
@@ -504,7 +530,6 @@ check_kernel_version() {
     return 1
 }
 
-# FIXED: Return exit codes instead of string for better validation
 check_ssh_keys() {
     local has_valid_keys=false
     
@@ -551,7 +576,6 @@ module_system_update() {
     log SUCCESS "System packages updated"
 }
 
-# FIXED: Improved SSH port detection to exclude commented lines
 module_firewall() {
     CURRENT_MODULE="firewall"
     log INFO "Configuring firewall..."
@@ -590,6 +614,14 @@ module_firewall() {
         if [[ ! "${allow_kde}" =~ ^[Nn]$ ]]; then
             sudo ufw allow 1714:1764/tcp comment 'KDE Connect'
             sudo ufw allow 1714:1764/udp comment 'KDE Connect'
+        fi
+        
+        read -p "Allow Samba file sharing? (y/N): " -r allow_samba
+        if [[ "${allow_samba}" =~ ^[Yy]$ ]]; then
+            sudo ufw allow 137/udp comment 'Samba NetBIOS'
+            sudo ufw allow 138/udp comment 'Samba NetBIOS'
+            sudo ufw allow 139/tcp comment 'Samba SMB'
+            sudo ufw allow 445/tcp comment 'Samba CIFS'
         fi
     fi
     
@@ -630,7 +662,6 @@ module_root_access() {
     log SUCCESS "Root access restricted"
 }
 
-# FIXED: Better SSH key detection using return codes
 module_ssh_hardening() {
     CURRENT_MODULE="ssh_hardening"
     log INFO "Hardening SSH..."
@@ -640,7 +671,6 @@ module_ssh_hardening() {
     local sshd_config="/etc/ssh/sshd_config"
     [[ ! -f "${sshd_config}" ]] && { log ERROR "SSH not installed"; return 1; }
     
-    # FIXED: Use return code for validation
     local has_ssh_keys=false
     if check_ssh_keys; then
         log INFO "Valid SSH keys detected"
@@ -720,7 +750,6 @@ module_fail2ban() {
     
     install_package "fail2ban" || return 1
     
-    # FIXED: Changed backend to "auto" for better compatibility
     cat << 'EOF' | sudo tee /etc/fail2ban/jail.local > /dev/null
 [DEFAULT]
 bantime  = 3600
@@ -740,7 +769,6 @@ EOF
     log SUCCESS "Fail2Ban configured"
 }
 
-# FIXED: Added timeout to freshclam
 module_clamav() {
     CURRENT_MODULE="clamav"
     log INFO "Installing ClamAV antivirus..."
@@ -853,7 +881,6 @@ module_filesystems() {
     log SUCCESS "Unused filesystems disabled"
 }
 
-# FIXED: Improved encryption detection and kernel parameter handling
 module_boot_security() {
     CURRENT_MODULE="boot_security"
     log INFO "Securing boot configuration with kernel hardening..."
@@ -865,7 +892,6 @@ module_boot_security() {
     
     sudo cp "${grub_config}" "${grub_config}.backup.$(date +%Y%m%d_%H%M%S)" || return 1
     
-    # Only actual kernel cmdline parameters
     local kernel_params=(
         "page_alloc.shuffle=1"
         "slab_nomerge"
@@ -883,7 +909,6 @@ module_boot_security() {
         log INFO "Added lockdown parameter (kernel 5.4+)"
     fi
     
-    # FIXED: Better encryption detection using compgen
     local has_encryption=false
     if compgen -G "/dev/mapper/crypt*" > /dev/null 2>&1 || \
        lsblk -o TYPE,FSTYPE 2>/dev/null | grep -q "crypt"; then
@@ -923,7 +948,6 @@ module_boot_security() {
         local param_key="${param%%=*}"
         local param_value="${param#*=}"
         
-        # FIXED: Improved regex escaping
         local escaped_key=$(printf '%s\n' "$param_key" | sed 's/[][\.\*^$]/\\&/g')
         
         if echo " ${updated_params} " | grep -qE "[[:space:]]${escaped_key}(=[^[:space:]]*)?[[:space:]]"; then
@@ -1077,7 +1101,6 @@ module_apparmor() {
     sudo systemctl start apparmor
     
     local enforced_count=0
-    local complain_count=0
     
     for profile in /etc/apparmor.d/*; do
         if [[ -f "$profile" ]] && \
@@ -1120,7 +1143,6 @@ module_ntp() {
     fi
 }
 
-# FIXED: Added secure permissions for AIDE log directory
 module_aide() {
     CURRENT_MODULE="aide"
     ENABLE_CRON="${AIDE_ENABLE_CRON:-true}"
@@ -1141,11 +1163,9 @@ module_aide() {
     [[ ! -f /var/lib/aide/aide.db.new ]] && { log ERROR "AIDE database not created"; return 1; }
     sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db || return 1
     
-    # Only install cron if enabled
     if [[ "${ENABLE_CRON}" == "true" ]]; then
         log INFO "Installing AIDE cron job..."
         
-        # Check mail availability
         if ! command -v mail &> /dev/null; then
             log WARNING "Mail not configured - reports will be logged only"
         fi
@@ -1156,11 +1176,9 @@ REPORT="/var/log/aide/aide-report-$(date +%Y%m%d).log"
 mkdir -p /var/log/aide
 chmod 750 /var/log/aide
 
-# Run with lower priority
 nice -n 19 ionice -c3 /usr/bin/aide --check > "$REPORT" 2>&1
 EXIT_CODE=$?
 
-# Set secure permissions on report
 chmod 640 "$REPORT" 2>/dev/null || true
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -1172,7 +1190,6 @@ fi
 EOF
         sudo chmod +x /etc/cron.daily/aide-check
         
-        # FIXED: Create log directory with secure permissions now
         sudo mkdir -p /var/log/aide
         sudo chmod 750 /var/log/aide
         
@@ -1313,7 +1330,6 @@ EOF
     log SUCCESS "Automatic updates enabled"
 }
 
-# FIXED: Added manual installation instructions
 module_rootkit_scanner() {
     CURRENT_MODULE="rootkit_scanner"
     log INFO "Installing rootkit scanners..."
@@ -1330,7 +1346,6 @@ module_rootkit_scanner() {
     log INFO "Run 'sudo rkhunter --check' to scan for rootkits"
 }
 
-# FIXED: Added logrotate configuration for USB log
 module_usb_protection() {
     CURRENT_MODULE="usb_protection"
     log INFO "Configuring USB logging..."
@@ -1345,7 +1360,6 @@ EOF
     sudo touch /var/log/usb-devices.log
     sudo chmod 644 /var/log/usb-devices.log
     
-    # FIXED: Add logrotate configuration
     cat << 'EOF' | sudo tee /etc/logrotate.d/usb-devices > /dev/null
 /var/log/usb-devices.log {
     weekly
@@ -1360,7 +1374,6 @@ EOF
     log INFO "USB device connections will be logged to /var/log/usb-devices.log"
 }
 
-# FIXED: Improved fstab regex check
 module_secure_shared_memory() {
     CURRENT_MODULE="secure_shared_memory"
     log INFO "Securing shared memory..."
@@ -1375,7 +1388,6 @@ module_secure_shared_memory() {
         return 0
     fi
     
-    # FIXED: More precise regex for fstab check
     if ! grep -E "^tmpfs[[:space:]]+${shm_mount}[[:space:]]+.*noexec" /etc/fstab; then
         sudo sed -i "\|^tmpfs[[:space:]]*${shm_mount}|d" /etc/fstab
         echo "tmpfs ${shm_mount} tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
@@ -1404,7 +1416,6 @@ module_secure_shared_memory() {
     log SUCCESS "Shared memory configured"
 }
 
-# FIXED: Added manual installation instructions
 module_lynis_audit() {
     CURRENT_MODULE="lynis_audit"
     log INFO "Running Lynis security audit..."
@@ -1437,28 +1448,114 @@ generate_report() {
     
     local failed_list=""
     if [[ ${#FAILED_MODULES[@]} -gt 0 ]]; then
-        failed_list="<p><strong>Failed Modules:</strong> ${FAILED_MODULES[*]}</p>"
+        failed_list="<div class=\"info-box error\"><h2>Failed Modules</h2><p><strong>Failed:</strong> ${FAILED_MODULES[*]}</p></div>"
     fi
     
     cat << EOF > "${REPORT_FILE}"
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Security Hardening Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Hardening Report - $(hostname)</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
-        .info-box { background: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; border-radius: 4px; }
-        .success { background: #d4edda; border-left: 4px solid #28a745; }
-        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
-        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        th { background: #007bff; color: white; font-weight: bold; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        }
+        h1 { 
+            color: #2d3748; 
+            border-bottom: 4px solid #667eea; 
+            padding-bottom: 15px; 
+            font-size: 2.5em;
+            margin-top: 0;
+        }
+        h2 {
+            color: #4a5568;
+            margin-top: 30px;
+            font-size: 1.5em;
+        }
+        .info-box { 
+            background: #edf2f7; 
+            border-left: 6px solid #4299e1; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 6px; 
+        }
+        .success { 
+            background: #f0fff4; 
+            border-left-color: #48bb78; 
+        }
+        .warning { 
+            background: #fffaf0; 
+            border-left-color: #ed8936; 
+        }
+        .error { 
+            background: #fff5f5; 
+            border-left-color: #f56565; 
+        }
+        .info-box p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        .info-box strong {
+            color: #2d3748;
+            font-weight: 600;
+        }
+        code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        ul {
+            line-height: 1.8;
+        }
+        .footer { 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            border-top: 2px solid #e2e8f0; 
+            color: #718096; 
+            font-size: 0.9em; 
+            text-align: center;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .badge-warning {
+            background: #feebc8;
+            color: #7c2d12;
+        }
     </style>
 </head>
 <body>
@@ -1472,48 +1569,60 @@ generate_report() {
             <p><strong>Hostname:</strong> $(hostname)</p>
             <p><strong>Date:</strong> $(date)</p>
             <p><strong>Desktop Environment:</strong> ${IS_DESKTOP}</p>
-            <p><strong>Security Level:</strong> ${SECURITY_LEVEL}</p>
+            <p><strong>Security Level:</strong> ${SECURITY_LEVEL} <span class="badge badge-success">Applied</span></p>
             <p><strong>Script Version:</strong> ${VERSION}</p>
         </div>
         
         <div class="info-box success">
-            <h2>Executed Modules</h2>
-            <p><strong>Total:</strong> ${#EXECUTED_MODULES[@]}</p>
+            <h2>✅ Executed Modules</h2>
+            <p><strong>Total Completed:</strong> ${#EXECUTED_MODULES[@]}</p>
             <p><strong>Modules:</strong> ${EXECUTED_MODULES[*]}</p>
         </div>
         
-        ${failed_list:+<div class="info-box error">
-            <h2>Failed Modules</h2>
-            ${failed_list}
-        </div>}
+        ${failed_list}
         
         <div class="info-box">
-            <h2>Backup Information</h2>
-            <p><strong>Log File:</strong> ${LOG_FILE}</p>
+            <h2>📋 Backup Information</h2>
+            <p><strong>Log File:</strong> <code>${LOG_FILE}</code></p>
             <p>To restore from backup, run:<br>
             <code>sudo ./${SCRIPT_NAME} --restore</code></p>
         </div>
         
         <div class="info-box warning">
-            <h2>⚠️ Important Notes</h2>
+            <h2>⚠️ Important Next Steps</h2>
             <ul>
-                <li>A system restart is recommended to apply all changes</li>
-                <li>Keep the backup file safe for recovery purposes</li>
-                <li>Review the log file for detailed information: ${LOG_FILE}</li>
+                <li><strong>Restart your system</strong> to apply all kernel and boot changes</li>
+                <li>Keep the backup files safe for recovery purposes</li>
+                <li>Review the detailed log: <code>${LOG_FILE}</code></li>
                 <li>Test all critical services before deploying to production</li>
+                <li>If using SSH, verify key-based login works before logging out</li>
+                <li>Check firewall rules: <code>sudo ufw status verbose</code></li>
+                <li>Monitor blocked IPs: <code>sudo fail2ban-client status sshd</code></li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <h2>📊 Security Recommendations</h2>
+            <ul>
+                <li>Run periodic security scans: <code>sudo rkhunter --check</code></li>
+                <li>Check AIDE reports: <code>sudo cat /var/log/aide/aide-report-*.log</code></li>
+                <li>Review audit logs: <code>sudo ausearch -m USER_LOGIN -ts recent</code></li>
+                <li>Monitor AppArmor: <code>sudo aa-status</code></li>
+                <li>Keep system updated: <code>sudo apt update && sudo apt upgrade</code></li>
             </ul>
         </div>
         
         <div class="footer">
-            <p>Generated by Enhanced Linux Security Hardening Script v${VERSION}</p>
-            <p>GitHub: <a href="https://github.com/captainzero93/security_harden_linux">captainzero93/security_harden_linux</a></p>
+            <p><strong>Enhanced Linux Security Hardening Script v${VERSION}</strong></p>
+            <p>Created by captainzero93 | 
+            <a href="https://github.com/captainzero93/security_harden_linux" target="_blank">GitHub Repository</a></p>
+            <p>Report generated: $(date '+%Y-%m-%d %H:%M:%S')</p>
         </div>
     </div>
 </body>
 </html>
 EOF
     
-    # Set secure permissions on report
     sudo chmod 600 "${REPORT_FILE}"
     
     log SUCCESS "Report generated: ${REPORT_FILE}"
@@ -1627,7 +1736,7 @@ main() {
                 exit 0
                 ;;
             -c|--config) CONFIG_FILE="$2"; shift 2 ;;
-            --version) echo "v${VERSION}"; exit 0 ;;
+            --version) echo "Enhanced Linux Security Hardening Script v${VERSION}"; exit 0 ;;
             --list-modules) list_modules ;;
             *) 
                 echo "Unknown option: $1"
@@ -1645,17 +1754,22 @@ main() {
     sudo touch "${LOG_FILE}"
     sudo chmod 640 "${LOG_FILE}"
     
-    log INFO "Starting Security Hardening v${VERSION}"
+    echo ""
+    log INFO "================================"
+    log INFO "Security Hardening Script v${VERSION}"
+    log INFO "================================"
     log INFO "Security Level: ${SECURITY_LEVEL}"
     log INFO "Desktop Mode: ${IS_DESKTOP}"
     log INFO "Dry Run: ${DRY_RUN}"
+    log INFO "Interactive: ${INTERACTIVE}"
+    echo ""
     
     [[ "${DRY_RUN}" == "false" ]] && backup_files
     
     execute_modules
     generate_report
     
-    echo
+    echo ""
     log SUCCESS "================================"
     log SUCCESS "Security hardening completed!"
     log SUCCESS "================================"
@@ -1663,9 +1777,9 @@ main() {
     [[ ${#FAILED_MODULES[@]} -gt 0 ]] && log WARNING "Failed modules: ${#FAILED_MODULES[@]} (${FAILED_MODULES[*]})"
     log INFO "Log: ${LOG_FILE}"
     log INFO "Report: ${REPORT_FILE}"
+    echo ""
     
     if [[ "${DRY_RUN}" == "false" ]] && [[ "${INTERACTIVE}" == "true" ]]; then
-        echo
         read -p "Restart recommended to apply all changes. Restart now? (y/N): " -r restart
         [[ "${restart}" =~ ^[Yy]$ ]] && sudo reboot
     fi
