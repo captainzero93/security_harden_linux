@@ -14,6 +14,8 @@
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
 [![Version](https://img.shields.io/badge/Version-3.6-green.svg)]()
 
+ko_fi: nucleardiffusion
+
 ---
 
 ## Table of Contents
