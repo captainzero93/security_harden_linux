@@ -13,7 +13,6 @@
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
 [![Version](https://img.shields.io/badge/Version-3.6-green.svg)]()
-[![Tested](https://img.shields.io/badge/Tested-Production%20Ready-success.svg)]()
 
 ---
 
