@@ -1950,6 +1950,6 @@ Verify:       sha256sum -c /root/security_backup_*.tar.gz.sha256
 
 ** Star this repo if it helped you! **
 
-**Version:** 3.5-fixed | **Last Updated:** 2025/10/11 | **Author:** captainzero93
+**Version:** 3.5-fixed.2 **Author:** captainzero93
 
 ---
