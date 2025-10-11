@@ -25,33 +25,31 @@
 - [ Desktop Users: This Won't Ruin Your Workflow](#️-desktop-users-this-wont-ruin-your-workflow)
 - [⚡ TL;DR - Quick Commands](#-tldr---quick-commands)
 - [🚀 Quick Start (5 Minutes)](#-quick-start-5-minutes)
-- [💀 Why This Matters - Real-World Attacks](#-why-this-matters---real-world-attacks)
-- [🔒 Why Each Security Measure Matters](#-why-each-security-measure-matters)
+- [ Why This Matters - Real-World Attacks](#-why-this-matters---real-world-attacks)
+- [ Why Each Security Measure Matters](#-why-each-security-measure-matters)
 - [ For Creative Professionals](#-for-creative-professionals)
 - [ What's New in v3.6](#-whats-new-in-v36---production-stable)
-- [🛡️ Safety Features Status](#️-safety-features-status)
-- [📦 Installation](#-installation)
+- [ Safety Features Status](#️-safety-features-status)
+- [ Installation](#-installation)
 - [ Usage Guide](#-usage-guide)
 - [ Security Levels Explained](#️-security-levels-explained)
 - [ Available Modules](#-available-modules)
-- [🔐 What Gets Hardened?](#-what-gets-hardened)
-- [🆘 Emergency Recovery](#-emergency-recovery)
-- [❓ Common Questions](#-common-questions)
-- [🔧 Troubleshooting](#-troubleshooting)
-- [⚙️ Advanced Usage](#-advanced-usage)
-- [📋 Requirements](#-requirements)
-- [🏛️ Security Compliance](#️-security-compliance)
-- [📄 License & Support](#-license--support)
-- [📜 Version History](#-version-history)
-- [🤝 Contributing](#-contributing)
-- [📚 Additional Resources](#-additional-resources)
-- [⚠️ Important Legal Disclaimer](#️-important-legal-disclaimer)
-- [📧 Contact & Support](#-contact--support)
-- [🎯 Quick Reference Card](#-quick-reference-card)
+- [ What Gets Hardened?](#-what-gets-hardened)
+- [ Emergency Recovery](#-emergency-recovery)
+- [ Common Questions](#-common-questions)
+- [ Troubleshooting](#-troubleshooting)
+- [ Advanced Usage](#-advanced-usage)
+- [ Requirements](#-requirements)
+- [ Security Compliance](#️-security-compliance)
+- [ License & Support](#-license--support)
+- [ Version History](#-version-history)
+- [ Contributing](#-contributing)
+- [ Additional Resources](#-additional-resources)
+- [ Important Legal Disclaimer](#️-important-legal-disclaimer)
+- [ Contact & Support](#-contact--support)
+- [ Quick Reference Card](#-quick-reference-card)
 
 ---
-
-## 🚨 The Truth About Linux Security
 
 ### **Your fresh Linux install isn't secure. Here's why.**
 
@@ -73,7 +71,7 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 
 ---
 
-## 👤 Who This Is For
+## Who This Is For
 
 ### **You, if you:**
 
@@ -137,7 +135,7 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 
 ---
 
-## 🖥️ Desktop Users: This Won't Ruin Your Workflow
+## Desktop Users: This Won't Ruin Your Workflow
 
 **Worried about compatibility?** The script:
 
@@ -211,7 +209,7 @@ sudo reboot
 ### **For Server Users:**
 
 ```bash
-# ⚠️ CRITICAL: Set up SSH keys FIRST!
+# CRITICAL: Set up SSH keys FIRST!
 ssh-keygen -t ed25519 -C "your_email@example.com"
 ssh-copy-id user@your-server
 
@@ -268,7 +266,7 @@ Jan 15 03:42:15 [Fail2Ban] Banned 185.220.101.45 for 2 hours
 
 ---
 
-## 🔒 Why Each Security Measure Matters
+## Why Each Security Measure Matters
 
 <details>
 <summary><b>Firewall (UFW)</b></summary>
@@ -492,28 +490,28 @@ AIDE detected changes:
 
 ### **New Features:**
 
-✨ **Enhanced Help & Documentation**
+ **Enhanced Help & Documentation**
 - More detailed command examples
 - Improved flag descriptions
 - Direct links to GitHub documentation
 
-✨ **Modern HTML Reports**
+ **Modern HTML Reports**
 - Responsive, professional design
 - Better visual hierarchy
 - Actionable next steps
 - Security recommendations section
 
-✨ **Improved Firewall Configuration**
+ **Improved Firewall Configuration**
 - Added Samba file sharing prompt for desktops
 - Better handling of network discovery
 - More intelligent desktop feature detection
 
-✨ **Better Desktop Environment Detection**
+ **Better Desktop Environment Detection**
 - Shows detected desktop (GNOME, KDE, etc.) in logs
 - More reliable detection logic
 - Better adaptation to desktop vs server environments
 
-✨ **Enhanced User Experience**
+ **Enhanced User Experience**
 - Cleaner progress indicators
 - More informative status messages
 - Better error descriptions
@@ -542,7 +540,7 @@ AIDE detected changes:
 
 ---
 
-## 🛡️ Safety Features Status
+## Safety Features Status;
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -559,7 +557,7 @@ AIDE detected changes:
 
 ---
 
-## 📦 Installation
+## Installation:
 
 ### **Method 1: Direct Download (Recommended)**
 
