@@ -73,18 +73,18 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 
 ---
 
-## 🎮 Who This Is For
+## Who This Is For
 
 ### **You, if you:**
 
-- 🎮 **Gaming on Linux** and want to stay secure without FPS loss
-- 🎨 **Create art, music, or videos** without security getting in your way
-- 💼 **Work from home** and need basic protection
-- 🏠 **Just want a secure personal computer** that works normally
-- 🔰 **Are tired of complicated security guides** written for sysadmins
-- 🖥️ **Run a home server** or self-host services
-- 👨‍💻 **Develop software** and want security without breaking your tools
-- 📚 **Are learning Linux** and want to start with good habits
+- **Gaming on Linux** and want to stay secure without FPS loss
+- **Create art, music, or videos** without security getting in your way
+- **Work from home** and need basic protection
+- **Just want a secure personal computer** that works normally
+- **Are tired of complicated security guides** written for sysadmins
+- **Run a home server** or self-host services
+- **Develop software** and want security without breaking your tools
+- **Are learning Linux** and want to start with good habits
 
 ### **What makes this different:**
 
@@ -1588,7 +1588,7 @@ apt-config dump | grep 'APT::Periodic::Unattended-Upgrade'
 
 ---
 
-## 📚 Version History
+## Version History
 
 ### **v3.5-fixed (Current - 2025-01-09)** 🎉
 **"Production-Ready Release" - All Critical Bugs Fixed**
