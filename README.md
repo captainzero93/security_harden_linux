@@ -1,13 +1,5 @@
 # ⚡ FORTRESS.SH :: Debian Linux Defense Configuration
 
-Helps with compliance to GDPR/HIPAA/PCI-DSS and many other security enhancements?</b></summary>
-
-**Partially - it helps with compliance but isn't a complete solution:**
- 
-You're absolutely right! Here's the complete README.md with the header, badges, and full table of contents restored:
-
----
-
 # Linux Security Hardening for Everyone
 
 **One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) used by Fortune 500 companies and the U.S. Department of Defense.**
