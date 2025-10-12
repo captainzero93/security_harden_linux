@@ -2350,7 +2350,6 @@ Contributions welcome! See [Contributing](#contributing) section.
 - Ansible/Terraform examples
 
 **Low priority:**
-- 🎯 Performance optimizations
 - New features
 - UI/UX improvements
 
@@ -2443,10 +2442,10 @@ This script is provided **"AS IS"** without warranty of any kind, express or imp
 
 ### **Use at Your Own Risk:**
 
-- ⚠️ The authors and contributors are **not responsible** for any damage, data loss, service disruption, or security incidents resulting from use of this script
-- ⚠️ You are **solely responsible** for testing in your environment before production use
-- ⚠️ This script modifies critical system configurations - improper use can render systems inaccessible
-- ⚠️ Always maintain backups and recovery methods before running
+-  The authors and contributors are **not responsible** for any damage, data loss, service disruption, or security incidents resulting from use of this script
+-  You are **solely responsible** for testing in your environment before production use
+-  This script modifies critical system configurations - improper use can render systems inaccessible
+-  Always maintain backups and recovery methods before running
 
 ### **Compliance Disclaimer:**
 
