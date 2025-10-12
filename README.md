@@ -28,7 +28,7 @@
 - [🚀 Quick Start (5 Minutes)](#-quick-start-5-minutes)
 - [ Why This Matters - Real-World Attacks](#-why-this-matters---real-world-attacks)
 - [ Why Each Security Measure Matters](#-why-each-security-measure-matters)
-- [ For Creative Professionals](#-for-creative-professionals)
+- [ For Creative Uses](#-for-creative-uses)
 - [ What's New in v3.6](#-whats-new-in-v36---production-stable)
 - [ Safety Features Status](#️-safety-features-status)
 - [ Installation](#-installation)
