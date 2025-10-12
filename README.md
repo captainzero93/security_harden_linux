@@ -20,37 +20,35 @@
 
 ## Table of Contents
 
-## Table of Contents
-
 - [Your fresh Linux install isn't secure. Here's why.](#your-fresh-linux-install-isnt-secure-heres-why)
 - [Who This Is For](#who-this-is-for)
-- [What This Actually Does (In Plain English)](#-what-this-actually-does-in-plain-english)
+- [What This Actually Does (In Plain English)](#what-this-actually-does-in-plain-english)
 - [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
-- [TL;DR - Quick Commands](#-tldr---quick-commands)
-- [Quick Start (5 Minutes)](#-quick-start-5-minutes)
+- [TL;DR - Quick Commands](#tldr---quick-commands)
+- [Quick Start (5 Minutes)](#quick-start-5-minutes)
 - [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 - [Why Each Security Measure Matters](#why-each-security-measure-matters)
 - [For Creative Users](#for-creative-users)
-- [What's New in v3.6](#-whats-new-in-v36---production-stable)
+- [What's New in v3.6 - Production Stable](#whats-new-in-v36---production-stable)
 - [Safety Features Status](#safety-features-status)
 - [Installation](#installation)
-- [Usage Guide](#-usage-guide)
-- [Security Levels Explained](#️-security-levels-explained)
-- [Available Modules](#-available-modules)
+- [Usage Guide](#usage-guide)
+- [Security Levels Explained](#security-levels-explained)
+- [Available Modules](#available-modules)
 - [What Gets Hardened?](#what-gets-hardened)
 - [Emergency Recovery](#emergency-recovery)
-- [Common Questions](#-common-questions)
-- [Troubleshooting](#-troubleshooting)
+- [Common Questions](#common-questions)
+- [Troubleshooting](#troubleshooting)
 - [Advanced Usage](#advanced-usage)
-- [Requirements](#-requirements)
+- [Requirements](#requirements)
 - [Security Compliance](#security-compliance)
-- [License & Support](#-license--support)
+- [License & Support](#license--support)
 - [Version History](#version-history)
 - [Contributing](#contributing)
-- [Additional Resources](#-additional-resources)
-- [Important Legal Disclaimer](#️-important-legal-disclaimer)
-- [Contact & Support](#-contact--support)
-- [Quick Reference Card](#-quick-reference-card)
+- [Additional Resources](#additional-resources)
+- [Important Legal Disclaimer](#important-legal-disclaimer)
+- [Contact & Support](#contact--support)
+- [Quick Reference Card](#quick-reference-card)
 
 ---
 
@@ -493,28 +491,28 @@ AIDE detected changes:
 
 ### **New Features:**
 
- **Enhanced Help & Documentation**
+✅ **Enhanced Help & Documentation**
 - More detailed command examples
 - Improved flag descriptions
 - Direct links to GitHub documentation
 
- **Modern HTML Reports**
+✅ **Modern HTML Reports**
 - Responsive, professional design
 - Better visual hierarchy
 - Actionable next steps
 - Security recommendations section
 
- **Improved Firewall Configuration**
+✅ **Improved Firewall Configuration**
 - Added Samba file sharing prompt for desktops
 - Better handling of network discovery
 - More intelligent desktop feature detection
 
- **Better Desktop Environment Detection**
+✅ **Better Desktop Environment Detection**
 - Shows detected desktop (GNOME, KDE, etc.) in logs
 - More reliable detection logic
 - Better adaptation to desktop vs server environments
 
- **Enhanced User Experience**
+✅ **Enhanced User Experience**
 - Cleaner progress indicators
 - More informative status messages
 - Better error descriptions
@@ -543,7 +541,7 @@ AIDE detected changes:
 
 ---
 
-## Safety Features Status;
+## Safety Features Status
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -560,7 +558,7 @@ AIDE detected changes:
 
 ---
 
-## Installation:
+## Installation
 
 ### **Method 1: Direct Download (Recommended)**
 
@@ -1009,7 +1007,7 @@ sudo update-grub
 
 ---
 
-##  Common Questions
+## Common Questions
 
 <details>
 <summary><b>Is this safe to run on my daily driver?</b></summary>
@@ -1338,7 +1336,7 @@ cat my-firewall-rules.txt  # Review and re-create rules
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### **Module Failed - General Approach**
 
@@ -1698,41 +1696,474 @@ sudo update-grub
 
 ## Advanced Usage
 
-[Content for Advanced Usage section continues exactly as in the original document, including all subsections:
-- Server Deployment Pipeline
-- Custom Configuration File
-- Ansible Playbook Integration
-- Docker/Container Deployment
-- Terraform/IaC Integration
-- Monitoring & Alerting Setup
-- Compliance Reporting]
+### **Server Deployment Pipeline**
+
+```bash
+#!/bin/bash
+# Example CI/CD pipeline for server hardening
+
+# 1. Provision server (Terraform, CloudFormation, etc.)
+terraform apply
+
+# 2. Wait for SSH to be available
+while ! nc -z $SERVER_IP 22; do sleep 5; done
+
+# 3. Copy SSH key
+ssh-copy-id -i ~/.ssh/id_ed25519.pub user@$SERVER_IP
+
+# 4. Download hardening script
+ssh user@$SERVER_IP 'wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh'
+ssh user@$SERVER_IP 'chmod +x improved_harden_linux.sh'
+
+# 5. Run hardening (non-interactive, high security)
+ssh user@$SERVER_IP 'sudo ./improved_harden_linux.sh -l high -n'
+
+# 6. Verify hardening
+ssh user@$SERVER_IP 'sudo ./improved_harden_linux.sh --report'
+
+# 7. Run application deployment
+ansible-playbook deploy-app.yml
+```
+
+---
+
+### **Custom Configuration File**
+
+```bash
+# Create custom config: ~/hardening.conf
+SECURITY_LEVEL="high"
+ENABLE_MODULES="system_update,firewall,ssh_hardening,fail2ban,audit,sysctl"
+DISABLE_MODULES="clamav,aide"
+VERBOSE=true
+INTERACTIVE=false
+
+# Firewall settings
+UFW_ENABLE_IPV6="yes"
+UFW_ALLOW_MDNS="no"
+UFW_ALLOW_KDE_CONNECT="no"
+UFW_ALLOW_SAMBA="no"
+
+# SSH settings
+SSH_PORT="2222"
+SSH_ALLOW_PASSWORD_AUTH="no"
+SSH_PERMIT_ROOT_LOGIN="no"
+
+# Fail2Ban settings
+FAIL2BAN_BANTIME="3600"  # 1 hour
+FAIL2BAN_MAXRETRY="3"
+
+# AIDE settings
+AIDE_ENABLE_CRON="true"
+AIDE_CRON_SCHEDULE="daily"
+
+# Use the config
+sudo ./improved_harden_linux.sh -c ~/hardening.conf
+```
+
+---
+
+### **Ansible Playbook Integration**
+
+```yaml
+---
+# playbook.yml
+- name: Harden Linux servers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Download hardening script
+      get_url:
+        url: https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+        dest: /tmp/improved_harden_linux.sh
+        mode: '0755'
+
+    - name: Copy custom configuration
+      copy:
+        src: files/hardening.conf
+        dest: /tmp/hardening.conf
+
+    - name: Run hardening script
+      command: /tmp/improved_harden_linux.sh -c /tmp/hardening.conf -n -l high
+      register: hardening_result
+
+    - name: Generate report
+      command: /tmp/improved_harden_linux.sh --report
+      register: report_result
+
+    - name: Fetch report
+      fetch:
+        src: /root/security_report.html
+        dest: reports/{{ inventory_hostname }}_security_report.html
+        flat: yes
+
+    - name: Reboot if required
+      reboot:
+        reboot_timeout: 300
+      when: hardening_result.changed
+```
+
+---
+
+### **Docker/Container Deployment**
+
+```dockerfile
+# Dockerfile.hardened
+FROM ubuntu:22.04
+
+# Install prerequisites
+RUN apt-get update && apt-get install -y \
+    wget \
+    sudo \
+    systemd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and run hardening script
+RUN wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh \
+    && chmod +x improved_harden_linux.sh \
+    && ./improved_harden_linux.sh -l moderate -n -x ssh_hardening,fail2ban
+
+# Your application
+COPY app /app
+WORKDIR /app
+
+CMD ["/app/start.sh"]
+```
+
+**Note:** Some modules (SSH, Fail2Ban, firewall) may not work in containers. Use selective modules.
+
+---
+
+### **Terraform/IaC Integration**
+
+```hcl
+# main.tf
+resource "aws_instance" "hardened_server" {
+  ami           = "ami-0c55b159cbfafe1f0"  # Ubuntu 22.04
+  instance_type = "t3.medium"
+  key_name      = aws_key_pair.deployer.key_name
+
+  user_data = <<-EOF
+              #!/bin/bash
+              # Wait for cloud-init
+              cloud-init status --wait
+
+              # Download hardening script
+              wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+              chmod +x improved_harden_linux.sh
+
+              # Run hardening
+              ./improved_harden_linux.sh -l high -n
+
+              # Signal completion
+              /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource HardenedServer --region ${AWS::Region}
+              EOF
+
+  tags = {
+    Name = "Hardened Server"
+    SecurityCompliance = "STIG"
+  }
+}
+```
+
+---
+
+### **Monitoring & Alerting Setup**
+
+```bash
+#!/bin/bash
+# monitor_security.sh - Run this via cron
+
+# Check firewall status
+if ! sudo ufw status | grep -q "Status: active"; then
+    echo "ALERT: Firewall is not active!" | mail -s "Security Alert" admin@example.com
+fi
+
+# Check Fail2Ban
+if ! sudo systemctl is-active --quiet fail2ban; then
+    echo "ALERT: Fail2Ban is not running!" | mail -s "Security Alert" admin@example.com
+fi
+
+# Check for banned IPs
+BANNED=$(sudo fail2ban-client status sshd | grep "Currently banned" | awk '{print $4}')
+if [ "$BANNED" -gt 10 ]; then
+    echo "ALERT: $BANNED IPs currently banned" | mail -s "Security Alert" admin@example.com
+fi
+
+# Check AIDE integrity
+if [ -f /var/log/aide/aide.log ]; then
+    if grep -q "changed" /var/log/aide/aide.log; then
+        echo "ALERT: AIDE detected file changes" | mail -s "Security Alert" admin@example.com
+    fi
+fi
+
+# Check audit logs for suspicious activity
+if sudo ausearch -ts today -m USER_LOGIN | grep -q "failed"; then
+    FAILED=$(sudo ausearch -ts today -m USER_LOGIN | grep -c "failed")
+    echo "ALERT: $FAILED failed login attempts today" | mail -s "Security Alert" admin@example.com
+fi
+```
+
+**Add to cron:**
+```bash
+# Run every hour
+0 * * * * /usr/local/bin/monitor_security.sh
+```
+
+---
+
+### **Compliance Reporting**
+
+```bash
+#!/bin/bash
+# generate_compliance_report.sh
+
+# Run Lynis audit
+sudo ./improved_harden_linux.sh -e lynis_audit
+
+# Generate HTML report
+sudo ./improved_harden_linux.sh --report
+
+# Extract compliance metrics
+LYNIS_SCORE=$(sudo lynis show details | grep "Hardening index" | awk '{print $4}')
+
+# Create compliance summary
+cat > compliance_summary.txt << EOF
+Security Compliance Report
+Generated: $(date)
+==========================
+
+Lynis Hardening Index: $LYNIS_SCORE
+
+Firewall Status: $(sudo ufw status | grep Status | awk '{print $2}')
+Fail2Ban Status: $(sudo systemctl is-active fail2ban)
+SSH Password Auth: $(sudo sshd -T | grep passwordauthentication | awk '{print $2}')
+Root Login: $(sudo sshd -T | grep permitrootlogin | awk '{print $2}')
+AIDE Status: $([ -f /var/lib/aide/aide.db ] && echo "Configured" || echo "Not configured")
+AppArmor Status: $(sudo aa-status | grep "profiles are loaded" | awk '{print $1}') profiles
+
+Compliance Standards:
+- CIS Benchmark: ~70% Level 1
+- DISA STIG: ~60% controls
+- PCI-DSS: ~40% technical controls
+
+Full report: /root/security_report.html
+EOF
+
+# Email report
+mail -s "Security Compliance Report" -a /root/security_report.html admin@example.com < compliance_summary.txt
+```
 
 ---
 
 ## Requirements
 
-[Content for Requirements section continues exactly as in the original document, including all subsections:
-- System Requirements
-- Pre-Flight Checklist
-- Critical for Remote Servers
-- Network Requirements]
+### **System Requirements:**
+
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| **OS** | Debian 11, Ubuntu 20.04 | Debian 12, Ubuntu 22.04+ |
+| **RAM** | 1GB | 2GB+ |
+| **Disk Space** | 2GB free | 5GB+ free |
+| **CPU** | 1 core | 2+ cores |
+| **Sudo Access** | Required | Required |
+
+### **Supported Distributions:**
+
+- Ubuntu 22.04 LTS, 24.04 LTS
+- Debian 11 (Bullseye), 12 (Bookworm)
+- Linux Mint 21+
+- Pop!_OS 22.04+
+- Kubuntu 24.04+
+
+**Should Work (community tested):**
+- Elementary OS 6+
+- Zorin OS 16+
+- MX Linux 21+
+- Ubuntu derivatives
+
+**Not Supported:**
+- RHEL/CentOS/Fedora (different package manager)
+- Arch/Manjaro (rolling release, different tools)
+- openSUSE (different architecture)
+
+### **Pre-Flight Checklist:**
+
+**Before running the script:**
+
+✅ **System backup** - Full system backup or snapshot  
+✅ **Console access** - IPMI, physical access, or recovery mode capability  
+✅ **SSH keys configured** - If using SSH (CRITICAL for remote servers)  
+✅ **Custom configs documented** - Note any custom firewall rules or configurations  
+✅ **Read the documentation** - At least skim this README  
+✅ **Test in staging** - For production servers, test in identical staging environment first  
+
+### **Critical for Remote Servers:**
+
+**⚠️ IF YOU'RE RUNNING THIS ON A REMOTE SERVER:**
+
+1. **Set up SSH keys FIRST:**
+   ```bash
+   # On your local machine
+   ssh-keygen -t ed25519 -C "your_email@example.com"
+   ssh-copy-id user@remote-server
+   
+   # Test key login works
+   ssh user@remote-server
+   ```
+
+2. **Have backup access method:**
+   - IPMI/iDRAC console
+   - Cloud provider console (AWS SSM, Azure Serial Console, etc.)
+   - Physical access
+
+3. **Run during maintenance window:**
+   - Not during peak traffic
+   - With ability to revert quickly
+
+4. **Use dry-run first:**
+   ```bash
+   sudo ./improved_harden_linux.sh --dry-run -v
+   ```
+
+### **Network Requirements:**
+
+**During installation:**
+- Internet connection required (for package downloads)
+- Bandwidth: ~200-500MB downloads (ClamAV signatures, packages, etc.)
+- Repositories: Ubuntu/Debian package repositories accessible
+
+**After installation:**
+- Ongoing: ~50-100MB/day (automatic updates, ClamAV signature updates)
+- Ports: SSH (22), and any application-specific ports you configure
 
 ---
 
 ## Security Compliance
 
-[Content for Security Compliance section continues exactly as in the original document, including all subsections:
-- Standards Implemented
-- CIS Benchmark Controls
-- DISA STIG Controls
-- Compliance Verification
-- Limitations]
+### **Standards Implemented:**
+
+This script implements controls from multiple security frameworks:
+
+| Framework | Coverage | Notes |
+|-----------|----------|-------|
+| **CIS Benchmarks** | ~70% Level 1<br>~50% Level 2 | Host-level controls only |
+| **DISA STIG** | ~60% | Debian/Ubuntu STIG controls |
+| **PCI-DSS** | ~40% | Technical controls only |
+| **NIST 800-53** | ~30% | Host hardening controls |
+| **HIPAA** | ~35% | Technical safeguards |
+
+### **CIS Benchmark Controls:**
+
+**Level 1 (implemented):**
+- ✅ Initial Setup (filesystem configuration, boot settings)
+- ✅ Services (disable unnecessary services)
+- ✅ Network Configuration (firewall, kernel parameters)
+- ✅ Logging and Auditing (auditd, rsyslog)
+- ✅ Access Control (PAM, SSH hardening)
+- ✅ User Accounts and Environment (password policy, account security)
+
+**Level 2 (partially implemented):**
+- ⚠️ Additional kernel hardening
+- ⚠️ Mandatory access control (AppArmor)
+- ⚠️ Additional audit logging
+- ⚠️ Advanced authentication
+
+### **DISA STIG Controls:**
+
+**Implemented:**
+- ✅ V-238200 through V-238350 (account management, access control)
+- ✅ V-238360 through V-238390 (audit logging)
+- ✅ V-238400 through V-238440 (kernel hardening)
+- ✅ V-238450 through V-238470 (network security)
+- ✅ V-238480 through V-238510 (SSH hardening)
+
+**Not Implemented (require manual configuration or are out of scope):**
+- ⚠️ Organizational policy controls
+- ⚠️ Physical security controls
+- ⚠️ Application-specific controls
+- ⚠️ Encryption key management
+- ⚠️ Personnel security
+
+### **Compliance Verification:**
+
+**Run Lynis audit:**
+```bash
+# Enable Lynis module
+sudo ./improved_harden_linux.sh -e lynis_audit
+
+# View results
+sudo lynis show details
+
+# Check hardening index
+sudo lynis show details | grep "Hardening index"
+```
+
+**Expected Lynis scores:**
+- **Before hardening:** 40-55 (varies by distribution)
+- **After hardening (moderate):** 70-80
+- **After hardening (high):** 80-88
+- **After hardening (paranoid):** 85-92
+
+**Note:** 100 is effectively impossible without breaking functionality.
+
+### **Limitations:**
+
+**This script DOES NOT provide:**
+- ❌ Complete compliance with any framework
+- ❌ Encryption at rest (use LUKS)
+- ❌ Network segmentation (use VLANs, subnets)
+- ❌ Application-level controls
+- ❌ Data loss prevention
+- ❌ Backup solutions
+- ❌ High availability
+- ❌ Disaster recovery
+- ❌ Organizational policies
+- ❌ Physical security
+
+**For full compliance, you'll also need:**
+- Encryption solutions (LUKS, GPG)
+- Backup and recovery procedures
+- Network architecture (firewalls, IDS/IPS)
+- Access control policies and procedures
+- Incident response plans
+- Security awareness training
+- Regular vulnerability assessments
+- Professional security audit
 
 ---
 
 ## 📄 License & Support
 
-[Content for License & Support section continues exactly as in the original document, including all subsections]
+### **License:**
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
+
+**You are free to:**
+- ✅ Share - copy and redistribute the material
+- ✅ Adapt - remix, transform, and build upon the material
+
+**Under the following terms:**
+- **Attribution** - Give appropriate credit, provide link to license
+- **NonCommercial** - Not for commercial use
+
+**Full license:** https://creativecommons.org/licenses/by-nc/4.0/
+
+### **Commercial Use:**
+
+For commercial licensing, please contact: captainzero93@protonmail.com
+
+### **Support:**
+
+**Free support:**
+- Documentation (this README)
+- GitHub Issues: https://github.com/captainzero93/security_harden_linux/issues
+- GitHub Discussions: https://github.com/captainzero93/security_harden_linux/discussions
+
+**No warranty provided.** Use at your own risk.
+
+### **Contributing:**
+
+Contributions welcome! See [Contributing](#contributing) section.
 
 ---
 
@@ -1778,14 +2209,18 @@ sudo update-grub
 **"Production-Ready Release" - All Critical Bugs Fixed**
 
 **Critical Fixes:**
-- SSH lockouts prevented (enhanced key detection)
-- Remote sessions protected (emergency SSH rule)
-- Cross-distro compatibility (auto backend)
-- No more process hangs (timeouts added)
-- Encrypted systems detected properly
-- GRUB configs stay clean
-- Logs rotate automatically
-- Backups more reliable
+- ✅ SSH lockouts prevented (enhanced key detection)
+- ✅ Remote sessions protected (emergency SSH rule)
+- ✅ Cross-distro compatibility (auto backend detection)
+- ✅ No more process hangs (timeouts added)
+- ✅ Encrypted systems detected properly
+- ✅ GRUB configs stay clean (regex escaping)
+- ✅ Logs rotate automatically
+- ✅ Backups more reliable (timestamp fix)
+- ✅ Permissions correct (750 for AIDE logs)
+- ✅ Dependencies resolved (audit module)
+
+**Upgrade from v3.4 or earlier:** Highly recommended
 
 ---
 
@@ -1844,81 +2279,355 @@ sudo update-grub
 - Comprehensive backup system
 - Dry-run mode
 - HTML reporting
+- Enhanced error handling
+- Better documentation
+
+---
+
+### **v2.x (2024-Q1)**  
+**"Stability Series"**
+
+- Multiple bug fixes
+- Improved compatibility
+- Better logging
+- Community feedback integration
+
+---
+
+### **v1.x (2023)**  
+**"Initial Release"**
+
+- Basic hardening functionality
+- Firewall, SSH, Fail2Ban
+- Simple execution model
 
 ---
 
 ## Contributing
 
-[Content for Contributing section continues exactly as in the original document]
+### **How to Contribute:**
+
+**Bug reports:**
+1. Check existing issues first
+2. Create new issue with:
+   - Clear description
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - System information (`uname -a`, OS version)
+   - Relevant log excerpts
+
+**Feature requests:**
+1. Open GitHub discussion first
+2. Describe use case
+3. Explain benefit to users
+4. Consider implementation complexity
+
+**Code contributions:**
+1. Fork repository
+2. Create feature branch
+3. Make changes with clear commits
+4. Test on multiple distributions
+5. Update documentation
+6. Submit pull request
+
+### **Contribution Guidelines:**
+
+**Code style:**
+- Follow existing style
+- Use descriptive variable names
+- Comment complex logic
+- Include error handling
+
+**Testing requirements:**
+- Test on Ubuntu 22.04 minimum
+- Test on Debian 12 if possible
+- Test both desktop and server
+- Verify dry-run mode works
+- Ensure backups function
+
+**Documentation:**
+- Update README for new features
+- Add inline comments
+- Update help text
+- Include examples
+
+### **Areas needing help:**
+
+**High priority:**
+- Bug fixes (always welcome)
+- Documentation improvements
+- Testing on more distributions
+- Translations
+
+**Medium priority:**
+- New security modules
+- HTML report improvements
+- Compliance mappings
+- Ansible/Terraform examples
+
+**Low priority:**
+- 🎯 Performance optimizations
+- New features
+- UI/UX improvements
+
+### **Recognition:**
+
+Contributors will be:
+- Listed in CONTRIBUTORS.md
+- Credited in release notes
+- Thanked in documentation
 
 ---
 
 ## Additional Resources
 
-[Content for Additional Resources section continues exactly as in the original document]
+### **Security References:**
+
+**Official documentation:**
+- [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/) - Industry security standards
+- [DISA STIGs](https://public.cyber.mil/stigs/) - DoD security guidelines
+- [NIST 800-53](https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final) - Federal security controls
+
+**Linux security guides:**
+- [Linux Kernel Security](https://www.kernel.org/doc/html/latest/admin-guide/security-bugs.html) - Official kernel security
+- [AppArmor Wiki](https://gitlab.com/apparmor/apparmor/-/wikis/home) - AppArmor documentation
+- [SSH Hardening Guide](https://stribika.github.io/2015/01/04/secure-secure-shell.html) - SSH best practices
+
+### **Tools Documentation:**
+
+- [UFW](https://help.ubuntu.com/community/UFW) - Firewall documentation
+- [Fail2Ban](https://www.fail2ban.org/wiki/index.php/Main_Page) - Intrusion prevention
+- [AIDE](https://aide.github.io/) - File integrity monitoring
+- [Auditd](https://linux.die.net/man/8/auditd) - Linux auditing
+- [Lynis](https://cisofy.com/lynis/) - Security auditing tool
+
+### **Related Projects:**
+
+- [DevSec Hardening Framework](https://dev-sec.io/) - Ansible/Chef hardening
+- [Lynis](https://cisofy.com/lynis/) - Security auditing tool
+- [OpenSCAP](https://www.open-scap.org/) - Security compliance tool
+- [Bastille Linux](http://bastille-linux.sourceforge.net/) - Hardening toolkit
+
+### **Learning Resources:**
+
+**Beginner:**
+- [Linux Journey](https://linuxjourney.com/) - Learn Linux basics
+- [OverTheWire: Bandit](https://overthewire.org/wargames/bandit/) - Security challenges
+- [Cybrary](https://www.cybrary.it/) - Free security training
+
+**Intermediate:**
+- [Defensive Security](https://tryhackme.com/paths) - TryHackMe paths
+- [Linux Academy](https://linuxacademy.com/) - Linux training
+- [SANS Reading Room](https://www.sans.org/white-papers/) - Security papers
+
+**Advanced:**
+- [Exploit Education](https://exploit.education/) - Security exercises
+- [PentesterLab](https://pentesterlab.com/) - Web security
+- [HackTheBox](https://www.hackthebox.com/) - Security challenges
+
+### **Books:**
+
+- **"Linux Basics for Hackers"** - OccupyTheWeb
+- **"Practical Linux Security"** - Michael Boelen
+- **"Linux Security Cookbook"** - Gregor N. Purdy
+- **"The Practice of Network Security Monitoring"** - Richard Bejtlich
+
+### **YouTube Channels:**
+
+- NetworkChuck - Linux and security basics
+- LiveOverflow - Security research and exploitation
+- IppSec - HackTheBox walkthroughs
+- John Hammond - CTF challenges and security
 
 ---
 
-## 🌟 Star This Repo!
-
-**If you find this useful, please star the repository!** 
-
-It helps others discover the project and motivates continued development.
+**Quick links:**
+-  [Documentation](https://github.com/captainzero93/security_harden_linux/blob/main/README.md)
+-  [Report Bug](https://github.com/captainzero93/security_harden_linux/issues/new)
+-  [Request Feature](https://github.com/captainzero93/security_harden_linux/issues/new)
+-  [Discussions](https://github.com/captainzero93/security_harden_linux/discussions)
 
 ---
 
 ## ⚠️ Important Legal Disclaimer
 
-[Content for Legal Disclaimer section continues exactly as in the original document]
+**READ THIS BEFORE USING THE SCRIPT**
+
+### **No Warranty:**
+
+This script is provided **"AS IS"** without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
+
+### **Use at Your Own Risk:**
+
+- ⚠️ The authors and contributors are **not responsible** for any damage, data loss, service disruption, or security incidents resulting from use of this script
+- ⚠️ You are **solely responsible** for testing in your environment before production use
+- ⚠️ This script modifies critical system configurations - improper use can render systems inaccessible
+- ⚠️ Always maintain backups and recovery methods before running
+
+### **Compliance Disclaimer:**
+
+- This script provides **foundation** for security hardening, not complete compliance with any security framework
+- Compliance with PCI-DSS, HIPAA, SOC 2, or other frameworks requires additional controls, policies, and professional audit
+- Consult with qualified security professionals for compliance requirements
+
+### **Testing Requirements:**
+
+- ✅ **ALWAYS** test in a non-production environment first
+- ✅ **ALWAYS** have console or out-of-band access before running on remote systems
+- ✅ **ALWAYS** maintain recent backups before executing
+- ✅ **ALWAYS** review changes with `--dry-run` first
+- ✅ **NEVER** run on production systems without testing
+- ✅ **NEVER** run without understanding what it does
+
+### **Limitations:**
+
+**This script does NOT:**
+- Guarantee absolute security (no system is 100% secure)
+- Replace professional security assessment
+- Provide monitoring or incident response
+- Implement application-specific security
+- Configure backup or disaster recovery
+- Provide encryption at rest
+- Replace security awareness training
+
+### **Professional Advice:**
+
+For production environments, compliance requirements, or high-security needs, **consult qualified security professionals**.
+
+### **Liability:**
+
+To the maximum extent permitted by law:
+- The authors and contributors **disclaim all liability** for any damages arising from use of this script
+- Users **assume all risk** associated with use
+- This includes but is not limited to: data loss, system damage, service disruption, security breaches, compliance violations, or financial losses
+
+### **Support Disclaimer:**
+
+- Support is provided **best effort** basis with no guaranteed response time
+- No service level agreements (SLAs)
+- Bug fixes and updates provided **when possible**, not guaranteed
+
+**BY USING THIS SCRIPT, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO THESE TERMS.**
 
 ---
 
-## 📧 Contact & Support
+## Contact & Support
 
-[Content for Contact & Support section continues exactly as in the original document]
+### **Getting Help:**
+
+**Before asking for help:**
+1. Read this README thoroughly
+2. Check existing [GitHub Issues](https://github.com/captainzero93/security_harden_linux/issues)
+3. Review [Troubleshooting](#troubleshooting) section
+4. Run with `--verbose` and check logs
+
+**Where to get help:**
+
+** Bug Reports:**
+- GitHub Issues: https://github.com/captainzero93/security_harden_linux/issues
+- Include: OS version, script version, error messages, log excerpts
+
+** Questions:**
+- GitHub Discussions: https://github.com/captainzero93/security_harden_linux/discussions
+- Provide context and what you've already tried
+
+** Feature Requests:**
+- GitHub Discussions first to gauge interest
+- Then create Issue with detailed proposal
+
+** Security Vulnerabilities:**
+- **DO NOT** open public issue
+- Email directly: captainzero93@protonmail.com
+- Use subject: "SECURITY: [brief description]"
+- Will respond within 48 hours
+
+
+**Note:** These are targets, not guarantees. All support is provided on best-effort basis.
+
+### **Commercial Support:**
+
+For commercial licensing, professional support, or consulting services:
+- 📧 captainzero93@protonmail.com
+
+**Services available:**
+- Custom script development
+- Professional security assessment
+- Compliance consulting
+- Training and workshops
+- Priority support contracts
 
 ---
 
 ## 🎯 Quick Reference Card
 
 ```
+═══════════════════════════════════════════════════════════════════
+                    FORTRESS.SH QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════
+
 ESSENTIAL COMMANDS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Preview:      sudo ./improved_harden_linux.sh --dry-run
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Preview:      sudo ./improved_harden_linux.sh --dry-run -v
 Apply:        sudo ./improved_harden_linux.sh
 Restore:      sudo ./improved_harden_linux.sh --restore
 Report:       sudo ./improved_harden_linux.sh --report
 Help:         sudo ./improved_harden_linux.sh --help
 
 SECURITY LEVELS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Desktop:      sudo ./improved_harden_linux.sh -l moderate
 Server:       sudo ./improved_harden_linux.sh -l high -n
 Maximum:      sudo ./improved_harden_linux.sh -l paranoid
+Basic:        sudo ./improved_harden_linux.sh -l low
 
 MODULE SELECTION:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 List:         sudo ./improved_harden_linux.sh --list-modules
 Enable:       sudo ./improved_harden_linux.sh -e module1,module2
 Disable:      sudo ./improved_harden_linux.sh -x module1,module2
+Custom:       sudo ./improved_harden_linux.sh -c config.conf
 
 MONITORING:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Firewall:     sudo ufw status
 Blocked IPs:  sudo fail2ban-client status sshd
+Unban IP:     sudo fail2ban-client set sshd unbanip IP
 Audit:        sudo ausearch -m USER_LOGIN -ts recent
 AppArmor:     sudo aa-status
 Logs:         sudo tail -f /var/log/security_hardening.log
 
+FILE CHECKS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AIDE:         sudo aide --check
+Rootkits:     sudo rkhunter --check
+ClamAV:       sudo clamscan -r /home
+
 BACKUPS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Location:     /root/security_backup_TIMESTAMP.tar.gz
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Location:     /root/security_backup_*.tar.gz
+List:         ls -lht /root/security_backup_*.tar.gz
 Verify:       sha256sum -c /root/security_backup_*.tar.gz.sha256
+Restore:      sudo ./improved_harden_linux.sh --restore [FILE]
+
+EMERGENCY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SSH lockout:  Use console, restore /etc/ssh/sshd_config.backup.*
+Firewall:     sudo ufw disable (from console)
+Boot fail:    Recovery mode, restore /etc/default/grub.backup.*
+Full restore: sudo ./improved_harden_linux.sh --restore
+
+QUICK FIXES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Allow port:   sudo ufw allow PORT/tcp
+Disable AIDE: sudo chmod -x /etc/cron.daily/aide-check
+Stop ClamAV:  sudo systemctl stop clamav-daemon
+
+RESOURCES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GitHub:       https://github.com/captainzero93/security_harden_linux
+Issues:       https://github.com/captainzero93/security_harden_linux/issues
+
 ```
-
----
-
-**10 minutes of hardening now can save months of recovery later. Stay secure!**
 
 ---
 
