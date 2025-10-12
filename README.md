@@ -27,7 +27,7 @@
 - [What This Actually Does](#what-this-actually-does)
 - [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
 - [TL;DR - Quick Commands](#tldr---quick-commands)
-- [Quick Start (5 Minutes)](#quick-start-5-minutes)
+- [Quick Start (5 Minutes)](#quick-start)
 - [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 - [Why Each Security Measure Matters](#why-each-security-measure-matters)
 - [For Creative Users](#for-creative-users)
@@ -184,7 +184,7 @@ sudo ./improved_harden_linux.sh --restore
 
 ---
 
-## 🚀 Quick Start (5 Minutes)
+## Quick Start
 
 ### **For Desktop Users:**
 
