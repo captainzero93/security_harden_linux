@@ -139,7 +139,7 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 
 ## Desktop Users: This Won't Ruin Your Workflow
 
-**Worried about compatibility?** The script:
+The script:
 
 - **Detects desktop environments automatically** - knows you're not a server
 - **Asks before blocking features** like mDNS (network discovery), KDE Connect, and Samba
