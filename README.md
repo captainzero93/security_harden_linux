@@ -279,7 +279,7 @@ Jan 15 03:42:15 [Fail2Ban] Banned 185.220.101.45 for 2 hours
 **Why it matters:** Without a firewall, every service you run is exposed to the internet. Port scanners constantly probe servers looking for vulnerabilities.
 
 **Real impact:** 
-- Blocks 99% of automated attacks
+- Blocks 99%(?) of automated attacks
 - Prevents port scanning
 - Stops exploitation of unknown vulnerabilities
 
