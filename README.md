@@ -20,8 +20,11 @@
 
 ## Table of Contents
 
+## Table of Contents
+
 - [Your fresh Linux install isn't secure. Here's why.](#your-fresh-linux-install-isnt-secure-heres-why)
-- [Who This Is For](#who-this-is-for) and what it actually does.
+- [Who This Is For](#who-this-is-for)
+- [What This Actually Does](#what-this-actually-does)
 - [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
 - [TL;DR - Quick Commands](#tldr---quick-commands)
 - [Quick Start (5 Minutes)](#quick-start-5-minutes)
