@@ -32,7 +32,6 @@
 - [Why Each Security Measure Matters](#why-each-security-measure-matters)
 - [For Creative Users](#for-creative-users)
 - [What's New in v3.6 - Production Stable](#whats-new-in-v36---production-stable)
-- [Safety Features Status](#safety-features-status)
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
 - [Security Levels Explained](#security-levels-explained)
@@ -540,23 +539,6 @@ AIDE detected changes:
 - Better variable scoping
 - Improved error handling
 - More robust validation
-
----
-
-## Safety Features Status
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **SSH Key Detection** | ✅ **WORKING** | Validates keys before disabling password auth |
-| **Emergency SSH Rule** | ✅ **WORKING** | Adds SSH rule before firewall reset if in SSH session |
-| **Backup System** | ✅ **WORKING** | Comprehensive backup with checksum verification |
-| **Restore Function** | ✅ **WORKING** | One-command restore from backup |
-| **Dry Run Mode** | ✅ **WORKING** | Preview changes without applying |
-| **Encryption Detection** | ✅ **WORKING** | Detects LUKS, avoids breaking encrypted systems |
-| **GRUB Validation** | ✅ **WORKING** | Validates config before updating, rolls back on error |
-| **Desktop Detection** | ✅ **WORKING** | Automatically adapts for desktop environments |
-| **Dependency Resolution** | ✅ **WORKING** | Automatically handles module dependencies |
-| **Error Handling** | ✅ **WORKING** | Graceful failure with restore option |
 
 ---
 
