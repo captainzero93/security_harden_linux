@@ -99,7 +99,7 @@ This script applies **industry-standard security WITHOUT breaking your desktop e
 
 ---
 
-## ✅ What This Actually Does (In Plain English)
+## What This Actually Does
 
 Instead of spending 40+ hours reading security guides and manually configuring dozens of tools, this script:
 
