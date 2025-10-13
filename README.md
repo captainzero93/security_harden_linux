@@ -222,7 +222,7 @@ The script:
 ### Performance Impact on Creative Work:
 
 **Zero impact:**
-- No CPU overhead during rendering
+- No /low CPU overhead during rendering
 - No GPU performance loss
 - No RAM usage by security tools (except ClamAV - can be disabled)
 - Low disk I/O interference
