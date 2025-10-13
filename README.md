@@ -2655,9 +2655,8 @@ Contributors will be:
 ---
 
 **Quick links:**
-- [Documentation](https://github.com/captainzero93/security_harden_linux/blob/main/README.md)
+- Documentation is basically this Readme.md
 - [Report Bug](https://github.com/captainzero93/security_harden_linux/issues/new)
-- [Request Feature](https://github.com/captainzero93/security_harden_linux/issues/new)
 - [Discussions](https://github.com/captainzero93/security_harden_linux/discussions)
 
 ---
