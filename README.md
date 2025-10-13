@@ -2522,13 +2522,6 @@ For commercial licensing, please contact: captainzero93@protonmail.com
 - New features
 - UI/UX improvements
 
-### Recognition:
-
-Contributors will be:
-- Listed in CONTRIBUTORS.md
-- Credited in release notes
-- Thanked in documentation
-
 ---
 
 ## Additional Resources
