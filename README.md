@@ -2670,15 +2670,6 @@ Contributors will be:
 
 This script is provided "AS IS" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
 
-### Your Responsibility
-
-- Test in non-production environments first
-- Maintain backups and recovery methods before running
-- Have console or out-of-band access for remote systems
-- Understand what the script does before running
-- Never run on production without thorough testing
-- You are solely responsible for any damage, data loss, or service disruption
-
 ### Compliance
 
 This script provides a security foundation, not complete compliance with any framework. Professional assessment and additional controls are required for PCI-DSS, HIPAA, SOC 2, or similar standards. Consult qualified security professionals for compliance requirements.
