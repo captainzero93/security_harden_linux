@@ -18,7 +18,7 @@
 
 ## **CRITICAL WARNING FOR REMOTE SERVER USERS**
 
-**REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out. [Jump to detailed instructions](#critical-warning-for-remote-servers)
+**REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out. 
 
 ---
 
