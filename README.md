@@ -2509,54 +2509,7 @@ For commercial licensing, please contact: captainzero93@protonmail.com
 
 ---
 
-## Contributing
 
-### How to Contribute:
-
-**Bug reports:**
-1. Check existing issues first
-2. Create new issue with:
-   - Clear description
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - System information (`uname -a`, OS version, script version)
-   - Relevant log excerpts from `/var/log/security_hardening.log`
-
-**Feature requests:**
-1. Open GitHub discussion first
-2. Describe use case
-3. Explain benefit to users
-4. Consider implementation complexity
-
-**Code contributions:**
-1. Fork repository
-2. Create feature branch
-3. Make changes with clear commits
-4. Test on multiple distributions
-5. Update documentation
-6. Submit pull request
-
-### Contribution Guidelines:
-
-**Code style:**
-- Follow existing style
-- Use descriptive variable names
-- Comment complex logic
-- Include error handling
-- Use shellcheck for validation
-
-**Testing requirements:**
-- Test on Ubuntu 22.04 minimum
-- Test on Debian 12 if possible
-- Test both desktop and server
-- Verify dry-run mode works
-- Ensure backups function
-
-**Documentation:**
-- Update README for new features
-- Add inline comments
-- Update help text
-- Include examples
 
 ### Areas needing help:
 
