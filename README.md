@@ -2820,6 +2820,4 @@ Discussions:  https://github.com/captainzero93/security_harden_linux/discussions
 
 **GitHub:** https://github.com/captainzero93/security_harden_linux
 
-**Optimized for:** Kubuntu 24.04+ and Ubuntu 22.04+
-
 ---
