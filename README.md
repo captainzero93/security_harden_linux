@@ -151,7 +151,7 @@ The script:
 - **Creates automatic backups** before every change
 - **One-command restore** if anything goes wrong
 
-**Real talk:** At "moderate" level (the default), you won't even notice the changes. Your computer will feel exactly the same, just with 95% fewer security holes.
+**At "moderate" level:** (the default), you won't even notice the changes. Your computer will feel exactly the same, just with 95% fewer security holes.
 
 ---
 
