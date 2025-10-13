@@ -92,8 +92,7 @@ This script applies **industry-standard security WITHOUT breaking your desktop e
 - Music producers (Jack, PipeWire, Ardour, Reaper)
 - Developers (Docker, VSCode, databases, IDEs)
 - Office users (LibreOffice, browsers, email)
-- Anyone who just wants their computer to work
-
+- Anyone who just wants more security minimal hassle
 ---
 
 ## What This Actually Does
