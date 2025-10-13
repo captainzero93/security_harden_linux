@@ -607,13 +607,7 @@ enforcing = 1
 - No CPU overhead during rendering
 - No GPU performance loss
 - No RAM usage by security tools (except ClamAV - can be disabled)
-- No disk I/O interference
-
-**Measured impact:**
-- Blender render times: **0% difference**
-- DaVinci Resolve export: **0% difference**
-- Kdenlive timeline performance: **0% difference**
-- Ardour/Reaper DSP load: **0% difference**
+- Low disk I/O interference
 
 ---
 
