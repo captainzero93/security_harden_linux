@@ -42,7 +42,6 @@
 - [Security Compliance](#security-compliance)
 - [License & Support](#license--support)
 - [Version History](#version-history)
-- [Contributing](#contributing)
 - [Additional Resources](#additional-resources)
 - [Important Legal Disclaimer](#important-legal-disclaimer)
 - [Contact & Support](#contact--support)
@@ -2371,10 +2370,6 @@ For commercial licensing, please contact: captainzero93@protonmail.com
 - GitHub Discussions: https://github.com/captainzero93/security_harden_linux/discussions
 
 **No warranty provided.** Use at your own risk.
-
-### Contributing:
-
-Contributions welcome! See [Contributing](#contributing) section.
 
 ---
 
