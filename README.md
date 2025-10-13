@@ -575,7 +575,7 @@ enforcing = 1
 **Digital Art:**
 - Wacom/Huion tablets work perfectly
 - Krita, GIMP, Blender unchanged
-- Pen pressure and tilt fully functional
+- Pen pressure and tilt functional
 - USB tablets logged but not blocked
 
 **Video Editing:**
@@ -2207,7 +2207,7 @@ mail -s "Security Compliance Report" -a /root/security_hardening_report_*.html a
 
 ### Supported Distributions:
 
-**Fully Supported and Optimized:**
+**Updated to Support and Optimise:**
 - Ubuntu 22.04 LTS, 24.04 LTS, 25.10+
 - Kubuntu 24.04+
 - Debian 11 (Bullseye), 12 (Bookworm)
