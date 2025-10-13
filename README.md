@@ -639,7 +639,7 @@ enforcing = 1
 **Critical Bug Fixes:**
 - SSH key validation using return codes for reliability
 - Firewall SSH port detection excludes comments
-- Fail2Ban backend auto-detection (systemd/polling)
+- Fail2Ban configuration with automatic backend selection
 - ClamAV 600-second timeout prevents hangs
 - Encryption detection with compgen for accuracy
 - GRUB parameter regex escaping prevents malformed configs
@@ -913,7 +913,9 @@ sudo ./improved_harden_linux.sh -l paranoid
 
 | Module | Description | Default | Dependencies |
 |--------|-------------|---------|--------------|
-| `lynis_audit` | Run Lynis security audit | ✗ | system_update |
+| `lynis_audit` | Run Lynis security audit | ✓ | system_update |
+
+**Note:** To skip Lynis audit (which can be time-consuming), use: `sudo ./improved_harden_linux.sh -x lynis_audit`
 
 ### Module Usage:
 
@@ -1307,16 +1309,6 @@ sudo lynis show details
 **Short answer: Negligible to none.**
 
 **Detailed measurements:**
-
-| Component | CPU Impact | Memory Impact | Disk Impact |
-|-----------|------------|---------------|-------------|
-| Firewall (UFW) | <0.1% | ~5MB | None |
-| Fail2Ban | <0.5% | ~20MB | Minimal (logs) |
-| Audit logging | <1% | ~10MB | ~100MB/day logs |
-| AppArmor | <0.1% | ~2MB per profile | None |
-| Kernel hardening | None | None | None |
-| AIDE daily check | 5-10% for 10min | ~50MB | ~500MB (database) |
-| ClamAV daemon | 1-2% | ~300MB | ~200MB (signatures) |
 
 **Total ongoing impact:**
 - **CPU:** <2% on average
