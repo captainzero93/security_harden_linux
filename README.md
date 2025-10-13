@@ -2353,7 +2353,7 @@ This project is licensed under the **Creative Commons Attribution-NonCommercial 
 
 ### Commercial Use:
 
-For commercial licensing, please contact: captainzero93@protonmail.com
+For commercial licensing, please contact: cyberjunk77@protonmail.com
 
 ### Support:
 
@@ -2659,7 +2659,7 @@ To the maximum extent permitted by law:
 
 **Security Vulnerabilities:**
 - **DO NOT** open public issue
-- Email directly: captainzero93@protonmail.com
+- Email directly: cyberjunk77@protonmail.com
 - Use subject: "SECURITY: [brief description]"
 - Response target: within 48 hours
 
@@ -2668,7 +2668,7 @@ To the maximum extent permitted by law:
 ### Commercial Support:
 
 For commercial licensing, professional support, or consulting services:
-- captainzero93@protonmail.com
+- cyberjunk77@protonmail.com
 
 **Services available:**
 - Custom script development
