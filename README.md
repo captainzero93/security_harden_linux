@@ -1,6 +1,6 @@
 # ⚡ FORTRESS.SH :: Debian Linux Defense Configuration
 
-**One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) Whilst allowing the user to decide the level of protection / use trade-off**
+**One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off**
 
 **Version 3.6** - Production-Ready with Enhanced Features & All (known) Critical Bug Fixes Applied!
 
@@ -16,9 +16,46 @@
 
 ---
 
+## **CRITICAL WARNING FOR REMOTE SERVER USERS**
+
+**REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out. [Jump to detailed instructions](#critical-warning-for-remote-servers)
+
+---
+
+## 30-Second Quickstart
+
+### Desktop Users:
+```bash
+# Download and make executable
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+chmod +x improved_harden_linux.sh
+
+# Preview changes (recommended)
+sudo ./improved_harden_linux.sh --dry-run
+
+# Apply with defaults
+sudo ./improved_harden_linux.sh
+
+# Answer the interactive prompts, then reboot when done
+```
+
+### Server Users:
+```bash
+# FIRST: Set up SSH keys (CRITICAL - see full warning below)
+ssh-keygen -t ed25519
+ssh-copy-id user@your-server
+
+# Then run hardening
+sudo ./improved_harden_linux.sh -l high -n
+```
+
+**Something broke?** `sudo ./improved_harden_linux.sh --restore`
+
+---
+
 ## Table of Contents
 
-- [A fresh Linux install isn't secure.](#your-fresh-linux-install-isnt-secure)
+- [Your fresh Linux install isn't secure](#your-fresh-linux-install-isnt-secure)
 - [Who This Is For](#who-this-is-for)
 - [What This Actually Does](#what-this-actually-does)
 - [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
@@ -27,7 +64,6 @@
 - [Quick Start](#quick-start)
 - [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 - [Why Each Security Measure Matters](#why-each-security-measure-matters)
-- [For Creative Users](#for-creative-users)
 - [What's New in v3.6](#whats-new-in-v36)
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
@@ -51,7 +87,7 @@
 
 ## Your fresh Linux install isn't secure.
 
-Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that prioritize "making things work" over "keeping you safe." This isn't a bug, it's by design. Distributions assume you'll configure security later.
+Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that prioritize "making things work" over "keeping you safe." This is intentional. Distributions assume you'll configure security later.
 
 **But most people never do.**
 
@@ -92,7 +128,8 @@ This script applies **industry-standard security WITHOUT breaking your desktop e
 - Music producers (Jack, PipeWire, Ardour, Reaper)
 - Developers (Docker, VSCode, databases, IDEs)
 - Office users (LibreOffice, browsers, email)
-- Anyone who just wants more security minimal hassle
+- Anyone who just wants more security with minimal hassle
+
 ---
 
 ## What This Actually Does
@@ -148,6 +185,47 @@ The script:
 - **One-command restore** if anything goes wrong
 
 **At "moderate" level:** (the default), you won't even notice the changes. Your computer will feel exactly the same, just with 95% fewer security holes.
+
+### Special Considerations for Creative Users
+
+**Digital Art:**
+- Wacom/Huion tablets work perfectly
+- Krita, GIMP, Blender unchanged
+- Pen pressure and tilt functional
+- USB tablets logged but not blocked
+
+**Video Editing:**
+- DaVinci Resolve (all features work)
+- Kdenlive, OpenShot, Shotcut
+- Hardware encoding intact
+- Proxy workflows unaffected
+
+**Audio Production:**
+- Jack, PipeWire, PulseAudio all work
+- Real-time kernel scheduling preserved
+- Low-latency monitoring works
+- USB audio interfaces function normally
+- MIDI controllers work
+
+**3D Modeling:**
+- Blender with GPU rendering
+- CUDA/OpenCL acceleration works
+- GPU render farms function
+- Network rendering works (firewall rules can be added)
+
+**Photography:**
+- Darktable, RawTherapee work normally
+- Camera tethering via USB functions
+- Color calibration devices work
+- Wacom tablets for retouching
+
+### Performance Impact on Creative Work:
+
+**Zero impact:**
+- No CPU overhead during rendering
+- No GPU performance loss
+- No RAM usage by security tools (except ClamAV - can be disabled)
+- Low disk I/O interference
 
 ---
 
@@ -559,55 +637,6 @@ enforcing = 1
 
 **Critical:** On encrypted systems, 'nousb' prevents USB keyboard from working at boot - you cannot enter encryption password. Script detects this and warns/prompts user.
 </details>
-
----
-
-## For Creative Users
-
-**Special considerations for artists, designers, musicians, and content creators:**
-
-### Will This Break My Tools?
-
-**NO.** This script is tested with:
-
-**Digital Art:**
-- Wacom/Huion tablets work perfectly
-- Krita, GIMP, Blender unchanged
-- Pen pressure and tilt functional
-- USB tablets logged but not blocked
-
-**Video Editing:**
-- DaVinci Resolve (all features work)
-- Kdenlive, OpenShot, Shotcut
-- Hardware encoding intact
-- Proxy workflows unaffected
-
-**Audio Production:**
-- Jack, PipeWire, PulseAudio all work
-- Real-time kernel scheduling preserved
-- Low-latency monitoring works
-- USB audio interfaces function normally
-- MIDI controllers work
-
-**3D Modeling:**
-- Blender with GPU rendering
-- CUDA/OpenCL acceleration works
-- GPU render farms function
-- Network rendering works (firewall rules can be added)
-
-**Photography:**
-- Darktable, RawTherapee work normally
-- Camera tethering via USB functions
-- Color calibration devices work
-- Wacom tablets for retouching
-
-### What About Performance?
-
-**Zero impact on creative work:**
-- No CPU overhead during rendering
-- No GPU performance loss
-- No RAM usage by security tools (except ClamAV - can be disabled)
-- Low disk I/O interference
 
 ---
 
@@ -1204,7 +1233,6 @@ sudo update-grub
 - Answer the interactive prompts carefully
 - Keep the backup files
 
-Thousands of users run this on their daily systems without issues.
 </details>
 
 <details>
@@ -1300,10 +1328,9 @@ sudo lynis show details
 
 **Detailed measurements:**
 
-**Total ongoing impact:**
-- **CPU:** <2% on average
-- **Memory:** ~100-400MB (depending on modules)
-- **Disk:** ~1GB for logs, databases, backups
+**CPU:** <2% on average
+**Memory:** ~100-400MB (depending on modules)
+**Disk:** ~1GB for logs, databases, backups
 
 **Disable resource-heavy components:**
 ```bash
@@ -2199,7 +2226,7 @@ mail -s "Security Compliance Report" -a /root/security_hardening_report_*.html a
 
 ### Supported Distributions:
 
-**Updated to Support and Optimise:**
+**Updated to Support and Optimize:**
 - Ubuntu 22.04 LTS, 24.04 LTS, 25.10+
 - Kubuntu 24.04+
 - Debian 11 (Bullseye), 12 (Bookworm)
@@ -2502,28 +2529,6 @@ For commercial licensing, please contact: cyberjunk77@protonmail.com
 
 ---
 
-
-
-### Areas needing help:
-
-**High priority:**
-- Bug fixes (always welcome)
-- Documentation improvements
-- Testing on more distributions
-- Translations
-
-**Medium priority:**
-- New security modules
-- HTML report improvements
-- Compliance mappings
-- Ansible/Terraform examples
-
-**Low priority:**
-- New features
-- UI/UX improvements
-
----
-
 ## Additional Resources
 
 ### Security References:
@@ -2587,7 +2592,7 @@ For commercial licensing, please contact: cyberjunk77@protonmail.com
 ---
 
 **Quick links:**
-- Documentation is basically this Readme.md
+- Documentation is this README
 - [Report Bug](https://github.com/captainzero93/security_harden_linux/issues/new)
 - [Discussions](https://github.com/captainzero93/security_harden_linux/discussions)
 
