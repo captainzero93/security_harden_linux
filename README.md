@@ -20,7 +20,7 @@
 
 ## Table of Contents
 
-- [Your fresh Linux install isn't secure. Here's why.](#your-fresh-linux-install-isnt-secure-heres-why)
+- [A fresh Linux install isn't secure.](#your-fresh-linux-install-isnt-secure-heres-why)
 - [Who This Is For](#who-this-is-for)
 - [What This Actually Does](#what-this-actually-does)
 - [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
