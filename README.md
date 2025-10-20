@@ -2229,20 +2229,6 @@ To the maximum extent permitted by law:
 3. Review [Troubleshooting](#troubleshooting) section
 4. Run with `--verbose` and check logs at `/var/log/security_hardening.log`
 
-**Where to get help:**
-
-**Bug Reports:**
-- GitHub Issues: https://github.com/captainzero93/security_harden_linux/issues
-- Include: OS version, script version, error messages, log excerpts
-
-**Questions:**
-- GitHub Discussions: https://github.com/captainzero93/security_harden_linux/discussions
-- Provide context and what you've already tried
-
-**Feature Requests:**
-- GitHub Discussions first to gauge interest
-- Then create Issue with detailed proposal
-
 **Security Vulnerabilities:**
 - **DO NOT** open public issue
 - Email directly: cyberjunk77@protonmail.com
