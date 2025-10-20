@@ -2338,8 +2338,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 ---
 
-**Star this repo if it helped you!**
-https://ko-fi.com/nucleardiffusion
+**Star this repo if it helped you!** Alternatively help support: https://ko-fi.com/nucleardiffusion
 
 **Version:** 3.7 | **Author:** captainzero93 | **License:** CC BY-NC 4.0
 
