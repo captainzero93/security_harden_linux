@@ -2332,8 +2332,7 @@ Stop ClamAV:  sudo systemctl stop clamav-daemon
 RESOURCES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GitHub:       https://github.com/captainzero93/security_harden_linux
-Issues:       https://github.com/captainzero93/security_harden_linux/issues
-Discussions:  https://github.com/captainzero93/security_harden_linux/discussions
+Issues:       [https://github.com/captainzero93/security_harden_linux/issues](https://github.com/captainzero93/security_harden_linux/issues)
 
 ```
 
