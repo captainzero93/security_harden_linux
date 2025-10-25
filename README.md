@@ -1946,7 +1946,7 @@ For commercial use, contact: cyberjunk77@protonmail.com
 
 If this script saved you time or money, consider supporting development:
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nucleardiffusion)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
 **All donations go toward:**
 - Continued development
@@ -2324,7 +2324,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 ---
 
-**Star this repo if it helped you!** Alternatively help support: https://ko-fi.com/nucleardiffusion
+**Star this repo if it helped you!** Alternatively help support: https://ko-fi.com/captainzero
 
 **Version:** 3.7 | **Author:** captainzero93 | 
 
