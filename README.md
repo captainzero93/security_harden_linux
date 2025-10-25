@@ -94,7 +94,7 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 **What this means for you right now:**
 
 - Your firewall probably isn't even enabled - Any service you run is exposed to the internet
-- SSH ports are wide open to brute force attacks - Bots try thousands of passwords per hour
+- SSH ports are wide open to brute force attacks - Bots try  of passwords per hour
 - Failed login attempts aren't tracked - Attackers get unlimited tries
 - Your system accepts connections you never asked for - Port scanners probe you 24/7
 - Critical security updates might not install automatically - You could be vulnerable for weeks
@@ -392,7 +392,7 @@ ls -lh /root/security_hardening_report_*.html
 ### Real Attack Scenarios This Prevents:
 
 **SSH Brute Force (Happens constantly):**
-- **Without hardening:** Attackers try thousands of password combinations
+- **Without hardening:** Attackers try  of password combinations
 - **With hardening:** Fail2Ban blocks them after 3 attempts, SSH requires keys
 
 **Port Scanning:**
@@ -1210,7 +1210,7 @@ ls -lht /root/security_backup_*.tar.gz
 ## Common Questions
 
 ### Will this break my system?
-**No.** The script creates automatic backups and is designed to be reversible. Thousands of users have run it successfully. If something does go wrong, restore with one command.
+**No.** The script creates automatic backups and is designed to be reversible. Many users have run it successfully. If something does go wrong, restore with one command.
 
 ### Will games still work?
 **Yes.** Steam, Lutris, Proton, Discord, and all gaming services work normally. Zero FPS impact. The firewall automatically allows gaming ports.
