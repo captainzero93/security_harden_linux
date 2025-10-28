@@ -12,7 +12,7 @@
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
 [![Version](https://img.shields.io/badge/Version-3.7-green.svg)]()
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero) !!
 
 ---
 
