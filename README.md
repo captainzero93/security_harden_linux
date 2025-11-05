@@ -1,8 +1,8 @@
-# ⚡ FORTRESS.SH :: Debian Linux Defense Configuration
+# FORTRESS.SH :: Debian Linux Defense Configuration
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual uses and more strict.**
 
-**Version 3.7** - Production-Ready with Critical Bug Fixes for Debian 13 and Enhanced Stability
+**Version 3.8** - Production-Ready with Complete Fix for Debian 13 Hanging Issues and Enhanced Stability
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -10,7 +10,7 @@
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-3.7-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-3.8-green.svg)]()
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero) !!
 
@@ -27,14 +27,14 @@
 ### Desktop Users:
 ```bash
 # Download and make executable
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fixed_harden_linux.sh
+chmod +x fixed_harden_linux.sh
 
 # Preview changes (recommended)
-sudo ./improved_harden_linux.sh --dry-run
+sudo ./fixed_harden_linux.sh --dry-run
 
 # Apply with defaults
-sudo ./improved_harden_linux.sh
+sudo ./fixed_harden_linux.sh
 
 # Answer the interactive prompts, then reboot when done
 ```
@@ -46,10 +46,10 @@ ssh-keygen -t ed25519
 ssh-copy-id user@your-server
 
 # Then run hardening
-sudo ./improved_harden_linux.sh -l high -n
+sudo ./fixed_harden_linux.sh -l high -n
 ```
 
-**Something broke?** `sudo ./improved_harden_linux.sh --restore`
+**Something broke?** `sudo ./fixed_harden_linux.sh --restore`
 
 ---
 
@@ -64,7 +64,7 @@ sudo ./improved_harden_linux.sh -l high -n
 - [Quick Start](#quick-start)
 - [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 - [Why Each Security Measure Matters](#why-each-security-measure-matters)
-- [What's New in v3.7](#whats-new-in-v37)
+- [What's New in v3.8](#whats-new-in-v38)
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
 - [Security Levels Explained](#security-levels-explained)
