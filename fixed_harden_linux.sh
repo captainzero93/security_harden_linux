@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
 # Version: 3.9 - Fixed /etc/os-release readonly variable issue
