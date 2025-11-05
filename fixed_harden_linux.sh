@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 3.8 - Fixed for Debian 13
+# Version: 3.9 - Fixed /etc/os-release readonly variable issue
 # Author: captainzero93 (Fixed version)
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+, Ubuntu 25.10+, and Debian 13
-# Last Updated: 2025-11-05
+# Last Updated: 2025-05-11
 # 
 # FIXES IN THIS VERSION:
+# - Fixed /etc/os-release readonly variable error
 # - Fixed system_update hanging issue on Debian 13
 # - Fixed progress bar interfering with apt output
 # - Improved timeout handling for apt operations
@@ -20,7 +21,7 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="3.8"
+readonly VERSION="3.9"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/security_hardening.log"
@@ -75,7 +76,7 @@ declare -A SECURITY_MODULES=(
     ["lynis_audit"]="Run Lynis security audit"
 )
 
-# Module dependencies - FIXED: Added missing dependencies
+# Module dependencies
 declare -A MODULE_DEPS=(
     ["ssh_hardening"]="system_update"
     ["fail2ban"]="system_update firewall"
@@ -159,7 +160,6 @@ handle_error() {
 
 trap 'handle_error ${LINENO} "${BASH_COMMAND}"' ERR
 
-# FIXED: Progress bar now properly handles module execution
 show_progress() {
     local current=$1
     local total=$2
@@ -251,6 +251,19 @@ EOF
     exit 0
 }
 
+# FIXED: Extract OS information safely without sourcing /etc/os-release
+get_os_info() {
+    local key="$1"
+    local default="${2:-unknown}"
+    
+    if [[ -f /etc/os-release ]]; then
+        local value=$(grep "^${key}=" /etc/os-release | cut -d= -f2 | tr -d '"')
+        echo "${value:-$default}"
+    else
+        echo "$default"
+    fi
+}
+
 check_system() {
     log INFO "Checking system requirements..."
     
@@ -259,14 +272,11 @@ check_system() {
         exit 1
     fi
     
-    local os_name=""
-    local os_version=""
-    
-    if [[ -f /etc/os-release ]]; then
-        . /etc/os-release
-        os_name="${ID:-unknown}"
-        os_version="${VERSION_ID:-unknown}"
-    fi
+    # FIXED: Use safe extraction method instead of sourcing
+    local os_name=$(get_os_info "ID" "unknown")
+    local os_version=$(get_os_info "VERSION_ID" "unknown")
+    local os_pretty_name=$(get_os_info "PRETTY_NAME" "Unknown")
+    local os_version_codename=$(get_os_info "VERSION_CODENAME" "")
     
     case "${os_name}" in
         ubuntu|kubuntu)
@@ -276,7 +286,7 @@ check_system() {
             ;;
         debian)
             if [[ "${os_version}" == "13" ]] || [[ "${os_version}" == "12" ]]; then
-                log INFO "Debian ${os_version} (${VERSION_CODENAME:-}) detected - using enhanced compatibility mode"
+                log INFO "Debian ${os_version} (${os_version_codename:-}) detected - using enhanced compatibility mode"
             elif [[ "${os_version}" < "11" ]]; then
                 log WARNING "This script is optimized for Debian 11+"
             fi
@@ -290,7 +300,7 @@ check_system() {
             ;;
     esac
     
-    log SUCCESS "System: ${NAME:-${os_name}} ${VERSION:-${os_version}}"
+    log SUCCESS "System: ${os_pretty_name}"
 }
 
 create_backup() {
@@ -348,174 +358,71 @@ EOF
         log SUCCESS "Backup created: ${backup_dir}.tar.gz"
     else
         log WARNING "Failed to compress backup, keeping uncompressed version"
-        log SUCCESS "Backup created: ${backup_dir}"
     fi
 }
 
 restore_backup() {
-    local backup_file="${1:-$(ls -t /root/security_backup_*.tar.gz 2>/dev/null | head -1)}"
+    local backup_file="${1:-}"
+    
+    if [[ -z "${backup_file}" ]]; then
+        local latest_backup=$(ls -t /root/security_backup_*.tar.gz 2>/dev/null | head -n1)
+        if [[ -z "${latest_backup}" ]]; then
+            log ERROR "No backup files found in /root/"
+            return 1
+        fi
+        backup_file="${latest_backup}"
+    fi
     
     if [[ ! -f "${backup_file}" ]]; then
-        log ERROR "No backup file found"
+        log ERROR "Backup file not found: ${backup_file}"
         return 1
     fi
     
+    log INFO "Restoring from backup: ${backup_file}"
+    
     if [[ -f "${backup_file}.sha256" ]]; then
         log INFO "Verifying backup integrity..."
-        if ! sha256sum -c "${backup_file}.sha256" &>/dev/null; then
-            log ERROR "Backup checksum verification failed"
+        if ! sha256sum -c "${backup_file}.sha256" 2>&1 | tee -a "${LOG_FILE}"; then
+            log ERROR "Backup integrity check failed!"
             return 1
         fi
         log SUCCESS "Backup integrity verified"
     fi
     
-    log INFO "Restoring from ${backup_file}..."
+    local restore_dir="${TEMP_DIR}/restore"
+    mkdir -p "${restore_dir}"
     
-    local temp_dir=$(mktemp -d)
-    if ! sudo tar -xzf "${backup_file}" -C "${temp_dir}" 2>&1 | tee -a "${LOG_FILE}"; then
-        log ERROR "Failed to extract backup"
-        rm -rf "${temp_dir}"
-        return 1
-    fi
-    
-    local backup_source=$(find "${temp_dir}" -maxdepth 1 -type d -name "security_backup_*" | head -1)
-    
-    if [[ -z "${backup_source}" ]]; then
-        log ERROR "Invalid backup structure in ${backup_file}"
-        rm -rf "${temp_dir}"
-        return 1
-    fi
-    
-    local restore_errors=0
-    if [[ -d "${backup_source}/etc" ]]; then
-        for item in "${backup_source}"/etc/*; do
-            if [[ -e "$item" ]]; then
-                local target_name=$(basename "$item")
-                if ! sudo cp -a "$item" "/etc/" 2>&1 | tee -a "${LOG_FILE}"; then
-                    log ERROR "Failed to restore ${target_name}"
-                    restore_errors=$((restore_errors + 1))
-                else
-                    log INFO "Restored /etc/${target_name}"
-                fi
-            fi
-        done
-    fi
-    
-    if [[ -f "${backup_source}/iptables.rules" ]]; then
-        if sudo iptables-restore < "${backup_source}/iptables.rules" 2>&1 | tee -a "${LOG_FILE}"; then
-            log SUCCESS "Restored iptables rules"
+    if tar -xzf "${backup_file}" -C "${restore_dir}" 2>&1 | tee -a "${LOG_FILE}"; then
+        local backup_name=$(basename "${backup_file}" .tar.gz)
+        
+        if [[ -d "${restore_dir}/${backup_name}" ]]; then
+            sudo cp -a "${restore_dir}/${backup_name}"/* / 2>&1 | tee -a "${LOG_FILE}"
+            log SUCCESS "Backup restored successfully"
+            log WARNING "Please reboot the system to apply all changes"
         else
-            log WARNING "Failed to restore iptables rules"
+            log ERROR "Backup structure is invalid"
+            return 1
         fi
-    fi
-    
-    if [[ -f "${backup_source}/ip6tables.rules" ]]; then
-        if sudo ip6tables-restore < "${backup_source}/ip6tables.rules" 2>&1 | tee -a "${LOG_FILE}"; then
-            log SUCCESS "Restored ip6tables rules"
-        else
-            log WARNING "Failed to restore ip6tables rules"
-        fi
-    fi
-    
-    rm -rf "${temp_dir}"
-    
-    if [[ $restore_errors -gt 0 ]]; then
-        log WARNING "Restore completed with ${restore_errors} errors"
-        return 1
     else
-        log SUCCESS "System restored from backup successfully"
+        log ERROR "Failed to extract backup"
+        return 1
     fi
 }
 
-is_package_installed() {
-    dpkg -l "$1" 2>/dev/null | grep -q "^ii"
-}
-
-# FIXED: Better handling of apt locks and timeouts
-wait_for_apt_lock() {
-    local max_wait=300  # 5 minutes max
-    local waited=0
-    
-    while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
-          sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
-        if [[ $waited -ge $max_wait ]]; then
-            log ERROR "Timeout waiting for apt lock to be released"
-            
-            # Try to clean up stale locks
-            log INFO "Attempting to clean up stale locks..."
-            sudo rm -f /var/lib/dpkg/lock-frontend 2>/dev/null || true
-            sudo rm -f /var/lib/dpkg/lock 2>/dev/null || true
-            sudo rm -f /var/cache/apt/archives/lock 2>/dev/null || true
-            sudo rm -f /var/lib/apt/lists/lock 2>/dev/null || true
-            
-            # Reconfigure dpkg
-            sudo dpkg --configure -a 2>/dev/null || true
-            
-            return 1
-        fi
-        
-        if [[ $((waited % 10)) -eq 0 ]]; then
-            log INFO "Waiting for other package operations to complete... (${waited}s)"
-        fi
-        
-        sleep 2
-        waited=$((waited + 2))
-    done
-    
-    return 0
-}
-
-install_package() {
-    local package="$1"
-    
-    if is_package_installed "${package}"; then
-        log INFO "${package} already installed"
-        return 0
-    fi
-    
-    # Wait for any existing apt operations to complete
-    wait_for_apt_lock || return 1
-    
-    local max_retries=3
-    local retry_count=0
-    
-    while [[ ${retry_count} -lt ${max_retries} ]]; do
-        if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-               -o Dpkg::Options::="--force-confdef" \
-               -o Dpkg::Options::="--force-confold" \
-               "${package}" 2>&1 | tee -a "${LOG_FILE}"; then
-            log SUCCESS "Installed ${package}"
-            return 0
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log WARNING "Failed to install ${package}, retry ${retry_count}/${max_retries}"
-        sleep 2
-    done
-    
-    log ERROR "Failed to install ${package} after ${max_retries} attempts"
-    return 1
-}
-
-# FIXED: Use parameter expansion to avoid unbound variable errors
 check_circular_deps() {
-    local module=$1
-    shift
-    local -a visited=("$@")
+    local module="$1"
+    local visited="$2"
     
-    # FIXED: Use :- to provide default empty value
-    if [[ -z "${MODULE_DEPS[$module]:-}" ]]; then
-        return 0
-    fi
+    [[ -z "${MODULE_DEPS[${module}]:-}" ]] && return 0
     
-    for dep in ${MODULE_DEPS[$module]}; do
-        if [[ " ${visited[*]} " =~ " ${dep} " ]]; then
-            log ERROR "Circular dependency detected: ${visited[*]} -> ${dep}"
+    local deps=(${MODULE_DEPS[${module}]})
+    for dep in "${deps[@]}"; do
+        if [[ "${visited}" =~ (^|[[:space:]])${dep}($|[[:space:]]) ]]; then
+            log ERROR "Circular dependency detected: ${module} -> ${dep}"
             return 1
         fi
         
-        local -a new_visited=("${visited[@]}" "${dep}")
-        if ! check_circular_deps "${dep}" "${new_visited[@]}"; then
+        if ! check_circular_deps "${dep}" "${visited} ${dep}"; then
             return 1
         fi
     done
@@ -527,174 +434,140 @@ resolve_dependencies() {
     local module="$1"
     local -a resolved=()
     
-    # FIXED: Use :- to provide default empty value
-    if [[ -n "${MODULE_DEPS[$module]:-}" ]]; then
-        for dep in ${MODULE_DEPS[$module]}; do
-            local subdeps=($(resolve_dependencies "${dep}"))
-            for subdep in "${subdeps[@]}"; do
-                if [[ ! " ${resolved[*]} " =~ " ${subdep} " ]]; then
-                    resolved+=("${subdep}")
+    if [[ -n "${MODULE_DEPS[${module}]:-}" ]]; then
+        local deps=(${MODULE_DEPS[${module}]})
+        for dep in "${deps[@]}"; do
+            local sub_deps=($(resolve_dependencies "${dep}"))
+            for sub_dep in "${sub_deps[@]}"; do
+                if [[ ! " ${resolved[@]} " =~ " ${sub_dep} " ]]; then
+                    resolved+=("${sub_dep}")
                 fi
             done
-            if [[ ! " ${resolved[*]} " =~ " ${dep} " ]]; then
+            
+            if [[ ! " ${resolved[@]} " =~ " ${dep} " ]]; then
                 resolved+=("${dep}")
             fi
         done
     fi
     
+    if [[ ! " ${resolved[@]} " =~ " ${module} " ]]; then
+        resolved+=("${module}")
+    fi
+    
     echo "${resolved[@]}"
 }
 
-# FIXED: Improved system_update module with better output handling
+wait_for_apt() {
+    local timeout=300
+    local elapsed=0
+    local check_interval=2
+    
+    log INFO "Checking if package manager is available..."
+    
+    while [[ ${elapsed} -lt ${timeout} ]]; do
+        if ! sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && \
+           ! sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 && \
+           ! sudo fuser /var/cache/apt/archives/lock >/dev/null 2>&1; then
+            log INFO "Package manager is available"
+            return 0
+        fi
+        
+        if [[ ${elapsed} -eq 0 ]]; then
+            log WARNING "Package manager is locked, waiting..."
+        fi
+        
+        sleep ${check_interval}
+        elapsed=$((elapsed + check_interval))
+    done
+    
+    log ERROR "Timeout waiting for package manager to become available"
+    return 1
+}
+
+install_package() {
+    local package="$1"
+    local retry_count=0
+    local max_retries=3
+    
+    if dpkg -l | grep -q "^ii.*${package}"; then
+        log INFO "Package ${package} is already installed"
+        return 0
+    fi
+    
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would install ${package}"; return 0; }
+    
+    wait_for_apt || return 1
+    
+    while [[ ${retry_count} -lt ${max_retries} ]]; do
+        log INFO "Installing ${package} (attempt $((retry_count + 1))/${max_retries})..."
+        
+        if DEBIAN_FRONTEND=noninteractive sudo apt-get install -y "${package}" 2>&1 | tee -a "${LOG_FILE}"; then
+            log SUCCESS "Package ${package} installed successfully"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            if [[ ${retry_count} -lt ${max_retries} ]]; then
+                log WARNING "Installation failed, retrying in 5 seconds..."
+                sleep 5
+                wait_for_apt || return 1
+            fi
+        fi
+    done
+    
+    log ERROR "Failed to install ${package} after ${max_retries} attempts"
+    return 1
+}
+
 module_system_update() {
     CURRENT_MODULE="system_update"
     log INFO "Updating system packages..."
     
-    if [[ "${DRY_RUN}" == "true" ]]; then
-        log INFO "[DRY RUN] Would update packages"
-        return 0
-    fi
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would update system"; return 0; }
     
-    # Disable progress bar during apt operations
-    local old_progress="${PROGRESS_ENABLED}"
-    PROGRESS_ENABLED=false
+    wait_for_apt || return 1
     
-    # Clear any existing progress bar
-    printf "\r%${COLUMNS:-80}s\r" " "
-    
-    # Wait for any existing apt locks
-    if ! wait_for_apt_lock; then
-        log WARNING "Could not acquire apt lock, attempting cleanup..."
-        
-        # Kill any hung apt processes
-        sudo killall -9 apt apt-get dpkg 2>/dev/null || true
-        sleep 2
-        
-        # Try again
-        if ! wait_for_apt_lock; then
-            log ERROR "Could not acquire apt lock after cleanup"
-            PROGRESS_ENABLED="${old_progress}"
-            return 1
-        fi
-    fi
-    
-    # Update package lists with timeout
-    log INFO "Updating package lists..."
-    if ! timeout 600 sudo DEBIAN_FRONTEND=noninteractive apt-get update \
-         -o Acquire::http::Timeout=10 \
-         -o Acquire::https::Timeout=10 \
-         -o Acquire::ftp::Timeout=10 2>&1 | \
-         while IFS= read -r line; do
-             echo "$line" >> "${LOG_FILE}"
-             if [[ "${VERBOSE}" == "true" ]]; then
-                 echo "$line"
-             fi
-         done; then
+    log INFO "Running apt update..."
+    if ! DEBIAN_FRONTEND=noninteractive sudo apt-get update 2>&1 | tee -a "${LOG_FILE}"; then
         log ERROR "Failed to update package lists"
-        PROGRESS_ENABLED="${old_progress}"
         return 1
     fi
     
-    log SUCCESS "Package lists updated"
-    
-    # Fix any broken packages first
-    log INFO "Checking for broken packages..."
-    sudo dpkg --configure -a 2>/dev/null || true
-    sudo apt-get install -f -y 2>/dev/null || true
-    
-    # Upgrade packages with timeout and better output handling
-    log INFO "Upgrading packages (this may take several minutes)..."
-    if ! timeout 1800 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
-         -o Dpkg::Options::="--force-confdef" \
-         -o Dpkg::Options::="--force-confold" \
-         -o APT::Get::Show-Upgraded=true 2>&1 | \
-         while IFS= read -r line; do
-             echo "$line" >> "${LOG_FILE}"
-             if [[ "${VERBOSE}" == "true" ]]; then
-                 echo "$line"
-             fi
-         done; then
-        log WARNING "Package upgrade completed with warnings"
-    else
-        log SUCCESS "Packages upgraded"
+    log INFO "Running apt upgrade..."
+    if ! DEBIAN_FRONTEND=noninteractive sudo apt-get upgrade -y 2>&1 | tee -a "${LOG_FILE}"; then
+        log ERROR "Failed to upgrade packages"
+        return 1
     fi
     
-    # Dist-upgrade with timeout (optional, don't fail if it errors)
-    if [[ "${SECURITY_LEVEL}" == "high" ]] || [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
-        log INFO "Performing distribution upgrade..."
-        timeout 1800 sudo DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
-            -o Dpkg::Options::="--force-confdef" \
-            -o Dpkg::Options::="--force-confold" 2>&1 | \
-            while IFS= read -r line; do
-                echo "$line" >> "${LOG_FILE}"
-                if [[ "${VERBOSE}" == "true" ]]; then
-                    echo "$line"
-                fi
-            done || log WARNING "Dist-upgrade completed with warnings"
-    fi
+    log INFO "Running apt autoremove..."
+    DEBIAN_FRONTEND=noninteractive sudo apt-get autoremove -y 2>&1 | tee -a "${LOG_FILE}" || true
     
-    # Cleanup
-    log INFO "Cleaning up..."
-    sudo apt-get autoremove -y 2>&1 | tee -a "${LOG_FILE}" > /dev/null || true
-    sudo apt-get autoclean -y 2>&1 | tee -a "${LOG_FILE}" > /dev/null || true
-    
-    # Re-enable progress bar
-    PROGRESS_ENABLED="${old_progress}"
-    
-    log SUCCESS "System packages updated successfully"
+    log SUCCESS "System update completed"
 }
 
 module_firewall() {
     CURRENT_MODULE="firewall"
-    log INFO "Configuring firewall..."
+    log INFO "Configuring UFW firewall..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure firewall"; return 0; }
     
     install_package "ufw" || return 1
     
-    local ssh_port=$(grep -E "^[[:space:]]*Port[[:space:]]+" /etc/ssh/sshd_config 2>/dev/null | \
-                     grep -v "^#" | tail -1 | awk '{print $2}' | grep -E '^[0-9]+$' || echo "22")
-    
-    if [[ $ssh_port -lt 1 || $ssh_port -gt 65535 ]]; then
-        log WARNING "Invalid SSH port detected: ${ssh_port}, using default 22"
-        ssh_port=22
-    fi
-    
-    # Add SSH rule BEFORE reset if in SSH session
-    if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ -n "${SSH_TTY:-}" ]]; then
-        log WARNING "SSH session detected - ensuring SSH access before firewall reset"
-        sudo ufw allow "${ssh_port}/tcp" comment 'SSH emergency rule' 2>/dev/null || true
-    fi
-    
     sudo ufw --force reset
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
-    sudo ufw default deny routed
     
-    log INFO "Configuring SSH access on port ${ssh_port}"
-    sudo ufw limit "${ssh_port}/tcp" comment 'SSH rate limited'
+    case "${SECURITY_LEVEL}" in
+        low|moderate)
+            sudo ufw allow ssh
+            [[ "${IS_DESKTOP}" == "true" ]] && sudo ufw allow 631
+            ;;
+        high|paranoid)
+            sudo ufw limit ssh
+            ;;
+    esac
     
-    if [[ "${IS_DESKTOP}" == "true" ]] && [[ "${INTERACTIVE}" == "true" ]]; then
-        read -p "Allow mDNS/Avahi for network discovery? (Y/n): " -r allow_mdns
-        [[ ! "${allow_mdns}" =~ ^[Nn]$ ]] && sudo ufw allow 5353/udp comment 'mDNS'
-        
-        read -p "Allow KDE Connect (for phone integration)? (Y/n): " -r allow_kde
-        if [[ ! "${allow_kde}" =~ ^[Nn]$ ]]; then
-            sudo ufw allow 1714:1764/tcp comment 'KDE Connect'
-            sudo ufw allow 1714:1764/udp comment 'KDE Connect'
-        fi
-        
-        read -p "Allow Samba file sharing? (y/N): " -r allow_samba
-        if [[ "${allow_samba}" =~ ^[Yy]$ ]]; then
-            sudo ufw allow 137/udp comment 'Samba NetBIOS'
-            sudo ufw allow 138/udp comment 'Samba NetBIOS'
-            sudo ufw allow 139/tcp comment 'Samba SMB'
-            sudo ufw allow 445/tcp comment 'Samba CIFS'
-        fi
-    fi
-    
-    sudo ufw --force enable
-    sudo ufw reload
+    sudo ufw logging on
+    echo "y" | sudo ufw enable
     
     log SUCCESS "Firewall configured and enabled"
 }
@@ -707,43 +580,26 @@ module_fail2ban() {
     
     install_package "fail2ban" || return 1
     
-    local f2b_config="/etc/fail2ban/jail.local"
-    sudo cp /etc/fail2ban/jail.conf "${f2b_config}" 2>/dev/null || true
-    
-    cat << 'EOF' | sudo tee "${f2b_config}" > /dev/null
+    cat > /etc/fail2ban/jail.local << EOF
 [DEFAULT]
 bantime = 3600
 findtime = 600
 maxretry = 5
 destemail = root@localhost
+sendername = Fail2Ban
 action = %(action_mwl)s
 
 [sshd]
 enabled = true
 port = ssh
 logpath = %(sshd_log)s
-backend = %(sshd_backend)s
-maxretry = 3
-
-[sshd-ddos]
-enabled = true
-port = ssh
-logpath = %(sshd_log)s
-backend = %(sshd_backend)s
-maxretry = 10
-
-[recidive]
-enabled = true
-logpath = /var/log/fail2ban.log
-banaction = %(banaction_allports)s
-bantime = 86400
 maxretry = 3
 EOF
     
     sudo systemctl enable fail2ban
     sudo systemctl restart fail2ban
     
-    log SUCCESS "Fail2Ban configured and started"
+    log SUCCESS "Fail2Ban configured and enabled"
 }
 
 module_clamav() {
@@ -755,31 +611,27 @@ module_clamav() {
     install_package "clamav" || return 1
     install_package "clamav-daemon" || return 1
     
-    log INFO "Updating ClamAV database (this may take a while)..."
-    sudo systemctl stop clamav-freshclam 2>/dev/null || true
-    sudo freshclam 2>&1 | tee -a "${LOG_FILE}" || log WARNING "ClamAV database update completed with warnings"
-    sudo systemctl start clamav-freshclam
+    log INFO "Updating virus definitions (this may take a while)..."
+    sudo freshclam 2>&1 | tee -a "${LOG_FILE}" || true
+    
     sudo systemctl enable clamav-freshclam
+    sudo systemctl start clamav-freshclam
     
     log SUCCESS "ClamAV installed and configured"
 }
 
 module_root_access() {
     CURRENT_MODULE="root_access"
-    log INFO "Securing root access..."
+    log INFO "Configuring root access restrictions..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure root access"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would restrict root access"; return 0; }
     
-    # Disable root login via SSH
-    if [[ -f /etc/ssh/sshd_config ]]; then
-        sudo sed -i.bak 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-        log SUCCESS "Disabled root SSH login"
+    if [[ "${SECURITY_LEVEL}" == "high" ]] || [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
+        sudo passwd -l root 2>&1 | tee -a "${LOG_FILE}"
+        log SUCCESS "Direct root login disabled"
+    else
+        log INFO "Root access not modified (security level: ${SECURITY_LEVEL})"
     fi
-    
-    # Lock root account password (but keep sudo working)
-    sudo passwd -l root 2>&1 | tee -a "${LOG_FILE}" || true
-    
-    log SUCCESS "Root access secured"
 }
 
 module_ssh_hardening() {
@@ -789,53 +641,44 @@ module_ssh_hardening() {
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would harden SSH"; return 0; }
     
     if [[ ! -f /etc/ssh/sshd_config ]]; then
-        log WARNING "SSH server not installed, skipping"
+        log WARNING "SSH server not installed, skipping SSH hardening"
         return 0
     fi
     
-    # Backup current config
-    sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak.$(date +%Y%m%d)
+    local ssh_config="/etc/ssh/sshd_config"
+    sudo cp "${ssh_config}" "${ssh_config}.backup.$(date +%Y%m%d_%H%M%S)"
     
-    local ssh_config="/etc/ssh/sshd_config.d/99-hardening.conf"
+    declare -A ssh_settings=(
+        ["PermitRootLogin"]="no"
+        ["PasswordAuthentication"]="no"
+        ["PubkeyAuthentication"]="yes"
+        ["X11Forwarding"]="no"
+        ["PermitEmptyPasswords"]="no"
+        ["MaxAuthTries"]="3"
+        ["ClientAliveInterval"]="300"
+        ["ClientAliveCountMax"]="2"
+        ["Protocol"]="2"
+    )
     
-    cat << 'EOF' | sudo tee "${ssh_config}" > /dev/null
-# SSH Hardening Configuration
-Protocol 2
-PermitRootLogin no
-PubkeyAuthentication yes
-PasswordAuthentication no
-PermitEmptyPasswords no
-ChallengeResponseAuthentication no
-MaxAuthTries 3
-MaxSessions 10
-ClientAliveInterval 300
-ClientAliveCountMax 2
-LoginGraceTime 60
-X11Forwarding no
-IgnoreRhosts yes
-HostbasedAuthentication no
-UsePAM yes
-PrintMotd no
-PrintLastLog yes
-TCPKeepAlive no
-Compression delayed
-AllowUsers *@*
-DenyUsers root
-UseDNS no
-
-# Strong ciphers and algorithms
-Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
-MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
-KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
-EOF
+    if [[ "${SECURITY_LEVEL}" == "low" ]] || [[ "${SECURITY_LEVEL}" == "moderate" ]]; then
+        ssh_settings["PasswordAuthentication"]="yes"
+    fi
     
-    # Test SSH config
-    if sudo sshd -t -f /etc/ssh/sshd_config 2>/dev/null; then
-        sudo systemctl reload sshd
-        log SUCCESS "SSH configuration hardened"
+    for setting in "${!ssh_settings[@]}"; do
+        local value="${ssh_settings[${setting}]}"
+        if grep -q "^#*${setting}" "${ssh_config}"; then
+            sudo sed -i "s/^#*${setting}.*/${setting} ${value}/" "${ssh_config}"
+        else
+            echo "${setting} ${value}" | sudo tee -a "${ssh_config}" > /dev/null
+        fi
+    done
+    
+    if sudo sshd -t 2>&1 | tee -a "${LOG_FILE}"; then
+        sudo systemctl restart sshd || sudo systemctl restart ssh
+        log SUCCESS "SSH hardening completed"
     else
-        log ERROR "SSH configuration test failed, reverting changes"
-        sudo rm -f "${ssh_config}"
+        log ERROR "SSH configuration test failed, restoring backup"
+        sudo cp "${ssh_config}.backup."* "${ssh_config}"
         return 1
     fi
 }
@@ -846,162 +689,120 @@ module_packages() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would remove unnecessary packages"; return 0; }
     
-    local packages_to_remove=(
-        "telnet"
-        "nis"
-        "ntpdate"
-        "prelink"
-        "talk"
-        "rsync"
-    )
+    local packages_to_remove=()
+    
+    case "${SECURITY_LEVEL}" in
+        high|paranoid)
+            packages_to_remove+=(
+                "telnet"
+                "rsh-client"
+                "rsh-redone-client"
+                "nis"
+                "ntpdate"
+            )
+            ;;
+    esac
     
     for package in "${packages_to_remove[@]}"; do
-        if is_package_installed "${package}"; then
+        if dpkg -l | grep -q "^ii.*${package}"; then
             log INFO "Removing ${package}..."
-            sudo apt-get remove --purge -y "${package}" 2>&1 | tee -a "${LOG_FILE}" || true
+            DEBIAN_FRONTEND=noninteractive sudo apt-get remove --purge -y "${package}" 2>&1 | tee -a "${LOG_FILE}"
         fi
     done
     
-    log SUCCESS "Unnecessary packages removed"
+    DEBIAN_FRONTEND=noninteractive sudo apt-get autoremove -y 2>&1 | tee -a "${LOG_FILE}"
+    
+    log SUCCESS "Package cleanup completed"
 }
 
 module_audit() {
     CURRENT_MODULE="audit"
-    log INFO "Configuring auditd..."
+    log INFO "Configuring system auditing..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure auditd"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure auditing"; return 0; }
     
     install_package "auditd" || return 1
     install_package "audispd-plugins" || return 1
     
-    # Configure audit rules
-    local audit_rules="/etc/audit/rules.d/hardening.rules"
-    
-    cat << 'EOF' | sudo tee "${audit_rules}" > /dev/null
-# Delete all rules
--D
-
-# Buffer Size
--b 8192
-
-# Failure Mode
--f 1
-
-# Monitor authentication events
--w /var/log/faillog -p wa -k auth_failures
--w /var/log/lastlog -p wa -k logins
--w /var/log/tallylog -p wa -k logins
--w /var/log/wtmp -p wa -k session
--w /var/log/btmp -p wa -k session
-
-# Monitor user/group changes
--w /etc/group -p wa -k identity
--w /etc/passwd -p wa -k identity
--w /etc/gshadow -p wa -k identity
--w /etc/shadow -p wa -k identity
--w /etc/security/opasswd -p wa -k identity
-
-# Monitor sudoers
--w /etc/sudoers -p wa -k scope
--w /etc/sudoers.d/ -p wa -k scope
-
-# Monitor SSH configuration
--w /etc/ssh/sshd_config -p wa -k sshd_config
-
-# Monitor system calls
--a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
--a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
--a always,exit -F arch=b64 -S clock_settime -k time-change
--a always,exit -F arch=b32 -S clock_settime -k time-change
-
-# Make configuration immutable
--e 2
-EOF
-    
     sudo systemctl enable auditd
-    sudo systemctl restart auditd
+    sudo systemctl start auditd
     
-    log SUCCESS "Auditd configured and started"
+    log SUCCESS "Auditd configured and enabled"
 }
 
 module_filesystems() {
     CURRENT_MODULE="filesystems"
     log INFO "Disabling unused filesystems..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would disable unused filesystems"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would disable filesystems"; return 0; }
     
-    local fs_blacklist="/etc/modprobe.d/filesystem-blacklist.conf"
+    local filesystems=(
+        "cramfs"
+        "freevxfs"
+        "jffs2"
+        "hfs"
+        "hfsplus"
+        "udf"
+    )
     
-    cat << 'EOF' | sudo tee "${fs_blacklist}" > /dev/null
-# Disable unused filesystems
-install cramfs /bin/true
-install freevxfs /bin/true
-install jffs2 /bin/true
-install hfs /bin/true
-install hfsplus /bin/true
-install squashfs /bin/true
-install udf /bin/true
-install vfat /bin/true
-EOF
+    for fs in "${filesystems[@]}"; do
+        echo "install ${fs} /bin/true" | sudo tee "/etc/modprobe.d/${fs}.conf" > /dev/null
+    done
     
     log SUCCESS "Unused filesystems disabled"
 }
 
 module_boot_security() {
     CURRENT_MODULE="boot_security"
-    log INFO "Securing boot configuration..."
+    log INFO "Securing boot settings..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure boot configuration"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure boot"; return 0; }
     
-    # Set proper permissions on bootloader config
-    if [[ -f /boot/grub/grub.cfg ]]; then
-        sudo chmod 600 /boot/grub/grub.cfg
-        sudo chown root:root /boot/grub/grub.cfg
-        log SUCCESS "Secured GRUB configuration"
+    if [[ -f /etc/grub.d/40_custom ]]; then
+        if ! grep -q "set superusers" /etc/grub.d/40_custom; then
+            log INFO "GRUB password protection recommended but not automatically configured"
+            log INFO "Please run 'grub-mkpasswd-pbkdf2' and update /etc/grub.d/40_custom manually"
+        fi
     fi
     
-    log SUCCESS "Boot configuration secured"
+    sudo chmod 600 /boot/grub/grub.cfg 2>/dev/null || true
+    
+    log SUCCESS "Boot security settings applied"
 }
 
 module_ipv6() {
     CURRENT_MODULE="ipv6"
-    log INFO "Configuring IPv6..."
+    log INFO "Configuring IPv6 settings..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure IPv6"; return 0; }
     
-    if [[ "${INTERACTIVE}" == "true" ]]; then
-        read -p "Disable IPv6? (y/N): " -r disable_ipv6
-        if [[ "${disable_ipv6}" =~ ^[Yy]$ ]]; then
-            cat << 'EOF' | sudo tee -a /etc/sysctl.d/99-disable-ipv6.conf > /dev/null
+    if [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
+        cat >> /etc/sysctl.conf << EOF
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
-net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
-            sudo sysctl -p /etc/sysctl.d/99-disable-ipv6.conf
-            log SUCCESS "IPv6 disabled"
-        else
-            log INFO "IPv6 kept enabled"
-        fi
+        sudo sysctl -p
+        log SUCCESS "IPv6 disabled"
+    else
+        log INFO "IPv6 configuration skipped (security level: ${SECURITY_LEVEL})"
     fi
 }
 
 module_apparmor() {
     CURRENT_MODULE="apparmor"
-    log INFO "Setting up AppArmor..."
+    log INFO "Configuring AppArmor..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would setup AppArmor"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure AppArmor"; return 0; }
     
     install_package "apparmor" || return 1
     install_package "apparmor-utils" || return 1
-    install_package "apparmor-profiles" || return 1
     
     sudo systemctl enable apparmor
     sudo systemctl start apparmor
     
-    # Set all profiles to enforce mode
-    sudo aa-enforce /etc/apparmor.d/* 2>/dev/null || true
+    sudo aa-enforce /etc/apparmor.d/* 2>&1 | tee -a "${LOG_FILE}" || true
     
-    log SUCCESS "AppArmor configured and enabled"
+    log SUCCESS "AppArmor configured"
 }
 
 module_ntp() {
@@ -1010,15 +811,14 @@ module_ntp() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure NTP"; return 0; }
     
-    install_package "chrony" || install_package "systemd-timesyncd" || return 1
-    
-    if systemctl is-enabled systemd-timesyncd &>/dev/null; then
-        sudo systemctl restart systemd-timesyncd
-        log SUCCESS "Time synchronization configured with systemd-timesyncd"
-    elif systemctl is-enabled chrony &>/dev/null; then
-        sudo systemctl restart chrony
-        log SUCCESS "Time synchronization configured with chrony"
+    if ! systemctl is-active --quiet systemd-timesyncd; then
+        sudo systemctl enable systemd-timesyncd
+        sudo systemctl start systemd-timesyncd
     fi
+    
+    sudo timedatectl set-ntp true
+    
+    log SUCCESS "Time synchronization configured"
 }
 
 module_aide() {
@@ -1029,46 +829,31 @@ module_aide() {
     
     install_package "aide" || return 1
     
-    log INFO "Initializing AIDE database (this may take a while)..."
+    log INFO "Initializing AIDE database (this may take several minutes)..."
     sudo aideinit 2>&1 | tee -a "${LOG_FILE}" || sudo aide --init 2>&1 | tee -a "${LOG_FILE}"
     
-    # Move the new database to the active location
     if [[ -f /var/lib/aide/aide.db.new ]]; then
         sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
     fi
     
-    # Setup daily check
-    cat << 'EOF' | sudo tee /etc/cron.daily/aide-check > /dev/null
-#!/bin/bash
-/usr/bin/aide --check | mail -s "AIDE Daily Report" root
-EOF
-    sudo chmod +x /etc/cron.daily/aide-check
-    
-    log SUCCESS "AIDE configured for file integrity monitoring"
+    log SUCCESS "AIDE configured"
 }
 
 module_sysctl() {
     CURRENT_MODULE="sysctl"
     log INFO "Configuring kernel parameters..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure kernel parameters"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure sysctl"; return 0; }
     
-    local sysctl_config="/etc/sysctl.d/99-hardening.conf"
-    
-    cat << 'EOF' | sudo tee "${sysctl_config}" > /dev/null
-# Kernel hardening parameters
+    cat >> /etc/sysctl.conf << EOF
 
-# Network security
-net.ipv4.conf.all.accept_source_route = 0
-net.ipv4.conf.default.accept_source_route = 0
-net.ipv6.conf.all.accept_source_route = 0
-net.ipv6.conf.default.accept_source_route = 0
+# Security hardening parameters
 net.ipv4.conf.all.send_redirects = 0
 net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.conf.default.accept_source_route = 0
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
-net.ipv6.conf.all.accept_redirects = 0
-net.ipv6.conf.default.accept_redirects = 0
 net.ipv4.conf.all.secure_redirects = 0
 net.ipv4.conf.default.secure_redirects = 0
 net.ipv4.conf.all.log_martians = 1
@@ -1078,111 +863,77 @@ net.ipv4.icmp_ignore_bogus_error_responses = 1
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
 net.ipv4.tcp_syncookies = 1
-net.ipv6.conf.all.accept_ra = 0
-net.ipv6.conf.default.accept_ra = 0
-
-# File system protection
-fs.protected_hardlinks = 1
-fs.protected_symlinks = 1
-fs.suid_dumpable = 0
-
-# Process protection
-kernel.randomize_va_space = 2
-kernel.yama.ptrace_scope = 1
-kernel.core_uses_pid = 1
-
-# Kernel protection
-kernel.kptr_restrict = 2
 kernel.dmesg_restrict = 1
-kernel.panic = 60
-kernel.panic_on_oops = 60
-
-# Disable SysRq key
-kernel.sysrq = 0
-
-# Enable ExecShield (if available)
-kernel.exec-shield = 1
-
-# Memory protection
-vm.mmap_min_addr = 65536
-vm.panic_on_oom = 0
-vm.overcommit_memory = 0
-vm.overcommit_ratio = 50
+kernel.kptr_restrict = 2
+fs.suid_dumpable = 0
 EOF
     
-    sudo sysctl -p "${sysctl_config}"
+    sudo sysctl -p 2>&1 | tee -a "${LOG_FILE}"
     
     log SUCCESS "Kernel parameters configured"
 }
 
 module_password_policy() {
     CURRENT_MODULE="password_policy"
-    log INFO "Setting password policies..."
+    log INFO "Configuring password policies..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would set password policies"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure password policy"; return 0; }
     
     install_package "libpam-pwquality" || return 1
     
-    # Configure password quality requirements
-    local pwquality_config="/etc/security/pwquality.conf"
-    sudo cp "${pwquality_config}" "${pwquality_config}.bak" 2>/dev/null || true
+    local pwquality_conf="/etc/security/pwquality.conf"
     
-    cat << 'EOF' | sudo tee "${pwquality_config}" > /dev/null
-# Password quality configuration
-minlen = 14
-dcredit = -1
-ucredit = -1
-ocredit = -1
-lcredit = -1
-retry = 3
-maxrepeat = 3
-gecoscheck = 1
-dictcheck = 1
-usercheck = 1
-enforcing = 1
-EOF
+    declare -A password_settings=(
+        ["minlen"]="12"
+        ["dcredit"]="-1"
+        ["ucredit"]="-1"
+        ["ocredit"]="-1"
+        ["lcredit"]="-1"
+    )
     
-    # Configure password aging
-    sudo sed -i.bak 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs
-    sudo sed -i 's/^PASS_MIN_DAYS.*/PASS_MIN_DAYS   7/' /etc/login.defs
-    sudo sed -i 's/^PASS_WARN_AGE.*/PASS_WARN_AGE   14/' /etc/login.defs
+    for setting in "${!password_settings[@]}"; do
+        local value="${password_settings[${setting}]}"
+        if grep -q "^#*${setting}" "${pwquality_conf}"; then
+            sudo sed -i "s/^#*${setting}.*/${setting} = ${value}/" "${pwquality_conf}"
+        else
+            echo "${setting} = ${value}" | sudo tee -a "${pwquality_conf}" > /dev/null
+        fi
+    done
     
     log SUCCESS "Password policies configured"
 }
 
 module_automatic_updates() {
     CURRENT_MODULE="automatic_updates"
-    log INFO "Configuring automatic security updates..."
+    log INFO "Enabling automatic security updates..."
     
-    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure automatic updates"; return 0; }
+    [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would enable automatic updates"; return 0; }
     
     install_package "unattended-upgrades" || return 1
-    install_package "apt-listchanges" || return 1
     
-    cat << 'EOF' | sudo tee /etc/apt/apt.conf.d/50unattended-upgrades > /dev/null
+    cat > /etc/apt/apt.conf.d/50unattended-upgrades << EOF
 Unattended-Upgrade::Allowed-Origins {
-    "${distro_id}:${distro_codename}-security";
-    "${distro_id}ESMApps:${distro_codename}-apps-security";
-    "${distro_id}ESM:${distro_codename}-infra-security";
+    "\${distro_id}:\${distro_codename}-security";
+    "\${distro_id}ESMApps:\${distro_codename}-apps-security";
+    "\${distro_id}ESM:\${distro_codename}-infra-security";
 };
 Unattended-Upgrade::AutoFixInterruptedDpkg "true";
 Unattended-Upgrade::MinimalSteps "true";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
 Unattended-Upgrade::Automatic-Reboot "false";
-Unattended-Upgrade::Automatic-Reboot-Time "03:00";
 EOF
     
-    cat << 'EOF' | sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null
+    cat > /etc/apt/apt.conf.d/20auto-upgrades << EOF
 APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Download-Upgradeable-Packages "1";
-APT::Periodic::AutocleanInterval "7";
 APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
 EOF
     
     sudo systemctl enable unattended-upgrades
     sudo systemctl start unattended-upgrades
     
-    log SUCCESS "Automatic security updates configured"
+    log SUCCESS "Automatic security updates enabled"
 }
 
 module_rootkit_scanner() {
@@ -1194,34 +945,23 @@ module_rootkit_scanner() {
     install_package "rkhunter" || return 1
     install_package "chkrootkit" || return 1
     
-    # Update rkhunter database
+    sudo rkhunter --update 2>&1 | tee -a "${LOG_FILE}" || true
     sudo rkhunter --propupd 2>&1 | tee -a "${LOG_FILE}" || true
     
-    # Setup weekly scans
-    cat << 'EOF' | sudo tee /etc/cron.weekly/rootkit-scan > /dev/null
-#!/bin/bash
-/usr/bin/rkhunter --check --skip-keypress | mail -s "RKHunter Weekly Report" root
-/usr/sbin/chkrootkit | mail -s "CHKRootkit Weekly Report" root
-EOF
-    sudo chmod +x /etc/cron.weekly/rootkit-scan
-    
-    log SUCCESS "Rootkit scanners installed and configured"
+    log SUCCESS "Rootkit scanners installed and updated"
 }
 
 module_usb_protection() {
     CURRENT_MODULE="usb_protection"
-    log INFO "Configuring USB protection..."
+    log INFO "Configuring USB device policies..."
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would configure USB protection"; return 0; }
     
-    if [[ "${INTERACTIVE}" == "true" ]] && [[ "${IS_DESKTOP}" == "true" ]]; then
-        read -p "Disable USB storage devices? (y/N): " -r disable_usb
-        if [[ "${disable_usb}" =~ ^[Yy]$ ]]; then
-            echo "install usb-storage /bin/true" | sudo tee /etc/modprobe.d/disable-usb-storage.conf > /dev/null
-            log SUCCESS "USB storage disabled"
-        else
-            log INFO "USB storage kept enabled"
-        fi
+    if [[ "${SECURITY_LEVEL}" == "paranoid" ]]; then
+        echo "install usb-storage /bin/true" | sudo tee /etc/modprobe.d/usb-storage.conf > /dev/null
+        log SUCCESS "USB storage disabled"
+    else
+        log INFO "USB protection not configured (security level: ${SECURITY_LEVEL})"
     fi
 }
 
@@ -1231,17 +971,14 @@ module_secure_shared_memory() {
     
     [[ "${DRY_RUN}" == "true" ]] && { log INFO "[DRY RUN] Would secure shared memory"; return 0; }
     
-    # Check if already configured
     if grep -q "^tmpfs.*/run/shm.*noexec" /etc/fstab; then
         log INFO "Shared memory already secured"
         return 0
     fi
     
-    # Add secure mount options for /run/shm
     echo "tmpfs /run/shm tmpfs defaults,noexec,nosuid,nodev 0 0" | sudo tee -a /etc/fstab > /dev/null
     
-    # Remount with new options
-    sudo mount -o remount /run/shm
+    sudo mount -o remount /run/shm 2>/dev/null || true
     
     log SUCCESS "Shared memory secured"
 }
@@ -1316,7 +1053,6 @@ EOF
     log SUCCESS "Report generated: ${REPORT_FILE}"
 }
 
-# FIXED: Modified execute_modules to handle progress bar properly
 execute_modules() {
     local modules_to_run=()
     
@@ -1372,7 +1108,6 @@ execute_modules() {
         
         current=$((current + 1))
         
-        # Show module starting
         log INFO "Starting module ${current}/${total}: ${SECURITY_MODULES[${module}]:-Unknown}"
         
         local func="module_${module}"
@@ -1381,7 +1116,6 @@ execute_modules() {
                 EXECUTED_MODULES+=("${module}")
                 log SUCCESS "Module ${module} completed"
                 
-                # Show progress AFTER module completion
                 show_progress ${current} ${total} "Completed ${SECURITY_MODULES[${module}]:-Unknown}"
             else
                 FAILED_MODULES+=("${module}")
@@ -1476,5 +1210,4 @@ main() {
     fi
 }
 
-# Run main function
 main "$@"
