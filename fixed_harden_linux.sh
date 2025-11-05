@@ -5,7 +5,7 @@
 # Author: captainzero93 (Fixed version)
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+, Ubuntu 25.10+, and Debian 13
-# Last Updated: 2025-11-04
+# Last Updated: 2025-11-05
 # 
 # FIXES IN THIS VERSION:
 # - Fixed system_update hanging issue on Debian 13
