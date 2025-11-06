@@ -622,8 +622,6 @@ wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/
 # Make it executable:
 chmod +x improved_harden_linux.sh
 
-# Verify download (optional but recommended):
-sha256sum improved_harden_linux.sh
 ```
 
 ### Method 2: Git Clone
