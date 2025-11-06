@@ -28,7 +28,7 @@
 
 ```bash
 # Download and make executable
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh](https://github.com/captainzero93/security_harden_linux/blob/main/fixed_harden_linux.sh
 chmod +x improved_harden_linux.sh
 
 # Preview changes (recommended)
