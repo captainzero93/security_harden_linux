@@ -2141,7 +2141,10 @@ If this script saved you time or money, consider supporting development:
 
 ## Version History
 
-### Version 3.7 (2025-10-20) - Current Release
+### Version 3.9 (2025-10-20) - Current Release
+- Critical bug fixes and fallback logic
+
+3.7;
 
 **Critical Bug Fixes:**
 
