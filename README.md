@@ -1916,7 +1916,7 @@ sudo systemctl restart docker
 
 ### Verified Distributions:
 
-**Fully Tested:**
+**Tested:**
 
 * Ubuntu 22.04 LTS (Jammy)
 * Ubuntu 24.04 LTS (Noble)
