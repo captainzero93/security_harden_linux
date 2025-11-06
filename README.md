@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict.**
 
-**Version 3.9** - Production-Ready with Complete Fix for Debian 13 Hanging Issues and Enhanced Stability
+**Version 3.9** - Production-Ready with Fixes for Debian 13 Hanging Issues and Enhanced Stability
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
