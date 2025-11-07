@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict.**
 
-**Version 4.0** - Production-Ready with Complete Fix for APT Lock Hanging Issues
+**Version 4.1** - Critical Fix for Module Execution
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -10,7 +10,7 @@
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-4.0-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-4.1-green.svg)]()
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
@@ -66,7 +66,7 @@ sudo ./improved_harden_linux.sh -l high -n
 * [Quick Start](#quick-start)
 * [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 * [Why Each Security Measure Matters](#why-each-security-measure-matters)
-* [What's New in v4.0](#whats-new-in-v40)
+* [What's New in v4.1](#whats-new-in-v41)
 * [Installation](#installation)
 * [Usage Guide](#usage-guide)
 * [Security Levels Explained](#security-levels-explained)
@@ -628,132 +628,157 @@ With audit logging: Attack detected and logged
 
 ---
 
-## What's New in v4.0
+## What's New in v4.1
 
-### CRITICAL FIX - Script Hanging at 4% After system_update:
+### CRITICAL FIX - Module Functions Missing Return Statements:
 
 **Problem Resolved:**
 
-Version 3.9 and earlier would complete the system_update module successfully, show 4% progress, then hang indefinitely. This occurred on Debian 13 (Trixie) and other systems with stale APT lock files.
+Version 4.0 and earlier would complete the system_update module successfully, show 4% progress, then immediately exit without continuing to the next module. The script appeared to hang or terminate prematurely after the first module.
 
 **Root Cause:**
 
-The `wait_for_apt()` function could not distinguish between active APT locks (held by running processes) and stale locks (lock files exist but no process holds them). When stale locks were present, the function would wait for 5 minutes or until manually terminated.
+All module functions were missing explicit `return 0` statements. In bash, when a function doesn't have an explicit return statement, it returns the exit code of the last command executed. Since `log SUCCESS "..."` was typically the last command in modules, the functions would return unpredictable exit codes. When the main execution loop checked `if "${func}"; then`, it would sometimes interpret the module as failed due to the missing explicit success return code, causing the script to terminate.
 
 **The Fix:**
 
-Version 4.0 completely rewrites the `wait_for_apt()` function to:
-
-* Explicitly detect lock files AND whether they are actively held by processes
-* Automatically identify stale locks (file exists but no process using it)
-* Remove stale locks and run `dpkg --configure -a` to fix broken states
-* Continue execution immediately instead of hanging
-* Provide clear feedback about what's happening
+Version 4.1 adds explicit `return 0` statements to all 21 module functions to ensure each one properly signals successful completion to the execution loop.
 
 **Technical Changes:**
 
 ```bash
-# Before (v3.9) - Would hang on stale locks:
-if ! sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; then
-    # This logic failed with stale locks
-fi
+# Before (v4.0) - Missing explicit return statement:
+module_system_update() {
+    # ... commands ...
+    log SUCCESS "System update completed"
+}  # Returns exit code of log function (unpredictable)
 
-# After (v4.0) - Detects and removes stale locks:
-for lock_file in /var/lib/dpkg/lock-frontend ...; do
-    if [[ -f "$lock_file" ]]; then
-        if ! sudo fuser "$lock_file" >/dev/null 2>&1; then
-            # Stale lock detected - remove it!
-            sudo rm -f "$lock_file"
-        fi
-    fi
-done
+# After (v4.1) - Explicit success return:
+module_system_update() {
+    # ... commands ...
+    log SUCCESS "System update completed"
+    return 0  # Explicitly signals success
+}
 ```
+
+**Modules Fixed (All 21):**
+
+* module_system_update
+* module_firewall
+* module_fail2ban
+* module_clamav
+* module_root_access
+* module_ssh_hardening
+* module_packages
+* module_audit
+* module_filesystems
+* module_boot_security
+* module_ipv6
+* module_apparmor
+* module_ntp
+* module_aide
+* module_sysctl
+* module_password_policy
+* module_automatic_updates
+* module_rootkit_scanner
+* module_usb_protection
+* module_secure_shared_memory
+* module_lynis_audit
 
 **User Experience Improvements:**
 
-* Timeout reduced: 300 seconds (5 minutes) → 120 seconds (2 minutes)
-* Interactive force-unlock: At 60 seconds, users can force-remove locks
-* Better logging: Clear messages about lock detection and removal
-* Automatic recovery: Stale locks removed without user intervention
-* Progress bar flush: Added 0.5s delay to ensure clean output
+* Script now executes all 21 modules sequentially without premature termination
+* Progress advances correctly from 4% through 100%
+* Module completion status now reliably indicates success or failure
+* Execution loop correctly identifies successful module completions
+* No more mysterious exits after the first module
 
-### Additional Improvements:
+### Previous Fixes Maintained from v4.0:
 
-**1. Enhanced Stability:**
+**1. APT Lock Handling:**
+
+* Fixed wait_for_apt() hanging with stale locks
+* Automatic detection and removal of stale APT locks
+* Interactive force-unlock option at 60 seconds
+* Better timeout handling and user feedback
+
+**2. Enhanced Stability:**
 
 * Fixed progress bar display between modules
 * Improved terminal output flushing
 * Better handling of interrupted operations
 * More robust error recovery
 
-**2. OS Detection:**
+**3. OS Detection:**
 
 * Fixed readonly variable errors in /etc/os-release parsing
 * Safe extraction of OS information
 * Better fallback to lsb_release when needed
 * Enhanced Debian 13 (Trixie) compatibility
 
-**3. Documentation:**
+**4. Documentation:**
 
 * Comprehensive fix documentation
 * Technical deep-dive available
 * Before/after code comparison
 * Troubleshooting guides
 
-### For Upgraders from v3.9:
+### For Upgraders from v4.0:
 
-No breaking changes. The fix is transparent - the script simply works now:
+No breaking changes. The fix is transparent - the script simply completes all modules now:
 
 ```bash
-# Download v4.0:
+# Download v4.1:
 wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
 chmod +x improved_harden_linux.sh
 
 # Run normally - no special steps needed:
 sudo ./improved_harden_linux.sh -v
 
-# Script will now complete all 21 modules without hanging
+# Script will now complete all 21 modules without premature exit
 ```
 
 Your existing backups remain fully compatible.
 
 ### What You'll Notice:
 
-**Before (v3.9):**
+**Before (v4.0):**
 ```
 [SUCCESS] Module system_update completed
 [==------------------------------------------------]   4% - Completed Update system
-[Script hangs here for 5 minutes or until Ctrl+C]
+[Script exits immediately - no further modules execute]
 ```
 
-**After (v4.0):**
+**After (v4.1):**
 ```
 [SUCCESS] Module system_update completed
 [==------------------------------------------------]   4% - Completed Update system
 [INFO] Starting module 2/21: Configure auditd logging
-[WARNING] Detected stale APT locks. Cleaning...
-[SUCCESS] Stale locks removed, package manager is now available
 [INFO] Installing auditd...
 [====----------------------------------------------]   9% - Completed Configure auditd
+[INFO] Starting module 3/21: Run Lynis security audit
+[======--------------------------------------------]  14% - Completed Run Lynis
 [Continues smoothly to 100%]
 ```
 
 ### Compatibility:
 
-* Full support for Debian 13 (Trixie) - the main affected system fixes
-* Ubuntu 25.10 - working
+* Full support for Debian 13 (Trixie)
+* Ubuntu 25.10 (Oracular) - working
 * Kubuntu 24.04+ - tested
 * All previously supported distributions - no regressions
+* Maintains all v4.0 improvements for APT lock handling
 
 ### Testing:
 
-Ttesting performed on:
+Testing performed on:
 
-* Debian 13 (Trixie) with stale locks present - FIXED
-* Fresh systems with no locks - working normally
-* Systems with active APT processes - proper wait behavior
-* Low disk space conditions - appropriate warnings
+* Debian 13 (Trixie) - all modules execute successfully
+* Fresh systems - completes all 21 modules
+* Systems with APT lock issues - handled by v4.0 improvements
+* Interactive mode - all prompts working correctly
 * Non-interactive mode - completed successfully
+* All security levels (low/moderate/high/paranoid) - working
 
 
 
@@ -2303,10 +2328,47 @@ If this script saved you time or money, consider supporting development:
 
 ## Version History
 
-### Version 4.0 
-(see above)
+### Version 4.1 (2025-11-07)
 
-3.9 (2025-10-20) - Current Release
+**Critical Fix:**
+
+* Fixed script exiting at 4% after first module completion
+* Added explicit return 0 statements to all 21 module functions
+* Modules now properly signal successful completion to execution loop
+* Script executes all modules sequentially without premature termination
+
+**Technical Details:**
+
+* All module functions were missing explicit return statements
+* Functions returned unpredictable exit codes from log commands
+* Execution loop misinterpreted module success/failure status
+* Fixed by adding return 0 to end of every module function
+
+**Improvements:**
+
+* Maintained all v4.0 APT lock handling improvements
+* Progress bar advances correctly through all modules
+* Reliable module completion status checking
+* No breaking changes from v4.0
+
+### Version 4.0 (2025-11-06)
+
+**Critical Fix:**
+
+* Fixed wait_for_apt() hanging with stale APT locks
+* Automatic detection and removal of stale lock files
+* Interactive force-unlock option at 60 seconds
+* Improved timeout handling and user feedback
+
+**Improvements:**
+
+* Enhanced Debian 13 (Trixie) compatibility
+* Fixed progress bar display between modules
+* Better terminal output flushing
+* Improved error recovery
+* Fixed readonly variable errors in OS detection
+
+3.9 (2025-10-20)
 - Critical bug fixes and fallback logic
 
 3.7;
@@ -2710,7 +2772,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 **Star this repo if it helped you.**
 
-**Version:** 4.0 | **Author:** captainzero93 |
+**Version:** 4.1 | **Author:** captainzero93 |
 
 **GitHub:** [https://github.com/captainzero93/security_harden_linux](https://github.com/captainzero93/security_harden_linux)
 
