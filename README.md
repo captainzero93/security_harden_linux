@@ -740,9 +740,9 @@ Your existing backups remain fully compatible.
 
 ### Compatibility:
 
-* Full support for Debian 13 (Trixie) - the main affected system
-* Ubuntu 25.10 (Oracular) - verified working
-* Kubuntu 24.04+ - tested and stable
+* Full support for Debian 13 (Trixie) - the main affected system fixes
+* Ubuntu 25.10 - working
+* Kubuntu 24.04+ - tested
 * All previously supported distributions - no regressions
 
 ### Testing:
