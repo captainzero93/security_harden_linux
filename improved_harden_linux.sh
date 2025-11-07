@@ -1,26 +1,30 @@
 #!/bin/bash 
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 4.0 - COMPLETE FIX for hanging issues
+# Version: 4.1 - CRITICAL FIX for premature exit issue
 # Author: captainzero93 (Fixed by Claude)
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+, Ubuntu 25.10+, and Debian 13
 # Last Updated: 2025-11-07
 # 
-# FIXES IN THIS VERSION (4.0):
-# - CRITICAL: Fixed wait_for_apt() hanging by properly handling stale locks
-# - CRITICAL: Fixed script hanging after system_update at 4% progress
+# FIXES IN THIS VERSION (4.1):
+# - CRITICAL: Fixed script exiting at 4% after first module
+# - Added explicit 'return 0' to all module functions
+# - All modules now properly signal successful completion
+# - This prevents bash from returning the exit code of the last command (which could be non-zero)
+# - Previous fixes from v4.0 maintained (APT lock handling, progress bar, etc.)
+#
+# PREVIOUS FIXES (4.0):
+# - Fixed wait_for_apt() hanging by properly handling stale locks
 # - Fixed lock file detection logic - now removes stale locks automatically
 # - Improved timeout handling with better feedback
 # - Fixed progress bar not advancing between modules
 # - Better error recovery and user feedback
-# - Added force unlock option when detected
-# - All previous fixes from v3.9 maintained
 
 set -euo pipefail
 
 # Global variables
-readonly VERSION="4.0"
+readonly VERSION="4.1"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/security_hardening.log"
@@ -743,6 +747,7 @@ module_system_update() {
     DEBIAN_FRONTEND=noninteractive sudo apt-get autoremove -y 2>&1 | tee -a "${LOG_FILE}" || true
     
     log SUCCESS "System update completed"
+    return 0
 }
 
 module_firewall() {
@@ -771,6 +776,7 @@ module_firewall() {
     echo "y" | sudo ufw enable
     
     log SUCCESS "Firewall configured and enabled"
+    return 0
 }
 
 module_fail2ban() {
@@ -801,6 +807,7 @@ EOF
     sudo systemctl restart fail2ban
     
     log SUCCESS "Fail2Ban configured and enabled"
+    return 0
 }
 
 module_clamav() {
@@ -819,6 +826,7 @@ module_clamav() {
     sudo systemctl enable clamav-freshclam
     
     log SUCCESS "ClamAV installed and database updated"
+    return 0
 }
 
 module_root_access() {
@@ -830,6 +838,7 @@ module_root_access() {
     sudo passwd -l root 2>&1 | tee -a "${LOG_FILE}"
     
     log SUCCESS "Root password login disabled"
+    return 0
 }
 
 module_ssh_hardening() {
@@ -858,6 +867,7 @@ module_ssh_hardening() {
     sudo systemctl restart sshd || sudo systemctl restart ssh
     
     log SUCCESS "SSH hardened successfully"
+    return 0
 }
 
 module_packages() {
@@ -884,6 +894,7 @@ module_packages() {
     done
     
     log SUCCESS "Unnecessary packages removed"
+    return 0
 }
 
 module_audit() {
@@ -899,6 +910,7 @@ module_audit() {
     sudo systemctl start auditd
     
     log SUCCESS "Auditd configured and enabled"
+    return 0
 }
 
 module_filesystems() {
@@ -921,6 +933,7 @@ module_filesystems() {
     done
     
     log SUCCESS "Unused filesystems disabled"
+    return 0
 }
 
 module_boot_security() {
@@ -939,6 +952,7 @@ module_boot_security() {
     sudo chmod 600 /boot/grub/grub.cfg 2>/dev/null || true
     
     log SUCCESS "Boot security settings applied"
+    return 0
 }
 
 module_ipv6() {
@@ -957,6 +971,7 @@ EOF
     else
         log INFO "IPv6 left enabled (not paranoid mode)"
     fi
+    return 0
 }
 
 module_apparmor() {
@@ -972,6 +987,7 @@ module_apparmor() {
     sudo systemctl start apparmor
     
     log SUCCESS "AppArmor configured and enabled"
+    return 0
 }
 
 module_ntp() {
@@ -990,6 +1006,7 @@ module_ntp() {
         sudo systemctl start ntp
         log SUCCESS "Time synchronization configured (NTP)"
     fi
+    return 0
 }
 
 module_aide() {
@@ -1009,6 +1026,7 @@ module_aide() {
     else
         log WARNING "AIDE database creation may not have completed"
     fi
+    return 0
 }
 
 module_sysctl() {
@@ -1037,6 +1055,7 @@ EOF
     sudo sysctl -p
     
     log SUCCESS "Kernel security parameters configured"
+    return 0
 }
 
 module_password_policy() {
@@ -1062,6 +1081,7 @@ lcredit = -1
 EOF
     
     log SUCCESS "Password policies configured"
+    return 0
 }
 
 module_automatic_updates() {
@@ -1075,6 +1095,7 @@ module_automatic_updates() {
     sudo dpkg-reconfigure -plow unattended-upgrades
     
     log SUCCESS "Automatic updates enabled"
+    return 0
 }
 
 module_rootkit_scanner() {
@@ -1090,6 +1111,7 @@ module_rootkit_scanner() {
     sudo rkhunter --propupd 2>&1 | tee -a "${LOG_FILE}" || true
     
     log SUCCESS "Rootkit scanners installed"
+    return 0
 }
 
 module_usb_protection() {
@@ -1107,6 +1129,7 @@ EOF
     sudo chmod 644 /var/log/usb-devices.log
     
     log SUCCESS "USB logging configured"
+    return 0
 }
 
 module_secure_shared_memory() {
@@ -1121,6 +1144,7 @@ module_secure_shared_memory() {
     else
         log INFO "Shared memory already secured"
     fi
+    return 0
 }
 
 module_lynis_audit() {
@@ -1137,6 +1161,7 @@ module_lynis_audit() {
     sudo lynis audit system --quick 2>&1 | tee -a "${LOG_FILE}" || log WARNING "Lynis audit completed with warnings"
     
     log SUCCESS "Lynis audit completed"
+    return 0
 }
 
 generate_report() {
