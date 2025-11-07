@@ -719,13 +719,13 @@ module_system_update() {
 **4. Documentation:**
 
 * Comprehensive fix documentation
-* Technical deep-dive available
+* Technical explination available
 * Before/after code comparison
 * Troubleshooting guides
 
 ### For Upgraders from v4.0:
 
-No breaking changes. The fix is transparent - the script simply completes all modules now:
+No breaking changes. The fix is transparent - the script should simply completes all modules now:
 
 ```bash
 # Download v4.1:
@@ -2270,7 +2270,6 @@ For commercial use, contact: [cyberjunk77@protonmail.com](mailto:cyberjunk77@pro
 **Community Support (Free):**
 
 * GitHub Issues: [https://github.com/captainzero93/security_harden_linux/issues](https://github.com/captainzero93/security_harden_linux/issues)
-* GitHub Discussions: [https://github.com/captainzero93/security_harden_linux/discussions](https://github.com/captainzero93/security_harden_linux/discussions)
 * Best-effort response time
 * Community-driven Q&A
 
