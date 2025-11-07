@@ -2,7 +2,7 @@
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
 # Version: 4.2 - ACTUAL FIX for premature exit at 4%
-# Author: captainzero93 (Fixed by Claude)
+# Author: captainzero93 
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+, Ubuntu 25.10+, and Debian 13
 # Last Updated: 2025-11-07
