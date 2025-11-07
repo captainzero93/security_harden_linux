@@ -545,7 +545,6 @@ With automatic updates: Vulnerabilities patched
 * Database contains customer data
 * Bot finds it in 6 hours
 * Data exfiltrated and sold
-* GDPR fine: €50,000
 
 With UFW: Only localhost can access MySQL
 With strong passwords: Default passwords don't work
