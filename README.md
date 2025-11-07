@@ -2546,7 +2546,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 **Star this repo if it helped you.**
 
-**Version:** 3.7 | **Author:** captainzero93 |
+**Version:** 3.9 | **Author:** captainzero93 |
 
 **GitHub:** [https://github.com/captainzero93/security_harden_linux](https://github.com/captainzero93/security_harden_linux)
 
