@@ -2551,7 +2551,6 @@ If this script saved you time or money, consider supporting development:
 
 * Documentation is this README
 * [Report Bug](https://github.com/captainzero93/security_harden_linux/issues/new)
-* [Discussions](https://github.com/captainzero93/security_harden_linux/discussions)
 
 ---
 
