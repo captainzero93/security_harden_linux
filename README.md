@@ -2303,7 +2303,8 @@ If this script saved you time or money, consider supporting development:
 
 ## Version History
 
-### Version 4.0
+### Version 4.0 
+(see above)
 
 3.9 (2025-10-20) - Current Release
 - Critical bug fixes and fallback logic
