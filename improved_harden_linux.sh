@@ -1,17 +1,21 @@
 #!/bin/bash 
 
 # Enhanced Ubuntu/Kubuntu Linux Security Hardening Script
-# Version: 4.1 - CRITICAL FIX for premature exit issue
+# Version: 4.2 - ACTUAL FIX for premature exit at 4%
 # Author: captainzero93 (Fixed by Claude)
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Kubuntu 24.04+, Ubuntu 25.10+, and Debian 13
 # Last Updated: 2025-11-07
 # 
-# FIXES IN THIS VERSION (4.1):
-# - CRITICAL: Fixed script exiting at 4% after first module
-# - Added explicit 'return 0' to all module functions
-# - All modules now properly signal successful completion
-# - This prevents bash from returning the exit code of the last command (which could be non-zero)
+# FIXES IN THIS VERSION (4.2):
+# - CRITICAL: Fixed show_progress() causing immediate exit with set -e
+# - The pattern '[[ test ]] && command' returns 1 when test is false
+# - With set -e, this caused script to exit after first module
+# - Changed to use if statement which is safe with set -e
+# - This was the ACTUAL cause of the 4% exit issue
+#
+# FIXES IN VERSION (4.1):
+# - Added explicit 'return 0' to all module functions (preventive measure)
 # - Previous fixes from v4.0 maintained (APT lock handling, progress bar, etc.)
 #
 # PREVIOUS FIXES (4.0):
@@ -24,7 +28,7 @@
 set -euo pipefail
 
 # Global variables
-readonly VERSION="4.1"
+readonly VERSION="4.2"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/security_hardening.log"
@@ -131,12 +135,13 @@ log() {
             echo -e "${GREEN}[SUCCESS]${NC} ${message}"
             ;;
         INFO)
-            $VERBOSE && echo -e "${BLUE}[INFO]${NC} ${message}"
+            $VERBOSE && echo -e "${BLUE}[INFO]${NC} ${message}" || true
             ;;
         *)
             echo "${message}"
             ;;
     esac
+    return 0
 }
 
 handle_error() {
@@ -182,7 +187,10 @@ show_progress() {
         printf "%$((width - filled))s" | tr ' ' '-'
         printf "] %3d%% - %s" "${percentage}" "${task}"
         
-        [[ ${current} -eq ${total} ]] && echo
+        # Add newline only at the end - safe with set -e
+        if [[ ${current} -eq ${total} ]]; then
+            echo
+        fi
     else
         # In non-interactive mode, just log progress at milestones
         if [[ ${percentage} -eq 25 ]] || \
