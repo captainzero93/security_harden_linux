@@ -694,14 +694,7 @@ done
 * Better fallback to lsb_release when needed
 * Enhanced Debian 13 (Trixie) compatibility
 
-**3. Diagnostic Tooling:**
-
-* Enhanced apt_diagnostic.sh script
-* Better detection of stale vs active locks
-* Automatic diagnostic report generation
-* Clearer recommendations for fixes
-
-**4. Documentation:**
+**3. Documentation:**
 
 * Comprehensive fix documentation
 * Technical deep-dive available
