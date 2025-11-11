@@ -462,7 +462,6 @@ wait_for_apt() {
     
     log ERROR "Timeout waiting for package manager to become available (${timeout}s)"
     log ERROR "Please close any running apt/dpkg processes and try again"
-    log ERROR "Or run: sudo ./apt_diagnostic.sh"
     return 1
 }
 
