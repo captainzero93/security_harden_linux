@@ -1,0 +1,63 @@
+NOTICE
+
+This project is licensed under the Apache License 2.0.
+Copyright 2025 captainzero93
+
+================================================================================
+
+ATTRIBUTION REQUIREMENTS
+================================================================================
+
+If you modify, distribute, or create derivative works of this software, you 
+MUST provide clear attribution as follows:
+
+1. REQUIRED ATTRIBUTION FOR MODIFICATIONS:
+   - All modified files must contain a prominent notice stating:
+     a) That the file was modified
+     b) The date of modification
+     c) Your name or identifier as the modifier
+   
+   Example:
+   // Modified by Captainzero93 on 15/11/2025
+   // Original work Copyright 2025 captainzero93
+
+2. REQUIRED ATTRIBUTION FOR DISTRIBUTIONS:
+   - Any distribution of this software or derivative works must include:
+     a) A copy of this NOTICE file
+     b) A copy of the LICENSE file (Apache 2.0)
+     c) Credit to the original author: captainzero93
+   
+3. REQUIRED ATTRIBUTION IN DOCUMENTATION:
+   - If you create documentation for derivative works, it must include:
+     "Based on original work by captainzero93"
+     "Original project: [Your Project URL/Name]"
+
+4. REQUIRED ATTRIBUTION IN USER-FACING MATERIALS:
+   - Any user interface, about screen, or credits section must include:
+     "Portions of this software are based on work by captainzero93,
+      licensed under the Apache License 2.0"
+
+5. PROHIBITED USES:
+   - You may NOT imply endorsement by the original author without permission
+   - You may NOT use the original author's name to promote derivative works
+     without explicit written permission
+
+================================================================================
+
+ORIGINAL WORK INFORMATION
+================================================================================
+
+Original Author: captainzero93
+Project Repository: https://github.com/captainzero93/
+Copyright Year: 2025
+
+For questions about attribution requirements, contact the original author
+through their GitHub profile.
+
+================================================================================
+
+This NOTICE file is part of the attribution requirements under Section 4(d)
+of the Apache License 2.0. Failure to include this NOTICE file with
+distributions or derivative works is a violation of the license terms.
+
+================================================================================
