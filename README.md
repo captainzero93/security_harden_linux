@@ -426,7 +426,7 @@ sudo ./improved_harden_linux.sh -l high -n
 sudo reboot
 ```
 
-### Step 5: Verify
+### Step 5: Verify / che
 
 ```bash
 # Check firewall:
@@ -1500,11 +1500,6 @@ All backups are stored in `/root/`:
 * SHA256 checksum: `/root/security_backup_YYYYMMDD_HHMMSS.tar.gz.sha256`
 * Individual file backups: `/etc/config_file.backup.TIMESTAMP`
 
-### Verify Backup Integrity:
-
-```bash
-sha256sum -c /root/security_backup_*.tar.gz.sha256
-```
 
 ### List Backups:
 
@@ -1818,7 +1813,7 @@ chmod +x improved_harden_linux.sh
 
 # Verify version:
 ./improved_harden_linux.sh --version
-# Should show: 3.7
+# Should show: 4.2
 
 # Run dry-run again:
 sudo ./improved_harden_linux.sh --dry-run -v
@@ -2747,7 +2742,6 @@ BACKUPS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Location:     /root/security_backup_*.tar.gz
 List:         ls -lht /root/security_backup_*.tar.gz
-Verify:       sha256sum -c /root/security_backup_*.tar.gz.sha256
 Restore:      sudo ./improved_harden_linux.sh --restore [FILE]
 
 EMERGENCY:
