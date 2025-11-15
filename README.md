@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
 
-This is a breakthrough in locally ran LLM's, especiaoly on mid/low end hardware!
+This is a breakthrough in locally ran LLM's, especially on mid/low end hardware!
 
 **Version 4.2** - Critical Fixes for Module(s) Execution - Tested WORKING on Debian 13 ... (4.2.1 - Readme clarifcation and extra detail, video footage added and a build added for Windows).
 
