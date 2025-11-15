@@ -4,7 +4,7 @@
 
 This is a breakthrough in locally ran LLM's, especially on mid/low end hardware!
 
-**Version 4.2** - Critical Fixes for Module(s) Execution - Tested WORKING on Debian 13 ... (4.2.1 - Readme clarifcation and extra detail, video footage added and a build added for Windows).
+**Version 4.2** - Critical Fixes for Module(s) Execution - Tested WORKING on Debian 13 ... (4.2.1 - Readme clarifcation and extra detail, video footage added).
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
