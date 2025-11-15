@@ -2770,6 +2770,6 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 **Version:** 4.2 | **Author:** captainzero93 |
 
-**GitHub:** [https://github.com/captainzero93/security_harden_linux](https://github.com/captainzero93/security_harden_linux)
+**GitHub:** https://github.com/captainzero93/
 
 ---
