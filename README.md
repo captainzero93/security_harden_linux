@@ -2322,6 +2322,8 @@ If this script saved you time or money, consider supporting development:
 
 ## Version History
 
+### Version 4.2.1 Current ( see above )
+
 ### Version 4.1 (2025-11-07)
 
 **Critical Fix:**
