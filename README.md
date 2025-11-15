@@ -156,7 +156,7 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 
 ### Things That KEEP Working:
 
-* Steam and all your games (zero FPS impact)
+* Steam and all your games (zero/low FPS impact)
 * Discord, Zoom, Slack, Teams
 * Wacom tablets and drawing tools
 * Audio production (Jack, PipeWire, ALSA)
