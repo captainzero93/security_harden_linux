@@ -20,7 +20,7 @@
 
 **REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out.
 
-### <b> Note: This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script </b>
+### <b> This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script </b>
 
 ---
 
