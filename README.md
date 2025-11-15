@@ -111,7 +111,7 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 
 ### You, if you:
 
-* **Game on Linux** and want to stay secure without FPS loss
+* **Game on Linux** and want to stay secure without / minimal FPS loss
 * **Create art, music, or videos** without security getting in your way
 * **Work from home** and need basic protection
 * **Just want a secure personal computer** that works normally
