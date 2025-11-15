@@ -2765,7 +2765,9 @@ GitHub:       https://github.com/captainzero93/security_harden_linux
 Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 ```
-
+<b> Note: script does: Network/system hardening, AppArmor (not SELinux), audit logging
+script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs
+If you need user group stuff, you'll want to handle that separately before or after running the script </b>
 ---
 
 **Star this repo if it helped you.**
