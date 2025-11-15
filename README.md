@@ -178,7 +178,7 @@ The script:
 
 * **Detects desktop environments automatically** - knows you're not a server
 * **Asks before blocking features** like mDNS (network discovery), KDE Connect, and Samba
-* **Preserves gaming functionality** - no impact on Steam, Lutris, or Proton
+* **Preserves gaming functionality** - no/little impact on Steam, Lutris, or Proton
 * **Zero performance impact** - no background processes eating CPU/GPU
 * **Audio production safe** - Jack, PipeWire, ALSA untouched
 * **Creative tools work** - Wacom, DaVinci, Blender all function normally
