@@ -2507,6 +2507,9 @@ If this script saved you time or money, consider supporting development:
 * Basic hardening steps
 * Manual configuration
 
+**Pre - Initial Release:**
+
+* Alpha and beta revisions, many hours of research and testing 
 ---
 
 ## Additional Resources
