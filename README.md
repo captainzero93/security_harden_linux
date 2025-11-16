@@ -1,3 +1,21 @@
+███████╗ ██████╗ ██████╗ ████████╗██████╗ ███████╗███████╗███████╗
+██╔════╝██╔═══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔════╝██╔════╝██╔════╝
+█████╗  ██║   ██║██████╔╝   ██║   ██████╔╝█████╗  ███████╗█████╗  
+██╔══╝  ██║   ██║██╔══██╗   ██║   ██╔══██╗██╔══╝  ╚════██║██╔══╝  
+███████╗╚██████╔╝██║  ██║   ██║   ██║  ██║███████╗███████║███████╗
+╚══════╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+
+FORTRESS.SH :: Debian Linux Defence Configuration  
+
+One-command security hardening that implements many enterprise-grade  
+protections (DISA STIG + CIS) while allowing the user to choose the  
+level of protection vs. usability. Designed for both casual and strict use.
+
+Version 5.0 — Major Rewrite  
+Removes security theatre; adds intelligent recommendations.  
+Tested WORKING on Debian 13, Ubuntu 24.04+
+
+
 # FORTRESS.SH :: Debian Linux Defence Configuration
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
@@ -50,7 +68,6 @@ v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need
 * **Boot security** - Now verifies Secure Boot status and guides BIOS configuration
 * **All modules** - Include educational explanations and threat modeling
 
-**Philosophy change:** From "automate everything" to "educate and execute"
 
 ---
 
