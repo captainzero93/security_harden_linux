@@ -26,7 +26,7 @@ v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need
 
 ---
 
-## What's New in v5.0 (Educational Edition)
+## What's New in v5.0 
 
 **MAJOR REWRITE** based on community feedback to remove security theater and add real education:
 
