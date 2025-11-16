@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
 
-**Version 5.0** - Major Rewrite: Educational Edition - Removes security theater, adds intelligent recommendations and educational mode. Tested WORKING on Debian 13, Ubuntu 24.04+.
+**Version 5.0** - Major Rewrite: Removes security theater, adds intelligent recommendations and educational mode. Tested WORKING on Debian 13, Ubuntu 24.04+.
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
