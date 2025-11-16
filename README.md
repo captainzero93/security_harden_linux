@@ -30,13 +30,13 @@ v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need
 
 **MAJOR REWRITE** based on community feedback to remove security theater and add real education:
 
-### Removed (Security Theater):
+### Removed:
 * **AIDE** - Ineffective on live systems, can't detect kernel rootkits. Replaced with `dpkg --verify`
 * **IPv6 disable** - Not a security feature, removed entirely
 * **ClamAV** - Minimal benefit on Linux, removed (install separately if needed)
 * **Blanket fail2ban installation** - Now optional and intelligent
 
-### Added (Real Security):
+### Added:
 * **Educational mode** (`--explain`) - Learn WHY each security measure matters
 * **Secure Boot verification** - Checks if enabled, provides setup instructions
 * **Package verification** - Uses dpkg's built-in checksums (weekly cron job)
