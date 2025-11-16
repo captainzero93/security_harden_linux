@@ -11,7 +11,6 @@
 # - Added --explain mode for educational context on every action
 # - Made fail2ban optional with clear explanation of limited value
 # - Removed AIDE in favor of dpkg package verification
-# - Removed IPv6 disable (it's not a security feature)
 # - Added secure boot validation recommendations
 # - Restructured as educational guide that explains WHY
 # - Defense-in-depth approach with realistic threat modeling
@@ -246,7 +245,7 @@ display_help() {
     cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                    FORTRESS.SH - Security Hardening                      ║
-║                         Version 5.0 (Educational)                        ║
+║                         Version 5.0                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 
 USAGE:
