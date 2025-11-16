@@ -1,15 +1,3 @@
-
-FORTRESS.SH :: Debian Linux Defence Configuration  
-
-One-command security hardening that implements many enterprise-grade  
-protections (DISA STIG + CIS) while allowing the user to choose the  
-level of protection vs. usability. Designed for both casual and strict use.
-
-Version 5.0 — Major Rewrite  
-Removes security theatre; adds intelligent recommendations.  
-Tested WORKING on Debian 13, Ubuntu 24.04+
-
-
 # FORTRESS.SH :: Debian Linux Defence Configuration
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
