@@ -50,7 +50,7 @@ v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need
 * **Boot security** - Now verifies Secure Boot status and guides BIOS configuration
 * **All modules** - Include educational explanations and threat modeling
 
-**Philosophy change:** From "automate everything" to "educate and execute intelligently"
+**Philosophy change:** From "automate everything" to "educate and execute"
 
 ---
 
