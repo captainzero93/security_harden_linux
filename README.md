@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
 
-**Version 4.2** - Critical Fixes for Module(s) Execution - Tested WORKING on Debian 13 ... (4.2.1 - Readme clarifcation and extra detail).
+**Version 5.0** - Major Rewrite: Educational Edition - Removes security theater, adds intelligent recommendations and educational mode. Tested WORKING on Debian 13, Ubuntu 24.04+.
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -10,7 +10,7 @@
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-4.2.1-green.svg)]() 
+[![Version](https://img.shields.io/badge/Version-5.0-green.svg)]() 
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
@@ -20,7 +20,37 @@
 
 **REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out.
 
+v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script.
+
 ### <b> This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script. </b>
+
+---
+
+## What's New in v5.0 (Educational Edition)
+
+**MAJOR REWRITE** based on community feedback to remove security theater and add real education:
+
+### Removed (Security Theater):
+* **AIDE** - Ineffective on live systems, can't detect kernel rootkits. Replaced with `dpkg --verify`
+* **IPv6 disable** - Not a security feature, removed entirely
+* **ClamAV** - Minimal benefit on Linux, removed (install separately if needed)
+* **Blanket fail2ban installation** - Now optional and intelligent
+
+### Added (Real Security):
+* **Educational mode** (`--explain`) - Learn WHY each security measure matters
+* **Secure Boot verification** - Checks if enabled, provides setup instructions
+* **Package verification** - Uses dpkg's built-in checksums (weekly cron job)
+* **Intelligent recommendations** - Analyzes your system before suggesting modules
+* **SSH lockout prevention** - Multiple safety checks with explicit confirmation
+* **Honest limitations** - Every module explains what it CAN'T protect against
+
+### Improved:
+* **fail2ban** - Only recommended when actually beneficial (web/mail servers, password-auth services)
+* **SSH hardening** - Requires explicit confirmation of working key-based auth
+* **Boot security** - Now verifies Secure Boot status and guides BIOS configuration
+* **All modules** - Include educational explanations and threat modeling
+
+**Philosophy change:** From "automate everything" to "educate and execute intelligently"
 
 ---
 
@@ -30,14 +60,14 @@
 
 ```bash
 # Download and make executable
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh
+chmod +x fortress_improved.sh
 
-# Preview changes (recommended)
-sudo ./improved_harden_linux.sh --dry-run
+# Learn what it does (recommended first time)
+sudo ./fortress_improved.sh --explain --dry-run
 
 # Apply with defaults
-sudo ./improved_harden_linux.sh
+sudo ./fortress_improved.sh
 
 # Answer the interactive prompts, then reboot when done
 ```
@@ -50,10 +80,10 @@ ssh-keygen -t ed25519
 ssh-copy-id user@your-server
 
 # Then run hardening
-sudo ./improved_harden_linux.sh -l high -n
+sudo ./fortress_improved.sh -l high -n
 ```
 
-**Something broke?** `sudo ./improved_harden_linux.sh --restore`
+**Something broke?** Restore from backup directory: `/root/fortress_backups_*/`
 
 ---
 
@@ -68,7 +98,7 @@ sudo ./improved_harden_linux.sh -l high -n
 * [Quick Start](#quick-start)
 * [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 * [Why Each Security Measure Matters](#why-each-security-measure-matters)
-* [What's New in v4.1](#whats-new-in-v41)
+* [What's New in v5.0](#whats-new-in-v50-educational-edition)
 * [Installation](#installation)
 * [Usage Guide](#usage-guide)
 * [Security Levels Explained](#security-levels-explained)
@@ -121,10 +151,11 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 * **Run a home server** or self-host services
 * **Develop software** and want security without breaking your tools
 * **Are learning Linux** and want to start with good habits
+* **Want to understand security** - not just blindly apply it
 
 ### What makes this different:
 
-This script applies **industry-standard security WITHOUT breaking your desktop experience.** No more choosing between security and usability.
+This script applies **industry-standard security WITHOUT breaking your desktop experience.** No more choosing between security and usability. **v5.0 also teaches you WHY each security measure matters.**
 
 **Tested and optimized for:**
 
@@ -145,15 +176,14 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 
 * Enables your firewall (UFW) - but keeps Steam, Discord, KDE Connect working
 * Hardens SSH - prevents brute force attacks if you use remote access
-* Blocks repeated failed logins - automatic IP banning with Fail2Ban
-* Installs antivirus - ClamAV (yes, Linux can get malware)
+* Blocks repeated failed logins - optional fail2ban (only if beneficial for your setup)
 * Secures the kernel - protection against memory exploits and attacks
-* Sets up file integrity monitoring - alerts you if system files change
+* Verifies package integrity - weekly dpkg verification (detects tampering/corruption)
 * Enforces strong passwords - because "password123" is still too common
 * Enables automatic security updates - patches critical bugs while you sleep
 * Configures audit logging - forensics and evidence if something happens
 * Applies kernel hardening - makes exploits far harder to pull off
-* Secures boot process - protects against physical attacks
+* Verifies boot security - checks Secure Boot status and guides configuration
 * Removes unnecessary packages - smaller attack surface
 
 ### Things That KEEP Working:
@@ -187,7 +217,7 @@ The script:
 * **Bluetooth works** - headphones, mice, controllers all fine
 * **Uses "moderate" security by default** - balanced, not paranoid
 * **Creates automatic backups** before every change
-* **One-command restore** if anything goes wrong
+* **Explains each action** in educational mode (--explain flag)
 
 **At "moderate" level:** (the default), you won't even notice the changes. Your computer will feel exactly the same, just with far fewer security holes.
 
@@ -213,178 +243,107 @@ The script:
 * Real-time kernel scheduling preserved
 * Low-latency monitoring works
 * USB audio interfaces function normally
-* MIDI controllers work
 
-**3D Modeling:**
+**Game Development:**
 
-* Blender with GPU rendering
-* FreeCAD, OpenSCAD work
-* 3D printers remain functional
-* USB dongles for licenses work
-
-**Gaming:**
-
-* Steam, Lutris, Heroic Launcher
-* Proton compatibility layer untouched
-* Anti-cheat systems work
-* RGB control software functions
-* Game controllers and wheels work
-* VR headsets supported
+* Godot, Unity, Unreal work fine
+* Build processes unaffected
+* Steam integration intact
+* Version control (Git) works
 
 ---
 
 ## Critical Warning for Remote Servers
 
-**READ THIS IF YOU'RE RUNNING THIS ON A REMOTE SERVER (VPS, cloud, etc.)**
+### YOU WILL LOCK YOURSELF OUT IF YOU SKIP THIS SECTION
 
-### YOU WILL LOCK YOURSELF OUT IF YOU DON'T FOLLOW THESE STEPS:
+This script **disables password authentication for SSH** and switches to key-only authentication. This is the single most effective security improvement you can make for SSH.
 
-**Before running this script on a remote server:**
+**But if you don't have SSH keys set up BEFORE running this script, you will be permanently locked out of your server.**
 
-1. **Set up SSH key authentication:**
+### Before Running This Script on ANY Remote Server:
 
 ```bash
-# On your LOCAL machine (not the server):
+# On your LOCAL machine (laptop/desktop):
 ssh-keygen -t ed25519 -C "your_email@example.com"
 
 # Copy the key to your server:
 ssh-copy-id username@your-server-ip
 
-# Test that key-based login works:
-ssh username@your-server-ip
+# Test that it works:
+ssh -i ~/.ssh/id_ed25519 username@your-server-ip
 
-# If that works, you're safe to proceed
+# If you can log in without typing a password, you're good to go
+# ONLY THEN run the hardening script on the server
 ```
 
-2. **Verify you have console access:**
+**v5.0 Safety Features:**
 
-* Cloud providers (AWS, DigitalOcean, Linode, etc.) provide web-based consoles
-* Physical servers need KVM/IPMI or physical access
-* VPS providers usually have VNC or serial console access
+* Script detects if SSH server is running
+* Requires explicit "yes" confirmation that you have working SSH keys
+* Provides setup instructions if you don't have keys
+* Multiple warnings before disabling password auth
+* Configuration validation before applying changes
+* Auto-rollback on SSH configuration errors
 
-3. **Keep an SSH session open:**
+**If you still lock yourself out:**
 
-* Before running the script, open a second SSH session
-* Keep it open until after reboot
-* If something breaks, you can fix it from that session
+You'll need physical access to the server (or console access from your hosting provider) to restore `/etc/ssh/sshd_config` from the backup.
 
-### Why This Matters:
+### For Desktop Users:
 
-This script **disables password authentication** for SSH when using "high" or "paranoid" security levels. If you don't have SSH keys set up:
-
-* You won't be able to log in via SSH
-* Password login will be disabled
-* You'll need console access to fix it
-* You might need to restore from backup
-* Cloud providers might charge for console access
-
-### Recovery If You Get Locked Out:
-
-**If you can access the console:**
-
-```bash
-# Edit SSH config:
-sudo nano /etc/ssh/sshd_config
-
-# Change this line:
-PasswordAuthentication no
-# To:
-PasswordAuthentication yes
-
-# Restart SSH:
-sudo systemctl restart sshd
-
-# Now you can log in with password again
-```
-
-**If you can't access the console:**
-
-You'll need to:
-
-1. Boot from rescue mode (if your provider supports it)
-2. Mount your filesystem
-3. Edit `/etc/ssh/sshd_config` as shown above
-4. Reboot normally
-
-**Or restore from the automatic backup:**
-
-```bash
-# The script creates backups in /root/
-ls -lh /root/security_backup_*.tar.gz
-
-# Restore using:
-sudo ./improved_harden_linux.sh --restore
-```
-
-### Safe Approach for Servers:
-
-```bash
-# 1. Test with dry-run first:
-sudo ./improved_harden_linux.sh --dry-run -v
-
-# 2. Use moderate level initially:
-sudo ./improved_harden_linux.sh -l moderate -n
-
-# 3. Verify SSH still works after reboot
-
-# 4. Only then upgrade to high:
-sudo ./improved_harden_linux.sh -l high -n
-```
+If you don't use SSH to remotely access your computer, this doesn't affect you. The script will detect this and handle it appropriately.
 
 ---
 
 ## TL;DR - Quick Commands
 
-**First time user (recommended):**
+### First Time Setup:
 
 ```bash
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
-sudo ./improved_harden_linux.sh --dry-run -v  # Preview
-sudo ./improved_harden_linux.sh                # Apply
-sudo reboot                                    # Reboot
+# Learn what the script does (RECOMMENDED)
+sudo ./fortress_improved.sh --explain --dry-run
+
+# See what would change without making changes
+sudo ./fortress_improved.sh --dry-run
+
+# Apply default hardening (interactive)
+sudo ./fortress_improved.sh
+
+# High security, non-interactive (servers)
+sudo ./fortress_improved.sh -l high -n
 ```
 
-**Desktop users:**
+### Selective Hardening:
 
 ```bash
-sudo ./improved_harden_linux.sh
+# Only specific modules
+sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
+
+# Skip certain modules
+sudo ./fortress_improved.sh -x fail2ban,usb_protection
+
+# List all available modules
+sudo ./fortress_improved.sh --list-modules
 ```
 
-**Servers (after SSH keys set up):**
+### Monitoring After Hardening:
 
 ```bash
-sudo ./improved_harden_linux.sh -l high -n
-```
+# Check firewall status
+sudo ufw status verbose
 
-**Something broke?**
+# Check AppArmor status
+sudo aa-status
 
-```bash
-sudo ./improved_harden_linux.sh --restore
-```
+# View recent authentication attempts
+sudo ausearch -m USER_LOGIN -ts recent
 
-**See what it will do:**
+# Verify package integrity
+dpkg --verify
 
-```bash
-sudo ./improved_harden_linux.sh --dry-run -v
-```
-
-**Skip slow modules (AIDE, ClamAV):**
-
-```bash
-sudo ./improved_harden_linux.sh -x aide,clamav
-```
-
-**Only specific modules:**
-
-```bash
-sudo ./improved_harden_linux.sh -e firewall,ssh_hardening,fail2ban
-```
-
-**Generate security report:**
-
-```bash
-sudo ./improved_harden_linux.sh --report
+# Check if fail2ban is active (if installed)
+sudo fail2ban-client status
 ```
 
 ---
@@ -394,448 +353,319 @@ sudo ./improved_harden_linux.sh --report
 ### Step 1: Download
 
 ```bash
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh
+chmod +x fortress_improved.sh
 ```
 
-### Step 2: Preview (Recommended)
+### Step 2: Preview Changes (Recommended)
 
 ```bash
-sudo ./improved_harden_linux.sh --dry-run -v
+# Educational mode - learn about each security measure
+sudo ./fortress_improved.sh --explain --dry-run
+
+# Or just see what would change
+sudo ./fortress_improved.sh --dry-run --verbose
 ```
 
-This shows exactly what would change without modifying anything.
+### Step 3: Apply Hardening
 
-### Step 3: Apply
-
-**Desktop users:**
+**Desktop (Interactive):**
 
 ```bash
-sudo ./improved_harden_linux.sh
+sudo ./fortress_improved.sh
 ```
 
-Answer the interactive prompts about desktop features you want to keep.
-
-**Server users (after SSH keys set up):**
+**Server (Non-Interactive):**
 
 ```bash
-sudo ./improved_harden_linux.sh -l high -n
+# Make sure SSH keys are set up first!
+sudo ./fortress_improved.sh -l high -n
 ```
 
-### Step 4: Reboot
+### Step 4: Review and Reboot
 
 ```bash
+# Check the HTML report
+cat /root/fortress_report_*.html
+
+# Review the log
+tail -100 /var/log/fortress_hardening.log
+
+# Reboot to apply all changes
 sudo reboot
 ```
-
-### Step 5: Verify / che
-
-```bash
-# Check firewall:
-sudo ufw status
-
-# Check Fail2Ban:
-sudo fail2ban-client status
-
-# Check if SSH still works (from another machine):
-ssh your-username@your-server
-```
-
-**Done.** Your system is now significantly more secure.
 
 ---
 
 ## Why This Matters - Real-World Attacks
 
-These aren't hypothetical threats. Here's what actually happens:
+### Attack #1: The Brute Force Bot
 
-### SSH Brute Force (Happens Daily):
+**What happens without this script:**
 
-Without this script:
+Your SSH port (22) is open to the internet. Automated bots try 10,000+ password combinations per hour. Eventually, a weak password gets cracked. Game over.
 
-```
-Nov 01 03:42:15 Failed password for root from 185.220.101.34
-Nov 01 03:42:17 Failed password for root from 185.220.101.34
-Nov 01 03:42:19 Failed password for root from 185.220.101.34
-[... 10,000 more attempts ...]
-```
+**What this script does:**
 
-Attackers try thousands of passwords. Eventually they might guess yours.
+* Disables password authentication completely (key-only access)
+* Changes SSH port (optional)
+* Rate limits connection attempts
+* Optional fail2ban for additional services
 
-With this script:
+**Why fail2ban is optional in v5.0:** With password auth disabled and key-only SSH, brute force attacks become impossible. The script intelligently detects this and recommends skipping fail2ban unless you have web/mail servers that benefit from it.
 
-```
-Nov 01 03:42:15 Failed password for root from 185.220.101.34
-Nov 01 03:42:17 Failed password for root from 185.220.101.34
-Nov 01 03:42:19 Failed password for root from 185.220.101.34
-Nov 01 03:42:19 Fail2Ban: Banned 185.220.101.34 for 1 hour
-```
+### Attack #2: The Kernel Exploit
 
-After 3 failed attempts, they're banned. No more tries.
+**What happens without this script:**
 
-### Port Scanning (Happens Hourly):
+A vulnerability in the Linux kernel allows attackers to escalate privileges. They go from limited user to root access.
 
-Bots constantly scan for open services:
+**What this script does:**
 
-```
-Scanning 203.0.113.45...
-Port 22 (SSH): OPEN
-Port 80 (HTTP): OPEN
-Port 3306 (MySQL): OPEN    <- Your database exposed!
-Port 5432 (PostgreSQL): OPEN  <- Another database!
-Port 6379 (Redis): OPEN     <- And another!
-```
+* Enables kernel hardening (sysctl parameters)
+* Restricts access to kernel symbols
+* Enables ASLR (Address Space Layout Randomization)
+* Configures memory protections
 
-With UFW enabled, only the ports you actually need are accessible. Everything else is blocked.
+### Attack #3: The Supply Chain Attack
 
-### Kernel Exploits:
+**What happens without this script:**
 
-Modern kernel exploits often rely on:
+A compromised package update installs malware. You don't notice until your data is encrypted or stolen.
 
-* Unprivileged BPF access
-* /proc/kallsyms information disclosure
-* Predictable memory layouts
+**What this script does:**
 
-This script hardens kernel parameters to make these exploits much harder.
+* **NEW in v5.0:** Weekly package integrity verification using dpkg
+* Enables audit logging for file changes
+* Monitors system files for tampering
+* AppArmor limits what processes can do
 
-### Malware (Yes, on Linux):
+**Note:** v5.0 removed AIDE because it can't detect kernel-level rootkits on live systems. Instead, we use dpkg's built-in verification which is more appropriate for package integrity checking.
 
-Linux malware exists:
+### Attack #4: The Physical Access Attack
 
-* Cryptocurrency miners (common on hacked servers)
-* Botnet agents
-* Ransomware (increasing)
-* Backdoors and rootkits
+**What happens without this script:**
 
-ClamAV provides basic detection. It's not perfect, but it catches a lot.
+Someone boots your computer from USB, mounts your drive, and steals everything.
 
-### Real Incident Examples:
+**What this script does:**
 
-**Example 1: WordPress Site Hack**
-
-* Attacker finds vulnerability in old WordPress plugin
-* Uploads web shell to server
-* Server has no AppArmor, no file integrity monitoring
-* Attacker installs crypto miner
-* Server runs at 100% CPU for 3 months before owner notices
-* Mining profits: ~$200. Electricity costs: ~$300
-
-With AIDE: File changes detected immediately
-With AppArmor: Web shell blocked from executing
-With resource limits: Miner would be constrained
-
-**Example 2: SSH Brute Force Success**
-
-* Server has password authentication enabled
-* User password: "server2024"
-* Attacker tries common passwords for 3 days
-* Eventually succeeds
-* Installs ransomware
-* All data encrypted
-* Ransom demand: $5,000
-
-With SSH key auth: Password attacks impossible
-With Fail2Ban: Attacker banned after 3 tries
-With automatic updates: Vulnerabilities patched
-
-**Example 3: Unsecured Database**
-
-* Developer installs MySQL
-* Binds to 0.0.0.0 (all interfaces)
-* Uses default password
-* Firewall disabled
-* Database contains customer data
-* Bot finds it in 6 hours
-* Data exfiltrated and sold
-
-With UFW: Only localhost can access MySQL
-With strong passwords: Default passwords don't work
-With audit logging: Attack detected and logged
+* **NEW in v5.0:** Verifies Secure Boot status
+* Provides instructions for enabling Secure Boot in BIOS
+* Sets GRUB bootloader password
+* Restricts boot parameter modification
+* Secures boot configuration files
 
 ---
 
 ## Why Each Security Measure Matters
 
-### Firewall (UFW):
+### System Updates (Priority #1)
 
-**Without it:** Every service you run is accessible from the internet
-**With it:** Only explicitly allowed services are accessible
-**Impact:** Prevents 90% of automated attacks
+**The single most important security measure.** Most attacks exploit known vulnerabilities that already have patches available.
 
-### Fail2Ban:
+* Automatic security updates keep you protected
+* Kernel vulnerabilities are patched quickly
+* Critical bugs fixed before exploits appear
 
-**Without it:** Unlimited login attempts, brute force succeeds eventually
-**With it:** 3 failed attempts = IP banned for hours
-**Impact:** Makes brute force attacks impossible
+**v5.0 explains:** Why this is more important than any other hardening measure.
 
-### SSH Hardening:
+### SSH Hardening
 
-**Without it:** Password authentication, root login allowed
-**With it:** Key-based auth only, no root login, strong ciphers
-**Impact:** Eliminates password attacks completely
+**If you use remote access, this prevents 99% of SSH attacks.**
 
-### ClamAV:
+* Password auth disabled (keys only)
+* Root login disabled
+* Strong ciphers enforced
+* Connection rate limiting
 
-**Without it:** No malware detection
-**With it:** Basic detection of known malware
-**Impact:** Catches common malware, especially miners
+**v5.0 improvements:** Multiple safety checks prevent lockouts, explains why fail2ban is NOT needed with key-only auth.
 
-### Audit Logging (auditd):
+### Firewall (UFW)
 
-**Without it:** No record of system changes
-**With it:** Every login, file change, and command logged
-**Impact:** Forensics and incident response capability
+**Blocks unexpected network connections.**
 
-### File Integrity (AIDE):
+* Default deny incoming
+* Allow only needed services
+* Logs blocked attempts
+* Prevents backdoor connections
 
-**Without it:** Malware can modify system files silently
-**With it:** Any system file change triggers alert
-**Impact:** Detects rootkits and unauthorized changes
+**v5.0 intelligently:** Detects running services and opens only necessary ports.
 
-### Kernel Hardening:
+### Kernel Hardening (sysctl)
 
-**Without it:** Kernel vulnerable to memory exploits
-**With it:** ASLR, DEP, kernel pointer protection
-**Impact:** Makes kernel exploits much harder
+**Makes kernel exploits harder.**
 
-### Password Policy:
+* ASLR randomizes memory layout
+* Restricts kernel symbols access
+* Protects against memory attacks
+* Hardens network stack
 
-**Without it:** Users can set "password" as password
-**With it:** Minimum 12 chars, complexity required
-**Impact:** Prevents weak passwords
+**v5.0 explains:** What each parameter does and why it matters.
 
-### Automatic Updates:
+### Package Verification (NEW in v5.0)
 
-**Without it:** Critical patches might not be installed for weeks
-**With it:** Security updates install automatically
-**Impact:** Reduces vulnerability window
+**Detects package tampering and corruption.**
 
-### AppArmor:
+* Uses dpkg's built-in MD5 checksums
+* Weekly automated verification
+* Alerts on anomalies
+* Honest about limitations (can't detect kernel rootkits)
 
-**Without it:** Compromised services have full system access
-**With it:** Services confined to specific files/actions
-**Impact:** Limits damage from compromised services
+**Replaced AIDE because:** AIDE on live systems can't detect sophisticated attacks and generates false positives with generic configs.
 
-### Boot Security:
+### Secure Boot Verification (NEW in v5.0)
 
-**Without it:** Attacker with physical access can boot rescue mode
-**With it:** GRUB password, kernel hardening params
-**Impact:** Protects against physical attacks
+**Prevents boot-level malware.**
 
-### USB Protection:
+* Checks if Secure Boot is enabled
+* Provides BIOS setup instructions
+* Verifies bootloader signatures
+* Protects against bootkits
 
-**Without it:** Any USB device silently accepted
-**With it:** USB devices logged, malicious devices harder to use
-**Impact:** Detects rubber ducky attacks
+**Note:** Script can't auto-enable Secure Boot (requires BIOS config), but guides you through the process.
 
----
+### Audit Logging
 
-## What's New in v4.1
+**Records security-relevant events for forensics.**
 
-### CRITICAL FIX - Module Functions Missing Return Statements:
+* Tracks authentication attempts
+* Logs file access to sensitive files
+* Monitors privilege escalation
+* Creates tamper-resistant logs
 
-**Problem Resolved:**
+**v5.0 explains:** What auditd can and can't detect, when to use it.
 
-Version 4.0 and earlier would complete the system_update module successfully, show 4% progress, then immediately exit without continuing to the next module. The script appeared to hang or terminate prematurely after the first module.
+### Automatic Updates
 
-**Root Cause:**
+**Applies security patches automatically.**
 
-All module functions were missing explicit `return 0` statements. In bash, when a function doesn't have an explicit return statement, it returns the exit code of the last command executed. Since `log SUCCESS "..."` was typically the last command in modules, the functions would return unpredictable exit codes. When the main execution loop checked `if "${func}"; then`, it would sometimes interpret the module as failed due to the missing explicit success return code, causing the script to terminate.
+* Daily checks for updates
+* Installs security fixes
+* Removes old kernels
+* Optional reboot scheduling
 
-**The Fix:**
+**v5.0 improved:** Better configuration, explains trade-offs.
 
-Version 4.1 adds explicit `return 0` statements to all 21 module functions to ensure each one properly signals successful completion to the execution loop.
+### AppArmor
 
-**Technical Changes:**
+**Limits what programs can do, even if compromised.**
 
-```bash
-# Before (v4.0) - Missing explicit return statement:
-module_system_update() {
-    # ... commands ...
-    log SUCCESS "System update completed"
-}  # Returns exit code of log function (unpredictable)
+* Mandatory access control
+* Restricts file access
+* Prevents privilege escalation
+* Logs policy violations
 
-# After (v4.1) - Explicit success return:
-module_system_update() {
-    # ... commands ...
-    log SUCCESS "System update completed"
-    return 0  # Explicitly signals success
-}
-```
-
-**Modules Fixed (All 21):**
-
-* module_system_update
-* module_firewall
-* module_fail2ban
-* module_clamav
-* module_root_access
-* module_ssh_hardening
-* module_packages
-* module_audit
-* module_filesystems
-* module_boot_security
-* module_ipv6
-* module_apparmor
-* module_ntp
-* module_aide
-* module_sysctl
-* module_password_policy
-* module_automatic_updates
-* module_rootkit_scanner
-* module_usb_protection
-* module_secure_shared_memory
-* module_lynis_audit
-
-**User Experience Improvements:**
-
-* Script now executes all 21 modules sequentially without premature termination
-* Progress advances correctly from 4% through 100%
-* Module completion status now reliably indicates success or failure
-* Execution loop correctly identifies successful module completions
-* No more mysterious exits after the first module
-
-### Previous Fixes Maintained from v4.0:
-
-**1. APT Lock Handling:**
-
-* Fixed wait_for_apt() hanging with stale locks
-* Automatic detection and removal of stale APT locks
-* Interactive force-unlock option at 60 seconds
-* Better timeout handling and user feedback
-
-**2. Enhanced Stability:**
-
-* Fixed progress bar display between modules
-* Improved terminal output flushing
-* Better handling of interrupted operations
-* More robust error recovery
-
-**3. OS Detection:**
-
-* Fixed readonly variable errors in /etc/os-release parsing
-* Safe extraction of OS information
-* Better fallback to lsb_release when needed
-* Enhanced Debian 13 (Trixie) compatibility
-
-**4. Documentation:**
-
-* Comprehensive fix documentation
-* Technical explination available
-* Before/after code comparison
-* Troubleshooting guides
-
-### For Upgraders from v4.0:
-
-No breaking changes. The fix is transparent - the script should simply completes all modules now:
-
-```bash
-# Download v4.1:
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
-
-# Run normally - no special steps needed:
-sudo ./improved_harden_linux.sh -v
-
-# Script will now complete all 21 modules without premature exit
-```
-
-Your existing backups remain fully compatible.
-
-### What You'll Notice:
-
-**Before (v4.0):**
-```
-[SUCCESS] Module system_update completed
-[==------------------------------------------------]   4% - Completed Update system
-[Script exits immediately - no further modules execute]
-```
-
-**After (v4.1):**
-```
-[SUCCESS] Module system_update completed
-[==------------------------------------------------]   4% - Completed Update system
-[INFO] Starting module 2/21: Configure auditd logging
-[INFO] Installing auditd...
-[====----------------------------------------------]   9% - Completed Configure auditd
-[INFO] Starting module 3/21: Run Lynis security audit
-[======--------------------------------------------]  14% - Completed Run Lynis
-[Continues smoothly to 100%]
-```
-
-### Compatibility:
-
-* Full support for Debian 13 (Trixie)
-* Ubuntu 25.10 (Oracular) - working
-* Kubuntu 24.04+ - tested
-* All previously supported distributions - no regressions
-* Maintains all v4.0 improvements for APT lock handling
-
-### Testing:
-
-Testing performed on:
-
-* Debian 13 (Trixie) - all modules execute successfully
-* Fresh systems - completes all 21 modules
-* Systems with APT lock issues - handled by v4.0 improvements
-* Interactive mode - all prompts working correctly
-* Non-interactive mode - completed successfully
-* All security levels (low/moderate/high/paranoid) - working
+**v5.0 explains:** How AppArmor works and its limitations.
 
+### Password Policy
 
+**Enforces strong passwords.**
+
+* Minimum length (12+ characters)
+* Complexity requirements
+* Password history
+* Account lockout
+
+**v5.0 notes:** This only matters if password auth is enabled. With SSH keys, password policy is less critical.
+
+### fail2ban (Optional in v5.0)
+
+**Bans IPs with suspicious behavior.**
+
+* Monitors log files
+* Detects brute force attempts
+* Automatically blocks attackers
+* Configurable ban duration
+
+**v5.0 intelligence:** Only recommends installation if you have services that benefit (web/mail servers). Explains why it's unnecessary with key-only SSH.
+
+### Shared Memory Security
+
+**Prevents shared memory exploits.**
+
+* Mount /dev/shm with nosuid
+* Prevents SUID execution
+* Blocks device creation
+* Restricts shared memory attacks
+
+### Boot Security
+
+**Protects boot process.**
+
+* Secure Boot verification
+* GRUB password protection
+* Boot parameter restrictions
+* Bootloader file permissions
+
+### Root Access Restrictions
+
+**Forces use of sudo.**
+
+* Direct root login disabled
+* All actions traceable to users
+* Accountability and audit trail
+* Least privilege principle
+
+### USB Protection (Optional)
+
+**Controls USB device access.**
+
+* Prevents auto-mounting
+* Logs USB connections
+* Optional device whitelisting
+* Reduces attack surface
+
+**v5.0 intelligence:** Desktop detection - asks before applying USB restrictions that might interfere with normal use.
+
+### Unused Filesystem Disable
+
+**Reduces kernel attack surface.**
+
+* Disables rarely-used filesystems
+* Fewer kernel modules loaded
+* Smaller attack surface
+* Prevents obscure exploits
 
 ---
 
 ## Installation
 
-### Requirements Check:
+### Prerequisites:
+
+* Debian-based Linux (Ubuntu, Kubuntu, Mint, Pop!\_OS, Debian)
+* Root/sudo access
+* Internet connection
+* **For servers:** SSH keys set up BEFORE running
+
+### Quick Install:
 
 ```bash
-# Supported distributions:
-# - Ubuntu 22.04+ / 25.10+
-# - Kubuntu 24.04+
-# - Debian 11+ / 13
-# - Linux Mint 21+
-# - Pop!_OS 22.04+
+# Download
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh
 
-# Check your version:
-cat /etc/os-release
+# Make executable
+chmod +x fortress_improved.sh
+
+# Run with educational mode (recommended first time)
+sudo ./fortress_improved.sh --explain --dry-run
 ```
 
-### Method 1: Direct Download (Recommended)
+### Manual Install:
 
 ```bash
-# Download the script:
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-
-# Make it executable:
-chmod +x improved_harden_linux.sh
-
-```
-
-### Method 2: Git Clone
-
-```bash
+# Clone repository
 git clone https://github.com/captainzero93/security_harden_linux.git
 cd security_harden_linux
-chmod +x improved_harden_linux.sh
-```
 
-### Method 3: Direct Run (Advanced Users Only)
+# Make executable
+chmod +x fortress_improved.sh
 
-```bash
-# ONLY if you trust the source:
-wget -O - https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh | sudo bash
-```
+# Review the code (always a good idea)
+less fortress_improved.sh
 
-### Verification (Recommended):
-
-```bash
-# View the script before running:
-less improved_harden_linux.sh
-
-# Or with syntax highlighting:
-nano improved_harden_linux.sh
+# Run
+sudo ./fortress_improved.sh
 ```
 
 ---
@@ -844,1402 +674,880 @@ nano improved_harden_linux.sh
 
 ### Basic Usage:
 
-**Preview Changes (Recommended First Step):**
+```bash
+# Educational mode - learn about each action
+sudo ./fortress_improved.sh --explain
+
+# Dry run - see what would change
+sudo ./fortress_improved.sh --dry-run
+
+# Default hardening (moderate level)
+sudo ./fortress_improved.sh
+
+# High security level
+sudo ./fortress_improved.sh -l high
+
+# Non-interactive mode
+sudo ./fortress_improved.sh -n
+```
+
+### Advanced Options:
 
 ```bash
-sudo ./improved_harden_linux.sh --dry-run -v
+# Combine options
+sudo ./fortress_improved.sh --explain -d -v
+
+# Specific security level
+sudo ./fortress_improved.sh -l paranoid
+
+# Enable only specific modules
+sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
+
+# Disable specific modules
+sudo ./fortress_improved.sh -x fail2ban,usb_protection
+
+# Use custom config file
+sudo ./fortress_improved.sh -c /path/to/config.conf
+
+# List all available modules
+sudo ./fortress_improved.sh --list-modules
+
+# Show version
+sudo ./fortress_improved.sh --version
 ```
 
-Shows exactly what would be changed without modifying anything.
-
-**Apply with Defaults (Moderate Security):**
+### Understanding the --explain Flag (NEW in v5.0):
 
 ```bash
-sudo ./improved_harden_linux.sh
+sudo ./fortress_improved.sh --explain
 ```
 
-Interactive mode - asks questions about desktop features.
+This mode shows detailed explanations before each module:
 
-**Non-Interactive Mode (Servers):**
+* What the module does
+* Why it matters (threat model)
+* What attacks it prevents
+* Trade-offs and limitations
+* What it CAN'T protect against
+* Common misconceptions
+* Alternative approaches
 
-```bash
-sudo ./improved_harden_linux.sh -n
-```
-
-Runs with sensible defaults, no prompts.
-
-### Command-Line Options:
-
-```
-Usage: sudo ./improved_harden_linux.sh [OPTIONS]
-
-OPTIONS:
-    -h, --help              Display help message
-    -v, --verbose           Enable verbose output
-    -n, --non-interactive   Run without user prompts
-    -d, --dry-run           Perform a dry run without changes
-    -l, --level LEVEL       Set security level (low|moderate|high|paranoid)
-    -e, --enable MODULES    Enable specific modules (comma-separated)
-    -x, --disable MODULES   Disable specific modules (comma-separated)
-    -r, --restore [FILE]    Restore from backup
-    -R, --report            Generate security report only
-    -c, --config FILE       Use custom configuration file
-    --version               Display script version
-    --list-modules          List available security modules
-```
-
-### Security Levels:
-
-**low** - Basic security (desktop-friendly):
-
-* Firewall enabled with desktop services allowed
-* SSH hardening (but password auth still works)
-* Fail2Ban with lenient settings
-* Minimal impact on usability
-
-**moderate** (DEFAULT) - Balanced security:
-
-* All basic protections
-* Stronger SSH settings (keys recommended)
-* File integrity monitoring
-* Audit logging
-* Recommended for desktops
-
-**high** - Strong security (servers):
-
-* SSH key authentication required
-* Strict firewall rules
-* Aggressive intrusion prevention
-* Full audit logging
-* Some desktop features may need manual allow-listing
-
-**paranoid** - Maximum security (experts only):
-
-* All protections at maximum
-* IPv6 disabled (unless needed)
-* Minimal services
-* Strict access controls
-* Significant usability impact
-
-### Examples:
-
-**Desktop User - First Time:**
-
-```bash
-# Preview:
-sudo ./improved_harden_linux.sh --dry-run -v
-
-# Apply moderate security:
-sudo ./improved_harden_linux.sh
-
-# Reboot:
-sudo reboot
-```
-
-**Development Server:**
-
-```bash
-# Moderate security, non-interactive:
-sudo ./improved_harden_linux.sh -l moderate -n
-```
-
-**Production Server (After SSH Keys Set Up):**
-
-```bash
-# High security, non-interactive:
-sudo ./improved_harden_linux.sh -l high -n
-```
-
-**Custom Module Selection:**
-
-```bash
-# Only firewall, SSH, and Fail2Ban:
-sudo ./improved_harden_linux.sh -e firewall,ssh_hardening,fail2ban
-
-# Everything except ClamAV (slow on low-power systems):
-sudo ./improved_harden_linux.sh -x clamav
-
-# Specific level with custom modules:
-sudo ./improved_harden_linux.sh -l high -x usb_protection,clamav
-```
-
-**Using Configuration File:**
-
-```bash
-# Create config file (see hardening.conf.example):
-cp hardening.conf.example hardening.conf
-nano hardening.conf
-
-# Run with config:
-sudo ./improved_harden_linux.sh -c hardening.conf
-```
+**Use this to learn security, not just apply it blindly.**
 
 ---
 
 ## Security Levels Explained
 
-### Low Security:
+### Low (Basic Protection)
 
-**Best for:** brand new Linux users, systems where security isn't critical
+**For:** Testing, compatibility checking, minimal disruption
 
-**What it includes:**
+**What it does:**
 
-* Basic firewall (UFW) with desktop ports allowed
-* SSH hardening (passwords still work)
-* Fail2Ban with lenient settings (5 attempts before ban)
-* Automatic security updates
-* Basic package cleanup
+* Updates system packages
+* Enables basic firewall
+* Configures automatic updates
+* Basic audit logging
 
 **What it skips:**
 
-* Aggressive kernel hardening
-* Mandatory SSH keys
-* AIDE file integrity checks
-* Rootkit scanning
-* USB device logging
-
-**Impact:** minimal. You probably won't notice any changes.
-
-### Moderate Security (DEFAULT):
-
-**Best for:** desktop users, home servers, developers
-
-**What it includes:**
-Everything from Low, plus:
-
-* Stronger SSH settings (keys strongly recommended)
-* File integrity monitoring (AIDE)
-* Comprehensive audit logging
-* Kernel hardening (sysctl parameters)
+* SSH hardening
 * AppArmor enforcement
-* Rootkit detection
-* Password policy enforcement
+* Strict kernel parameters
+* Optional modules
 
-**What it balances:**
+**Use when:** You want security without any risk of breaking things.
 
-* Desktop features work (KDE Connect, mDNS, Samba)
-* Development tools function (Docker, databases)
-* Gaming unaffected (Steam, Discord)
-* Security significantly improved
+### Moderate (Recommended Default)
 
-**Impact:** barely noticeable. Your system feels the same but is much more secure.
+**For:** Desktop users, home servers, balanced security
 
-### High Security:
+**What it does:**
 
-**Best for:** production servers, systems handling sensitive data
+* All "Low" features
+* SSH hardening (if SSH installed)
+* Kernel hardening
+* AppArmor enforcement
+* Package verification
+* Boot security checks
 
-**What it includes:**
-Everything from Moderate, plus:
+**What it skips:**
 
-* SSH key authentication REQUIRED (no passwords)
-* Strict firewall rules
-* USB device protection
-* More aggressive Fail2Ban (3 attempts before ban)
-* Comprehensive security scanning
-* Stricter password policies
-* More audit logging
+* Aggressive restrictions
+* USB blocking (asks first)
+* Paranoid settings
 
-**Trade-offs:**
+**Use when:** You want good security that doesn't interfere with normal use.
 
-* Must use SSH keys (password login disabled)
-* Some desktop features require manual configuration
-* Stricter network controls
-* More aggressive security = more maintenance
+### High (Production Servers)
 
-**Impact:** moderate. You'll notice security prompts and may need to configure some services manually.
+**For:** Servers, high-value targets, stricter security
 
-### Paranoid Security:
+**What it does:**
 
-**Best for:** security researchers, systems under active threat, compliance requirements
+* All "Moderate" features
+* Stricter kernel parameters
+* Full audit logging
+* USB restrictions
+* All hardening modules
 
-**What it includes:**
-Everything from High, plus:
+**What it skips:**
 
-* Maximum kernel hardening
-* IPv6 disabled (unless explicitly needed)
-* Minimal services
-* Strictest password policies
-* Maximum audit logging
-* Most restrictive firewall rules
-* USB ports can be disabled entirely
+* Extreme paranoia settings
+* Features that might break software
 
-**Trade-offs:**
+**Use when:** Security is more important than convenience.
 
-* Significant usability impact
-* Many services require manual configuration
-* Some applications may not work
-* Frequent security prompts
-* Requires deep Linux knowledge to maintain
+### Paranoid (Maximum Security)
 
-### Comparison Table:
+**For:** High-security environments, compliance requirements
 
-| Feature           | Low     | Moderate    | High         | Paranoid |
-| ----------------- | ------- | ----------- | ------------ | -------- |
-| Firewall          | Basic   | Standard    | Strict       | Maximum  |
-| SSH Keys Required | No      | Recommended | Yes          | Yes      |
-| Fail2Ban Attempts | 5       | 4           | 3            | 2        |
-| File Integrity    | No      | Yes         | Yes          | Yes      |
-| Audit Logging     | Minimal | Standard    | Detailed     | Maximum  |
-| USB Protection    | No      | Optional    | Yes          | Strict   |
-| IPv6              | Enabled | Enabled     | Configurable | Disabled |
-| Desktop Features  | All     | Most        | Some         | Minimal  |
-| Maintenance       | Low     | Low         | Medium       | High     |
+**What it does:**
+
+* Everything at maximum settings
+* Most restrictive parameters
+* Full monitoring
+* All security modules
+* Aggressive restrictions
+
+**Warning:** May break some applications. Test thoroughly.
+
+**Use when:** You need maximum security and are willing to troubleshoot issues.
 
 ---
 
 ## Available Modules
 
-The script is modular. You can enable/disable specific components:
+v5.0 includes 17 security modules (reduced from 21 - removed security theater):
 
-### Core Modules:
+### Core Modules (Always Recommended):
 
-**system_update**
+1. **system_update** - Update all packages (most important!)
+2. **firewall** - Configure UFW firewall
+3. **ssh_hardening** - Harden SSH (if installed)
+4. **automatic_updates** - Enable automatic security updates
+5. **sysctl** - Kernel parameter hardening
+6. **audit** - Configure auditd logging
+7. **apparmor** - Mandatory access control
 
-* Updates all packages to latest versions
-* Fixes security vulnerabilities
-* Dependency: None
-* Runtime: 2-10 minutes (depends on updates available)
+### Security Modules:
 
-**firewall**
+8. **package_verification** - Weekly dpkg integrity checks (NEW in v5.0)
+9. **boot_security** - Secure Boot verification and GRUB password (IMPROVED in v5.0)
+10. **password_policy** - Strong password requirements
+11. **ntp** - Time synchronization
+12. **secure_shared_memory** - Shared memory protections
+13. **root_access** - Disable direct root login
 
-* Configures UFW (Uncomplicated Firewall)
-* Blocks all except allowed services
-* Desktop-aware (preserves gaming, KDE Connect, etc.)
-* Dependency: system_update
-* Runtime: 1 minute
+### Optional Modules:
 
-**ssh_hardening**
+14. **fail2ban** - IP banning (optional, contextual in v5.0)
+15. **packages** - Remove unnecessary software
+16. **usb_protection** - USB device restrictions
+17. **filesystems** - Disable unused filesystems
 
-* Disables root login
-* Enforces strong ciphers
-* Disables password auth (moderate+ levels)
-* Changes default port (optional)
-* Dependency: system_update
-* Runtime: 1 minute
+### Removed in v5.0 (Security Theater):
 
-**fail2ban**
+* ~~aide~~ - Replaced with package_verification (dpkg-based)
+* ~~ipv6~~ - Not a security feature, removed entirely
+* ~~clamav~~ - Minimal Linux benefit, install separately if needed
+* ~~lynis_audit~~ - Run separately, removed for focus
+* ~~rootkit_scanner~~ - Can't detect kernel rootkits, removed
 
-* Automatic IP banning after failed logins
-* Protects SSH, web services, mail servers
-* Configurable attempt threshold
-* Dependency: system_update, firewall
-* Runtime: 2 minutes
-
-### Security Tools:
-
-**clamav**
-
-* Open-source antivirus
-* Scans for malware, viruses, trojans
-* Updates signatures automatically
-* Dependency: system_update
-* Runtime: 5 minutes (signature download)
-
-**aide**
-
-* File integrity monitoring
-* Detects unauthorized file changes
-* Creates baseline of system files
-* Dependency: system_update
-* Runtime: 10-20 minutes (initial database creation)
-
-**rootkit_scanner**
-
-* Installs rkhunter and chkrootkit
-* Scans for known rootkits
-* Weekly automated scans
-* Dependency: system_update
-* Runtime: 5 minutes
-
-**audit**
-
-* Comprehensive system auditing (auditd)
-* Logs privileged operations
-* Required for compliance (PCI-DSS, HIPAA)
-* Dependency: system_update
-* Runtime: 2 minutes
-
-### System Hardening:
-
-**sysctl**
-
-* Kernel parameter hardening
-* Enables ASLR, DEP, SYN cookies
-* Protects against IP spoofing
-* Networking stack hardening
-* Dependency: None
-* Runtime: 1 minute
-
-**apparmor**
-
-* Mandatory Access Control (MAC)
-* Confines programs to limited resources
-* Profiles for common services
-* Dependency: system_update
-* Runtime: 3 minutes
-
-**boot_security**
-
-* GRUB password protection
-* Secures boot parameters
-* Protects against boot-time attacks
-* Dependency: None
-* Runtime: 1 minute
-
-**filesystems**
-
-* Disables unused filesystems (cramfs, freevxfs, etc.)
-* Reduces attack surface
-* Prevents automatic mounting of dangerous filesystems
-* Dependency: None
-* Runtime: 1 minute
-
-### Access Control:
-
-**root_access**
-
-* Disables direct root login
-* Forces sudo usage (better audit trail)
-* Dependency: None
-* Runtime: 1 minute
-
-**password_policy**
-
-* Enforces strong passwords
-* Minimum length, complexity requirements
-* Password history and age
-* Dependency: None
-* Runtime: 1 minute
-
-**usb_protection**
-
-* Logs all USB device connections
-* Optional: block USB storage devices
-* Useful for corporate/compliance environments
-* Dependency: None
-* Runtime: 1 minute
-
-### Maintenance:
-
-**automatic_updates**
-
-* Enables unattended-upgrades
-* Automatic security patch installation
-* Configurable update window
-* Dependency: None
-* Runtime: 2 minutes
-
-**packages**
-
-* Removes unnecessary packages
-* Cleans up unused dependencies
-* Reduces attack surface
-* Dependency: None
-* Runtime: 2-5 minutes
-
-**ntp**
-
-* Configure time synchronization
-* Important for logging and certificates
-* Uses systemd-timesyncd
-* Dependency: system_update
-* Runtime: 1 minute
-
-### Additional Modules:
-
-**ipv6**
-
-* Configure IPv6 settings
-* Can disable if not needed
-* Reduces attack surface
-* Dependency: None
-* Runtime: 1 minute
-
-**secure_shared_memory**
-
-* Prevents execution from /dev/shm
-* Blocks privilege escalation vectors
-* Dependency: None
-* Runtime: 1 minute
-
-**lynis_audit**
-
-* Comprehensive security audit
-* Generates detailed security report
-* Identifies additional improvements
-* Dependency: None
-* Runtime: 5 minutes
-
-### Module Dependencies:
-
-Most modules are independent, but some require others:
-
-* fail2ban requires firewall
-* ssh_hardening requires system_update
-* Most security tools require system_update
-
-The script handles dependencies automatically - you don't need to manually order them.
-
-### Listing Available Modules:
+### Module Selection:
 
 ```bash
-sudo ./improved_harden_linux.sh --list-modules
-```
+# Enable specific modules only
+sudo ./fortress_improved.sh -e system_update,firewall,ssh_hardening
 
-### Running Specific Modules:
+# Disable specific modules
+sudo ./fortress_improved.sh -x fail2ban,usb_protection
 
-```bash
-# Only firewall and SSH:
-sudo ./improved_harden_linux.sh -e firewall,ssh_hardening
-
-# Everything except AIDE (slow):
-sudo ./improved_harden_linux.sh -x aide
-
-# Only essential modules for a quick run:
-sudo ./improved_harden_linux.sh -e system_update,firewall,fail2ban,ssh_hardening
+# See all available modules
+sudo ./fortress_improved.sh --list-modules
 ```
 
 ---
 
 ## What Gets Hardened?
 
-### Firewall Configuration:
+### Network Security:
 
-* **UFW enabled** with default deny incoming, allow outgoing
-* **Desktop exceptions:** Steam, Discord, KDE Connect, mDNS, Samba (if you choose)
-* **Rate limiting** on SSH port
-* **IPv6** firewall rules (if IPv6 enabled)
-* **Logging** of blocked connections
+* **Firewall (UFW):** Enabled with intelligent port opening
+* **SSH:** Key-only auth, strong ciphers, root login disabled
+* **fail2ban (optional):** Only if beneficial for your services
+* **Network parameters:** SYN cookies, ICMP redirects disabled, IP forwarding off
 
-### SSH Hardening:
+### System Security:
 
-* **Protocol 2 only** (SSHv1 disabled)
-* **Root login disabled** (must use sudo)
-* **Strong ciphers only** (modern algorithms)
-* **Password authentication disabled** (moderate+ levels)
-* **Key-based authentication required**
-* **MaxAuthTries reduced** to 3
-* **ClientAliveInterval** set to detect dead connections
-* **X11Forwarding disabled** (security risk)
-* **Optional:** change default port from 22
+* **Kernel:** ASLR enabled, kernel symbols restricted, memory protections
+* **Boot:** Secure Boot verification, GRUB password, boot security
+* **Packages:** Integrity verification (dpkg), automatic security updates
+* **AppArmor:** Mandatory access control enabled and enforcing
+* **Audit:** Comprehensive logging of security events
 
-### Fail2Ban Protection:
+### Access Control:
 
-* **SSH jail** enabled (4 failed attempts = temporary ban at moderate level)
-* **Recidive jail** (repeated offenders get longer bans)
-* **Email notifications** (if configured)
-* **Aggressive mode** at high/paranoid levels
+* **SSH:** Password auth disabled, key-only access
+* **Root:** Direct root login disabled, sudo required
+* **Passwords:** Strong policy enforced (if used)
+* **USB (optional):** Device restrictions and logging
 
-### Kernel Hardening (sysctl):
+### Monitoring:
 
-```
-# Network security:
-- IP forwarding disabled
-- ICMP redirects blocked
-- Source routing disabled
-- SYN cookies enabled
-- Reverse path filtering
+* **Audit logs:** Authentication, file changes, privilege escalation
+* **Package verification:** Weekly dpkg checks for tampering
+* **fail2ban (optional):** Monitors and bans malicious IPs
+* **AppArmor:** Logs policy violations
 
-# Memory protections:
-- ASLR enabled (randomize memory addresses)
-- DEP enabled (no-execute memory pages)
-- kptr_restrict (hide kernel pointers)
+### Files Changed:
 
-# Process restrictions:
-- dmesg_restrict (hide kernel messages)
-- ptrace restrictions
-```
+* `/etc/ssh/sshd_config` - SSH configuration
+* `/etc/ufw/` - Firewall rules
+* `/etc/sysctl.d/99-fortress.conf` - Kernel parameters
+* `/etc/audit/rules.d/fortress.rules` - Audit rules
+* `/etc/security/pwquality.conf` - Password policy
+* `/etc/apt/apt.conf.d/50unattended-upgrades` - Auto updates
+* `/etc/fstab` - Shared memory mount options
+* `/etc/modprobe.d/fortress-filesystems.conf` - Disabled filesystems
+* `/etc/cron.weekly/fortress-verify-packages` - Package verification (NEW)
 
-### File System Protections:
+### Backups Created:
 
-* **Unused filesystems disabled:** cramfs, freevxfs, jffs2, hfs, hfsplus, udf
-* **/dev/shm secured:** noexec, nosuid, nodev
-* **Automatic mounting of suspicious filesystems prevented**
+All modified files are backed up to:
 
-### Boot Security:
+* `/root/fortress_backups_TIMESTAMP/`
 
-* **GRUB password protection** (prevents boot parameter tampering)
-* **Kernel parameter protections**
-* **Boot-time integrity checks**
-
-### Password Policy:
-
-* **Minimum length:** 12 characters (14 at high, 16 at paranoid)
-* **Complexity:** must include upper, lower, numbers, special chars
-* **History:** last 5 passwords remembered
-* **Age:** maximum 90 days (60 at high, 30 at paranoid)
-* **Retry:** 3 attempts before lockout
-
-### Audit Logging (auditd):
-
-Tracks:
-
-* All privileged operations (sudo commands)
-* Authentication attempts (successful and failed)
-* File access to sensitive directories (/etc/passwd, /etc/shadow)
-* User account modifications
-* System time changes
-* Kernel module loading
-
-### AppArmor Profiles:
-
-Enabled for:
-
-* System services (systemd, dbus)
-* Network services (Apache, Nginx, MySQL if installed)
-* User applications (Firefox, Chromium, Thunderbird)
-* Custom profiles for high-risk services
-
-### File Integrity (AIDE):
-
-* **Baseline** created of system files
-* **Daily checks** for unauthorized changes
-* **Email alerts** on modifications (if configured)
-* **Checksums** of critical files stored securely
-
-### Antivirus (ClamAV):
-
-* **Signature updates:** automatic daily updates
-* **Scheduled scans:** weekly full system scan (configurable)
-* **Real-time protection:** optional (performance impact)
-* **Quarantine:** infected files can be isolated
-
-### USB Device Protection:
-
-* **All USB events logged** (device connect/disconnect)
-* **Optional:** block USB storage devices entirely
-* **Whitelist mode:** only allow specific devices (paranoid level)
-
-### Automatic Updates:
-
-* **Security updates:** installed automatically
-* **Update window:** configurable (default: daily at 6 AM)
-* **Notifications:** email on updates (if configured)
-* **Safety:** only security patches, not major version upgrades
+Original files can be restored from these backups.
 
 ---
 
 ## Emergency Recovery
 
-### If Something Goes Wrong:
+### SSH Lockout Recovery:
 
-**The script automatically creates backups before making ANY changes.**
+**If you can't log in via SSH:**
 
-### Quick Restore:
+1. Access server via console (physical or VPS console)
+2. Restore SSH config:
+   ```bash
+   sudo cp /root/fortress_backups_*/etc/ssh/sshd_config /etc/ssh/sshd_config
+   sudo systemctl restart sshd
+   ```
+3. Set up SSH keys properly
+4. Re-run hardening script
 
-```bash
-# Restore all changes:
-sudo ./improved_harden_linux.sh --restore
+**v5.0 Prevention:** Multiple confirmation prompts and SSH key verification before disabling password auth.
 
-# Restore specific backup file:
-sudo ./improved_harden_linux.sh --restore /root/security_backup_YYYYMMDD_HHMMSS.tar.gz
-```
+### Firewall Issues:
 
-### Manual Recovery (If Script Isn't Working):
-
-**Restore SSH Access:**
-
-```bash
-# From console or VNC (not SSH):
-sudo cp /etc/ssh/sshd_config.backup.* /etc/ssh/sshd_config
-sudo systemctl restart sshd
-```
-
-**Disable Firewall:**
+**If firewall blocks something you need:**
 
 ```bash
+# Allow specific port
+sudo ufw allow 8080/tcp
+
+# Disable firewall temporarily
 sudo ufw disable
+
+# Re-enable after fixing
+sudo ufw enable
 ```
 
-**Stop Fail2Ban:**
+### Boot Failure:
 
-```bash
-sudo systemctl stop fail2ban
-sudo systemctl disable fail2ban
-```
+**If system won't boot:**
 
-**Restore All Configs Manually:**
-
-```bash
-cd /root
-tar -xzf security_backup_YYYYMMDD_HHMMSS.tar.gz
-sudo cp -r backup/etc/ssh/* /etc/ssh/
-sudo cp -r backup/etc/ufw/* /etc/ufw/
-sudo cp backup/etc/sysctl.d/* /etc/sysctl.d/
-# Restart affected services:
-sudo systemctl restart sshd
-sudo ufw reload
-sudo sysctl --system
-```
-
-**Boot Issues (Recovery Mode):**
-
-1. Reboot and select "Advanced options" in GRUB
-2. Choose "Recovery mode"
-3. Select "root - Drop to root shell prompt"
-4. Remount filesystem as read-write:
-
+1. Boot into recovery mode (hold Shift during boot)
+2. Select "Drop to root shell prompt"
+3. Remount filesystem:
    ```bash
    mount -o remount,rw /
    ```
-5. Restore GRUB config:
-
+4. Restore GRUB config:
    ```bash
-   cp /etc/default/grub.backup.* /etc/default/grub
+   cp /root/fortress_backups_*/etc/default/grub /etc/default/grub
    update-grub
    ```
-6. Reboot:
+5. Reboot
 
-   ```bash
-   reboot
-   ```
+### Full System Restore:
 
-### Backup Locations:
-
-All backups are stored in `/root/`:
-
-* Main backup: `/root/security_backup_YYYYMMDD_HHMMSS.tar.gz`
-* SHA256 checksum: `/root/security_backup_YYYYMMDD_HHMMSS.tar.gz.sha256`
-* Individual file backups: `/etc/config_file.backup.TIMESTAMP`
-
-
-### List Backups:
+**To restore all changes:**
 
 ```bash
-ls -lht /root/security_backup_*.tar.gz
+# Restore all configuration files from backup
+cd /root/fortress_backups_TIMESTAMP/
+sudo cp -a * /
+
+# Restart services
+sudo systemctl restart sshd
+sudo systemctl restart ufw
+sudo systemctl restart auditd
+sudo systemctl restart apparmor
+
+# Reboot
+sudo reboot
 ```
 
 ---
 
 ## Common Questions
 
-### Will this break my system?
+### Q: Will this break my system?
 
-The script creates automatic backups and is designed to be reversible. If something does go wrong, restore with one command.
+**A:** Unlikely. The script:
 
-### Will games still work?
+* Creates backups before all changes
+* Has been tested on multiple distributions
+* Uses safe defaults at "moderate" level
+* Includes rollback functionality
+* v5.0 adds multiple safety checks
 
-Yes. Steam, Lutris, Proton, Discord, and gaming services work normally. The firewall can allow gaming ports. There is no expected FPS impact.
+**But:** Always test in a VM first, especially at "high" or "paranoid" levels.
 
-### Can I run this on a production server?
+### Q: What if I lock myself out of SSH?
 
-Yes, but set up SSH keys FIRST, then run in dry-run mode to preview changes. Use high or paranoid security level for production.
+**A:** v5.0 has multiple safeguards:
 
-### What about Docker/VMs/development tools?
+* Detects if SSH keys are set up
+* Requires explicit "yes" confirmation
+* Provides SSH key setup instructions
+* Validates SSH config before applying
+* Auto-rollbacks on SSH errors
 
-They work. Docker, VirtualBox, QEMU, databases, and development tools are preserved.
+You'd need to ignore multiple warnings to lock yourself out.
 
-### How long does it take?
+**If it happens:** Console access required to restore `/etc/ssh/sshd_config` from backup.
 
-Typically 5-15 minutes on most systems, depending on updates and AIDE initialization.
+### Q: Why did you remove AIDE?
 
-### Do I need to reboot?
+**A:** Community feedback revealed that:
 
-Yes, to apply kernel parameter changes and ensure everything is working correctly.
+* AIDE on live systems can't detect kernel rootkits
+* Generic AIDE configs generate false positives
+* dpkg already has built-in file verification
+* Sophisticated malware can hide from AIDE
 
-### Can I undo everything?
+v5.0 uses `dpkg --verify` which is more appropriate for package integrity checking.
 
-Yes. Use `--restore` to revert changes.
+### Q: Why is fail2ban optional now?
 
-### What if I use KDE Connect/Samba/mDNS?
+**A:** With SSH password auth disabled and key-only access:
 
-The script can keep desktop features working. If you use KDE Connect, Samba, or network discovery, select the corresponding options.
+* Brute force attacks become impossible
+* Failed login attempts are harmless
+* fail2ban provides no additional SSH protection
 
-### Is this safe for my home server?
+fail2ban IS still useful for:
+* Web servers with authentication
+* Mail servers
+* Other password-authenticated services
 
-Yes. Many users run this on Plex servers, NAS systems, and home automation setups.
+v5.0 intelligently detects your setup and recommends accordingly.
 
-### What about Raspberry Pi?
+### Q: What happened to IPv6 disable?
 
-It should work on Raspberry Pi OS (Debian-based), but AIDE database creation may take longer on slower hardware.
+**A:** It was security theater. Disabling IPv6:
 
-### Can I run this multiple times?
+* Doesn't improve security
+* Can break things (Docker, modern networks)
+* Is not a recognized security best practice
 
-Yes. It's safe to run repeatedly. The script detects existing configurations and updates them.
+Removed in v5.0 based on community feedback.
 
-### What about SELinux vs AppArmor?
+### Q: Will this slow down my computer?
 
-This script uses AppArmor (standard on Ubuntu/Debian). SELinux is different and not used here.
+**A:** No. The script:
 
-### Will automatic updates break things?
+* Doesn't add background processes
+* No FPS impact on games
+* No audio latency increase
+* Kernel hardening has negligible performance cost
 
-Automatic updates are security patches only, not major version upgrades.
+You won't notice any performance difference.
 
-### What if I don't have SSH?
+### Q: Can I use this on a Raspberry Pi?
 
-The SSH hardening module only runs if SSH is installed.
+**A:** Yes, but:
 
-### Can I use this on Arch/Fedora/other distros?
+* Use "low" or "moderate" level
+* May need to adjust for ARM-specific settings
+* Test thoroughly first
+* Some modules may not apply to ARM
 
-Not yet. Currently supports Ubuntu, Debian, Kubuntu, Mint, and Pop!_OS.
+### Q: What about ClamAV antivirus?
 
-### Is this overkill for a desktop?
+**A:** Removed in v5.0 because:
 
-No. The "moderate" level provides essential security without usability impact.
+* Minimal effectiveness on Linux
+* Mainly useful for mail servers scanning Windows attachments
+* Causes performance overhead
+* Rarely catches actual Linux threats
+
+Install separately if you need it for a mail server.
+
+### Q: How do I verify packages now without AIDE?
+
+**A:** v5.0 uses dpkg verification:
+
+```bash
+# Manual check
+dpkg --verify
+
+# Check weekly cron job
+cat /etc/cron.weekly/fortress-verify-packages
+
+# View last report
+ls -lht /var/log/fortress_package_verification_*.txt
+```
+
+### Q: What's this --explain mode?
+
+**A:** NEW in v5.0. Educational mode that shows:
+
+* What each module does
+* Why it matters (threat model)
+* What attacks it prevents
+* Limitations and trade-offs
+* Common misconceptions
+
+Run with: `sudo ./fortress_improved.sh --explain`
+
+**Use it to learn security, not just apply it.**
+
+### Q: Does this replace professional security audits?
+
+**A:** No. This provides:
+
+* Solid security foundation
+* Best practices implementation
+* Protection against common attacks
+
+**It does NOT:**
+
+* Replace professional assessment
+* Guarantee 100% security
+* Provide monitoring/incident response
+* Configure application-specific security
+
+### Q: How do I update the script?
+
+```bash
+# Download latest version
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh -O fortress_improved.sh
+
+# Review changes
+./fortress_improved.sh --version
+
+# Run with --dry-run first
+sudo ./fortress_improved.sh --dry-run
+```
+
+### Q: Can I run this multiple times?
+
+**A:** Yes, but:
+
+* First run creates configuration
+* Subsequent runs update/reapply settings
+* Each run creates new backups
+* Safe to re-run after system updates
+
+### Q: What if a module fails?
+
+**A:** The script:
+
+* Logs all errors
+* Continues with remaining modules
+* Tracks which modules failed
+* Creates HTML report showing failures
+
+Check `/var/log/fortress_hardening.log` for details.
+
+### Q: Is this suitable for production servers?
+
+**A:** Yes, with caveats:
+
+* Test in staging first
+* Use "high" security level
+* Review all changes
+* Ensure SSH keys are set up
+* Have console access available
+* Consider professional assessment
+
+### Q: What Linux distributions are supported?
+
+**A:** Tested on:
+
+* Ubuntu 22.04, 24.04, 25.10
+* Debian 11, 12, 13
+* Kubuntu 24.04+
+* Linux Mint 21+
+* Pop!\_OS 22.04+
+
+**Should work on any Debian-based distribution.**
+
+### Q: How is v5.0 different from v4.x?
+
+**A:** Major changes:
+
+* Removed security theater (AIDE, IPv6, ClamAV)
+* Added educational mode (--explain)
+* Intelligent module recommendations
+* SSH lockout prevention
+* Secure Boot verification
+* Package verification (dpkg-based)
+* Honest about limitations
+* fail2ban now optional and contextual
+
+See "What's New in v5.0" section for full details.
 
 ---
 
 ## Troubleshooting
 
-### General Debugging:
+### Issue: SSH Connection Refused
 
-**Enable verbose mode:**
+**Symptoms:** Can't connect to server via SSH
 
-```bash
-sudo ./improved_harden_linux.sh --verbose
-```
+**Solutions:**
 
-**Check the log:**
+1. Check if SSH is running:
+   ```bash
+   sudo systemctl status sshd
+   ```
 
-```bash
-sudo tail -f /var/log/security_hardening.log
-```
+2. Check firewall:
+   ```bash
+   sudo ufw status
+   sudo ufw allow ssh
+   ```
 
-**Run dry-run to see what would change:**
+3. Check SSH config:
+   ```bash
+   sudo sshd -t
+   ```
 
-```bash
-sudo ./improved_harden_linux.sh --dry-run -v
-```
+4. Restore from backup if needed:
+   ```bash
+   sudo cp /root/fortress_backups_*/etc/ssh/sshd_config /etc/ssh/sshd_config
+   sudo systemctl restart sshd
+   ```
 
-### Specific Issues:
+### Issue: Firewall Blocking Service
 
-#### SSH Connection Refused After Hardening:
+**Symptoms:** Service not accessible from network
 
-**Symptom:** can't SSH into the server
-**Cause:** SSH keys not set up or port changed
+**Solutions:**
 
-**Fix:**
+1. Check which port service uses:
+   ```bash
+   sudo netstat -tlnp
+   ```
 
-```bash
-# From console/VNC access:
-sudo nano /etc/ssh/sshd_config
-# Temporarily relax if needed:
-#   PasswordAuthentication yes
-#   PermitRootLogin yes
-sudo systemctl restart sshd
+2. Allow port through firewall:
+   ```bash
+   sudo ufw allow 8080/tcp
+   sudo ufw reload
+   ```
 
-# Test and fix key authentication
-# Then re-run hardening with SSH keys working
-```
+3. Check UFW status:
+   ```bash
+   sudo ufw status verbose
+   ```
 
-#### Firewall Blocking Expected Services:
+### Issue: Package Verification Alerts
 
-**Symptom:** can't access a service that should be working
-**Cause:** port not allowed through firewall
+**Symptoms:** dpkg --verify shows many files changed
 
-**Fix:**
+**Solutions:**
 
-```bash
-# List current rules:
-sudo ufw status numbered
+1. Check the report:
+   ```bash
+   cat /var/log/fortress_package_verification_*.txt
+   ```
 
-# Allow specific port:
-sudo ufw allow PORT/tcp
+2. **Normal changes:**
+   * Configuration files (expected)
+   * Log files (expected)
+   * Cache files (expected)
 
-# Allow specific service:
-sudo ufw allow SERVICE
-```
+3. **Investigate if:**
+   * System binaries changed
+   * Security files changed
+   * Unexpected number of changes
 
-#### Fail2Ban Banned Your Own IP:
+4. Reinstall suspicious packages:
+   ```bash
+   sudo apt-get install --reinstall package-name
+   ```
 
-**Symptom:** can't connect after failed password attempts
-**Cause:** Fail2Ban banned your IP
+### Issue: Performance Problems
 
-**Fix:**
+**Symptoms:** System slower after hardening
 
-```bash
-# Check if you're banned:
-sudo fail2ban-client status sshd
+**Check:**
 
-# Unban your IP:
-sudo fail2ban-client set sshd unbanip YOUR_IP
+1. Audit logging overhead:
+   ```bash
+   sudo auditctl -l
+   ```
 
-# Whitelist your IP permanently:
-sudo nano /etc/fail2ban/jail.local
-# Add under [DEFAULT]:
-#   ignoreip = 127.0.0.1/8 YOUR_IP
-sudo systemctl restart fail2ban
-```
+2. Disable if needed:
+   ```bash
+   sudo systemctl stop auditd
+   ```
 
-#### AIDE Taking Too Long:
+3. Check fail2ban (if installed):
+   ```bash
+   sudo systemctl status fail2ban
+   ```
 
-**Symptom:** initial AIDE database creation taking 30+ minutes
-**Cause:** scanning entire filesystem on slow hardware
+**Note:** Script shouldn't cause performance issues at default settings.
 
-**Fix:**
+### Issue: Boot Fails After Hardening
 
-```bash
-# Skip AIDE initially:
-sudo ./improved_harden_linux.sh -x aide
+**Symptoms:** System won't boot
 
-# Or reduce scope in /etc/aide/aide.conf:
-sudo nano /etc/aide/aide.conf
-# Comment out: /usr
-# Focus on: /etc, /bin, /sbin, /lib
-sudo aideinit
-```
+**Solutions:**
 
-#### ClamAV High Memory Usage:
+1. Boot into recovery mode
+2. Drop to root shell
+3. Restore GRUB config:
+   ```bash
+   mount -o remount,rw /
+   cp /root/fortress_backups_*/etc/default/grub /etc/default/grub
+   update-grub
+   reboot
+   ```
 
-**Symptom:** system slow after ClamAV installation
-**Cause:** ClamAV daemon uses significant RAM
+### Issue: AppArmor Blocks Application
 
-**Fix:**
+**Symptoms:** Application won't run, AppArmor logs show denials
 
-```bash
-# Stop real-time scanning:
-sudo systemctl stop clamav-daemon
+**Solutions:**
 
-# Use manual scans only:
-sudo systemctl disable clamav-daemon
+1. Check AppArmor logs:
+   ```bash
+   sudo aa-status
+   sudo journalctl -xe | grep apparmor
+   ```
 
-# Or skip ClamAV entirely:
-sudo ./improved_harden_linux.sh -x clamav
-```
+2. Set profile to complain mode:
+   ```bash
+   sudo aa-complain /etc/apparmor.d/usr.bin.application
+   ```
 
-#### USB Devices Not Working:
+3. Or disable profile:
+   ```bash
+   sudo aa-disable /etc/apparmor.d/usr.bin.application
+   ```
 
-**Symptom:** USB storage not mounting
-**Cause:** USB protection module blocked USB storage
+### Issue: USB Devices Not Working
 
-**Fix:**
+**Symptoms:** USB storage won't mount
 
-```bash
-# Check current USB rules:
-ls /etc/udev/rules.d/*usb*
+**Solutions:**
 
-# Temporarily disable:
-sudo rm /etc/udev/rules.d/99-usb-authorization.rules
-sudo udevadm control --reload-rules
+1. Check USB protection settings:
+   ```bash
+   cat /etc/udev/rules.d/99-fortress-usb.rules
+   ```
 
-# Or skip USB protection:
-sudo ./improved_harden_linux.sh -x usb_protection
-```
+2. Temporarily disable:
+   ```bash
+   sudo mv /etc/udev/rules.d/99-fortress-usb.rules /etc/udev/rules.d/99-fortress-usb.rules.disabled
+   sudo udevadm control --reload-rules
+   ```
 
-#### Audit Logs Filling Disk:
+3. Whitelist specific device (edit rules file)
 
-**Symptom:** /var/log/audit/ using too much space
-**Cause:** audit logging set to maximum
+### Getting More Help:
 
-**Fix:**
+1. Check detailed logs:
+   ```bash
+   sudo tail -100 /var/log/fortress_hardening.log
+   ```
 
-```bash
-# Check current size:
-du -sh /var/log/audit/
+2. Run with verbose output:
+   ```bash
+   sudo ./fortress_improved.sh --dry-run --verbose
+   ```
 
-# Reduce audit logging:
-sudo nano /etc/audit/rules.d/hardening.rules
-# Comment out verbose rules
+3. Check system logs:
+   ```bash
+   sudo journalctl -xe
+   ```
 
-# Reload:
-sudo service auditd restart
-
-# Set up log rotation:
-sudo nano /etc/audit/auditd.conf
-# Set: max_log_file_action = ROTATE
-```
-
-#### Desktop Features Not Working:
-
-**Symptom:** KDE Connect, Samba, or mDNS not working
-**Cause:** firewall blocking required ports
-
-**Fix:**
-
-```bash
-# KDE Connect:
-sudo ufw allow 1714:1764/tcp
-sudo ufw allow 1714:1764/udp
-
-# Samba:
-sudo ufw allow Samba
-
-# mDNS (network discovery):
-sudo ufw allow 5353/udp
-```
-
-#### Boot Taking Longer:
-
-**Symptom:** system boots slower after hardening
-**Cause:** GRUB timeout or audit logging
-
-**Fix:**
-
-```bash
-# Reduce GRUB timeout:
-sudo nano /etc/default/grub
-# Change: GRUB_TIMEOUT=5 to GRUB_TIMEOUT=2
-sudo update-grub
-
-# Disable audit at boot (if not needed):
-sudo nano /etc/default/grub
-# Add to GRUB_CMDLINE_LINUX: audit=0
-sudo update-grub
-```
-
-#### Script Hangs During system_update:
-
-**Symptom:** script stuck during package updates (especially Debian 13)
-**Cause:** package manager lock or hung apt process
-
-**Fix:**
-
-```bash
-# In another terminal:
-# Check for hung processes:
-ps aux | grep apt
-ps aux | grep dpkg
-
-# If found, kill them:
-sudo killall apt apt-get dpkg
-
-# Remove locks:
-sudo rm /var/lib/dpkg/lock-frontend
-sudo rm /var/lib/dpkg/lock
-sudo rm /var/cache/apt/archives/lock
-
-# Configure dpkg:
-sudo dpkg --configure -a
-
-# Re-run the script
-```
-
-#### Dry-Run Not Working Properly (older versions):
-
-**Fix:**
-
-```bash
-# Update to latest version:
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-chmod +x improved_harden_linux.sh
-
-# Verify version:
-./improved_harden_linux.sh --version
-# Should show: 4.2
-
-# Run dry-run again:
-sudo ./improved_harden_linux.sh --dry-run -v
-```
+4. Open GitHub issue with:
+   * Distribution and version
+   * Security level used
+   * Error messages
+   * Log excerpts
 
 ---
 
 ## Advanced Usage
 
-### Custom Configuration Files:
+### Custom Configuration File:
 
-Create a custom configuration file to override defaults:
-
-```bash
-# Create config file:
-sudo nano hardening.conf
-```
-
-Example `hardening.conf`:
+Create `fortress.conf`:
 
 ```bash
-# Security level
+# Custom hardening configuration
 SECURITY_LEVEL="high"
-
-# Module selection
-ENABLE_MODULES="system_update,firewall,ssh_hardening,fail2ban"
-DISABLE_MODULES="clamav,usb_protection"
-
-# Interactive mode
-INTERACTIVE=false
-
-# Desktop mode
-IS_DESKTOP=true
-
-# SSH settings
-SSH_PORT=2222
-DISABLE_ROOT_LOGIN=true
-PASSWORD_AUTH=false
-
-# Firewall rules
-ALLOW_PORTS="80,443,8080"
-
-# Fail2Ban settings
-FAIL2BAN_MAXRETRY=3
-FAIL2BAN_BANTIME=3600
-
-# AIDE settings
-AIDE_SCAN_PATHS="/etc /bin /sbin"
-
-# Email notifications
-NOTIFICATION_EMAIL="admin@example.com"
+DISABLE_MODULES="fail2ban,usb_protection"
+ENABLE_MODULES="system_update,ssh_hardening,firewall,apparmor"
 ```
 
-Use it:
+Run with:
 
 ```bash
-sudo ./improved_harden_linux.sh -c hardening.conf
+sudo ./fortress_improved.sh -c fortress.conf
 ```
 
-### Module-Specific Configuration:
+### Automated Deployment:
 
-**Firewall Custom Rules:**
+**For multiple servers:**
 
 ```bash
-# After running script, add custom rules:
-sudo ufw allow from 192.168.1.0/24 to any port 22
-sudo ufw allow 8080/tcp comment 'Custom web server'
-sudo ufw reload
+#!/bin/bash
+# deploy_hardening.sh
+
+SERVERS="server1 server2 server3"
+
+for server in $SERVERS; do
+    echo "Hardening $server..."
+    scp fortress_improved.sh user@$server:/tmp/
+    ssh user@$server "sudo /tmp/fortress_improved.sh -l high -n"
+done
 ```
 
-**Fail2Ban Custom Jail:**
-
-```bash
-sudo nano /etc/fail2ban/jail.local
-
-[custom-service]
-enabled = true
-port = 8080
-logpath = /var/log/custom-service.log
-maxretry = 3
-bantime = 3600
-
-sudo systemctl restart fail2ban
-```
-
-**AIDE Custom Configuration:**
-
-```bash
-sudo nano /etc/aide/aide.conf
-
-# Add custom paths:
-/home/user/important FullAccess
-!/home/user/cache
-
-# Reinitialize:
-sudo aideinit
-```
-
-**AppArmor Custom Profile:**
-
-```bash
-sudo aa-complain /usr/bin/custom-app
-# Test the app
-sudo aa-enforce /usr/bin/custom-app
-```
-
-### Automation:
-
-**Automated Deployment (Ansible):**
+### Integration with Ansible:
 
 ```yaml
-- name: Harden Linux servers
+- name: Deploy security hardening
   hosts: all
-  become: yes
   tasks:
-    - name: Download hardening script
-      get_url:
-        url: https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/improved_harden_linux.sh
-        dest: /tmp/harden.sh
+    - name: Copy script
+      copy:
+        src: fortress_improved.sh
+        dest: /tmp/fortress_improved.sh
         mode: '0755'
     
-    - name: Run hardening script
-      command: /tmp/harden.sh -l high -n
-      args:
-        creates: /var/log/security_hardening.log
+    - name: Run hardening
+      command: /tmp/fortress_improved.sh -l high -n
+      become: yes
 ```
 
-**Cron for Regular Audits:**
+### Periodic Re-hardening:
 
 ```bash
-# Run security checks weekly:
+# Add to cron for monthly re-hardening
 sudo crontab -e
 
-# Add:
-0 3 * * 0 /path/to/improved_harden_linux.sh --report
+# Add line:
+0 2 1 * * /root/fortress_improved.sh -n -e system_update,package_verification
 ```
 
-### Integration with Monitoring:
+### Module Development:
 
-**Send Logs to Syslog Server:**
-
-```bash
-sudo nano /etc/rsyslog.d/50-security.conf
-
-# Add:
-$ModLoad imfile
-$InputFileName /var/log/security_hardening.log
-$InputFileTag security-hardening:
-$InputFileStateFile stat-security-hardening
-$InputFileSeverity info
-$InputFileFacility local7
-$InputRunFileMonitor
-
-*.* @@syslog-server.example.com:514
-
-sudo systemctl restart rsyslog
-```
-
-**Email Notifications:**
+Create custom modules by adding to script:
 
 ```bash
-# Install mail utilities:
-sudo apt install mailutils
-
-# Configure in hardening.conf:
-NOTIFICATION_EMAIL="admin@example.com"
-
-# Test:
-echo "Test" | mail -s "Security Alert" admin@example.com
-```
-
-### Security Scanning Schedule:
-
-**Weekly Full Scan Script:**
-
-```bash
-sudo nano /etc/cron.weekly/security-scan
-
-#!/bin/bash
-# Weekly security scan
-DATE=$(date +%Y%m%d)
-REPORT="/var/log/security_scan_${DATE}.log"
-
-echo "=== Weekly Security Scan - ${DATE} ===" > ${REPORT}
-
-echo "--- RKHunter Scan ---" >> ${REPORT}
-rkhunter --check --skip-keypress --report-warnings-only >> ${REPORT}
-
-echo "--- ClamAV Scan ---" >> ${REPORT}
-clamscan -r /home --infected --log=${REPORT}
-
-echo "--- AIDE Check ---" >> ${REPORT}
-aide --check >> ${REPORT}
-
-echo "--- Lynis Audit ---" >> ${REPORT}
-lynis audit system --quick >> ${REPORT}
-
-# Email report if issues found:
-if grep -q "Warning" ${REPORT}; then
-    mail -s "Security Scan Warnings" admin@example.com < ${REPORT}
-fi
-
-chmod +x /etc/cron.weekly/security-scan
-```
-
-### Compliance Reporting:
-
-**Generate Compliance Report:**
-
-```bash
-# Install SCAP tools:
-sudo apt install libopenscap8 ssg-debian ssg-debderived
-
-# Run SCAP scan:
-oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_pci-dss \
-  --results /root/compliance-scan.xml \
-  --report /root/compliance-report.html \
-  /usr/share/xml/scap/ssg/content/ssg-debian10-ds.xml
-```
-
-### Container Hardening:
-
-**Docker Integration:**
-
-```bash
-# After running script, configure Docker:
-sudo nano /etc/docker/daemon.json
-
-{
-  "icc": false,
-  "userns-remap": "default",
-  "no-new-privileges": true,
-  "live-restore": true,
-  "userland-proxy": false
+module_custom_security() {
+    CURRENT_MODULE="custom_security"
+    
+    explain "Custom Security" \
+        "Description of what this does" \
+        "Why it matters"
+    
+    log INFO "Applying custom security"
+    
+    # Your hardening code here
+    
+    return 0
 }
+```
 
-sudo systemctl restart docker
+### Testing in Docker:
+
+```bash
+# Create test container
+docker run -it --rm ubuntu:24.04 bash
+
+# Inside container:
+apt update && apt install -y wget sudo
+wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh
+chmod +x fortress_improved.sh
+./fortress_improved.sh --dry-run
 ```
 
 ---
 
 ## Requirements
 
-### System Requirements:
+### Minimum Requirements:
 
-**Minimum:**
+* **OS:** Debian-based Linux (Ubuntu, Debian, Mint, Pop, Kubuntu)
+* **Access:** Root or sudo privileges
+* **Internet:** Required for downloading packages
+* **Disk:** ~500MB free space (for backups and new packages)
+* **RAM:** No additional requirement
 
-* Linux distribution: Ubuntu 22.04+, Debian 11+, Kubuntu 24.04+, Mint 21+, Pop!_OS 22.04+
-* Disk space: 2GB free (for security tools and backups)
-* Memory: 1GB RAM minimum (2GB recommended)
-* Root/sudo access
-* Internet connection (for package downloads)
+### Recommended:
 
-**Recommended:**
+* Fresh system or recent backup
+* Console/physical access for servers
+* SSH keys set up (for remote servers)
+* Understanding of Linux basics
 
-* 4GB RAM (for ClamAV and AIDE)
-* 5GB free disk space
-* SSH key authentication configured (for servers)
-* Console/VNC access available (for servers)
+### Not Required:
 
-### Software Dependencies:
+* SELinux (script uses AppArmor)
+* Specific kernel version
+* Commercial software
+* Paid subscriptions
 
-**Pre-installed on most systems:**
+### Incompatible With:
 
-* bash 4.0+
-* sudo
-* systemd
-* apt/apt-get (Debian/Ubuntu package manager)
-
-**Automatically installed by script:**
-
-* ufw (firewall)
-* fail2ban (intrusion prevention)
-* aide (file integrity)
-* auditd (system auditing)
-* apparmor (mandatory access control)
-* clamav (antivirus)
-* rkhunter (rootkit detection)
-* chkrootkit (rootkit detection)
-* lynis (security auditing)
-* unattended-upgrades (automatic updates)
-
-### Verified Distributions:
-
-**Tested:**
-
-* Ubuntu 22.04 LTS (Jammy)
-* Ubuntu 24.04 LTS (Noble)
-* Ubuntu 25.10 (Oracular)
-* Kubuntu 24.04 LTS
-* Debian 11 (Bullseye)
-* Debian 12 (Bookworm)
-* Debian 13 (Trixie)
-* Linux Mint 21
-* Pop!_OS 22.04
-
-**Should Work (Community Tested):**
-
-* Ubuntu derivatives (Xubuntu, Lubuntu, Ubuntu Budgie)
-* MX Linux
-* Kali Linux (limited - already hardened)
-* Elementary OS
-
-**Not Supported:**
-
-* Fedora, CentOS, RHEL (different package manager)
-* Arch, Manjaro (different package manager)
-* openSUSE (different package manager)
-* Alpine Linux (different init system)
+* Non-Debian distributions (Fedora, Arch, etc.)
+* Extremely old systems (Debian < 11)
+* Systems with conflicting security tools
+* Docker containers (limited functionality)
 
 ---
 
 ## Security Compliance
 
-### Compliance Frameworks Addressed:
+This script helps implement controls from:
 
-**CIS Benchmarks:**
-This script implements many recommendations from:
+* **DISA STIG** (Defense Information Systems Agency Security Technical Implementation Guide)
+* **CIS Benchmarks** (Center for Internet Security)
+* **NIST 800-53** (National Institute of Standards and Technology)
+* **PCI-DSS** (Payment Card Industry Data Security Standard) - partial
+* **HIPAA** (Health Insurance Portability and Accountability Act) - partial
 
-* CIS Ubuntu Linux Benchmark
-* CIS Debian Linux Benchmark
+**Important:** This provides a foundation, not complete compliance. Professional assessment required for:
 
-**Specific CIS controls implemented:**
+* PCI-DSS certification
+* HIPAA compliance
+* SOC 2 audit
+* ISO 27001 certification
+* Government contracts
 
-* 1.1.x - Filesystem configuration
-* 1.4.x - Secure boot settings
-* 1.5.x - Mandatory Access Control
-* 1.7.x - Warning banners
-* 3.x - Network configuration
-* 4.x - Logging and auditing
-* 5.x - Access, authentication, and authorization
-* 6.x - System maintenance
+**What you still need for compliance:**
 
-**DISA STIG:**
-Implements portions of:
-
-* Application Security and Development STIG
-* Operating System STIG (Linux)
-
-**Specific STIG controls:**
-
-* SRG-OS-000023 (Audit unsuccessful account access attempts)
-* SRG-OS-000024 (Audit successful account access)
-* SRG-OS-000032 (Session lock)
-* SRG-OS-000033 (Remote session termination)
-* SRG-OS-000037 (Limit concurrent sessions)
-* SRG-OS-000042 (Audit account management events)
-* SRG-OS-000057 (Screen lock)
-* SRG-OS-000163 (Wireless disabled if not required)
-* SRG-OS-000185 (Audit system startup/shutdown)
-
-**PCI-DSS (Payment Card Industry):**
-Addresses requirements:
-
-* 1.1 - Firewall configuration standards
-* 2.2 - Configuration standards for system components
-* 2.3 - Encrypt non-console admin access
-* 8.1 - User identification management
-* 8.2 - Authentication management
-* 8.3 - Multi-factor authentication for remote access
-* 10.1 - Audit trail requirements
-* 10.2 - Automated audit trails for security events
-* 10.3 - Audit trail detail requirements
-
-**HIPAA (Health Insurance Portability and Accountability Act):**
-Supports:
-
-* Access Control (§164.312(a)(1))
-* Audit Controls (§164.312(b))
-* Integrity (§164.312(c)(1))
-* Person or Entity Authentication (§164.312(d))
-* Transmission Security (§164.312(e)(1))
-
-**SOC 2 (Service Organization Control 2):**
-Supports trust service criteria:
-
-* CC6.1 - Logical and physical access controls
-* CC6.6 - Prevention and detection of security incidents
-* CC6.7 - Security incident containment
-* CC7.2 - System monitoring
-
-**NIST (National Institute of Standards and Technology):**
-Implements controls from:
-
-* NIST SP 800-53 (Security and Privacy Controls)
-* NIST Cybersecurity Framework
-
-### Important Compliance Notes:
-
-**This script provides a FOUNDATION, not complete compliance.**
-
-**What it does:**
-
-* Implements many technical controls from frameworks
-* Creates audit logs required for compliance
-* Hardens system configuration
-* Enables security tools
-
-**What it DOES NOT do:**
-
-* Replace formal security assessment
-* Implement application-specific security
-* Configure backups or disaster recovery
-* Provide encryption at rest
-* Replace security awareness training
-* Provide HIPAA Business Associate Agreement
-* Configure network segmentation
-* Implement role-based access control (RBAC)
-* Configure intrusion detection systems (IDS)
-* Provide security information and event management (SIEM)
-
-**For full compliance, you also need:**
-
-* Formal risk assessment
-* Security policies and procedures
-* Incident response plan
-* Security awareness training
-* Regular vulnerability assessments
+* Professional security assessment
+* Vulnerability scanning
 * Penetration testing
-* Third-party audit
-* Ongoing monitoring and maintenance
-
-**Professional Assessment Required:**
-If you need compliance certification (PCI-DSS, HIPAA, SOC 2, etc.), hire a qualified security professional or compliance specialist. This script is a starting point, not a complete solution.
+* Security awareness training
+* Incident response plan
+* Disaster recovery plan
+* Encryption at rest
+* Data classification
+* Access control policies
+* Regular audits
 
 ---
 
@@ -2247,325 +1555,122 @@ If you need compliance certification (PCI-DSS, HIPAA, SOC 2, etc.), hire a quali
 
 ### License:
 
-This project is licensed under **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
+**Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
 
-**You are free to:**
+You are free to:
 
-* Share - copy and redistribute the material
-* Adapt - remix, transform, and build upon the material
+* Share - copy and redistribute
+* Adapt - remix, transform, and build upon
 
-**Under the following terms:**
+Under these terms:
 
-* **Attribution** - you must give appropriate credit, provide a link to the license, and indicate if changes were made
-* **NonCommercial** - you may not use the material for commercial purposes
+* **Attribution** - Give appropriate credit
+* **NonCommercial** - Not for commercial use
+* **No additional restrictions**
 
-**Commercial Licensing:**
-For commercial use, contact: [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com)
+Full license: https://creativecommons.org/licenses/by-nc/4.0/
+
+### Commercial Use:
+
+For commercial licensing:
+
+* Email: cyberjunk77@protonmail.com
+* Subject: "Commercial License Request"
 
 ### Support:
 
 **Community Support (Free):**
 
-* GitHub Issues: [https://github.com/captainzero93/security_harden_linux/issues](https://github.com/captainzero93/security_harden_linux/issues)
-* Best-effort response time
-* Community-driven Q&A
+* GitHub Issues
+* Documentation
+* Best-effort responses
 
-**Professional Support (Paid):**
+**Commercial Support (Paid):**
 
-* Email: [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com)
-* Custom script development
-* Security consulting
+* Priority responses
+* Custom development
+* Professional consultation
 * Training and workshops
-* Priority response
-* Commercial licensing
-
-### Contributing:
-
-**Want to improve this script?**
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-**Contribution guidelines:**
-
-* Follow existing code style
-* Add comments for complex logic
-* Test on multiple distributions
-* Update documentation
-* One feature per pull request
-
-**What we're looking for:**
-
-* Bug fixes
-* Performance improvements
-* Additional security modules
-* Better error handling
-* Documentation improvements
-* Distribution compatibility
-
-### Donations:
-
-If this script saved you time or money, consider supporting development:
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
-
-**All donations go toward:**
-
-* Continued development
-* Testing on more distributions
-* Documentation improvements
-* Security research
-* Community support
 
 ---
 
 ## Version History
 
-### Version 4.2.1 Current ( see above )
+### v5.0 (2025-11-16) - Educational Edition
 
-### Version 4.1 (2025-11-07)
+**MAJOR REWRITE** - Complete philosophical shift
 
-**Critical Fix:**
+**Removed (Security Theater):**
 
-* Fixed script exiting at 4% after first module completion
-* Added explicit return 0 statements to all 21 module functions
-* Modules now properly signal successful completion to execution loop
-* Script executes all modules sequentially without premature termination
+* AIDE - Can't detect kernel rootkits, replaced with dpkg verification
+* IPv6 disable - Not a security feature
+* ClamAV - Minimal Linux benefit
+* lynis_audit - Run separately
+* rootkit_scanner - False sense of security
 
-**Technical Details:**
+**Added (Real Security):**
 
-* All module functions were missing explicit return statements
-* Functions returned unpredictable exit codes from log commands
-* Execution loop misinterpreted module success/failure status
-* Fixed by adding return 0 to end of every module function
+* Educational mode (--explain flag)
+* Secure Boot verification
+* Package verification (dpkg-based, weekly cron)
+* Intelligent module recommendations
+* SSH lockout prevention (multiple safety checks)
+* Honest limitation statements
 
-**Improvements:**
+**Improved:**
 
-* Maintained all v4.0 APT lock handling improvements
-* Progress bar advances correctly through all modules
-* Reliable module completion status checking
-* No breaking changes from v4.0
+* fail2ban - Now optional and contextual
+* SSH hardening - Explicit key confirmation required
+* Boot security - Verifies Secure Boot status
+* All modules - Include educational explanations
 
-### Version 4.0 (2025-11-06)
+**Philosophy:** From "automate everything" to "educate and execute intelligently"
 
-**Critical Fix:**
+### v4.2 (2025-11-07)
 
-* Fixed wait_for_apt() hanging with stale APT locks
-* Automatic detection and removal of stale lock files
-* Interactive force-unlock option at 60 seconds
-* Improved timeout handling and user feedback
+* Fixed premature exit at 4% issue
+* Fixed show_progress() causing immediate exit with set -e
+* Changed progress bar to use if statement (safe with set -e)
+* Added explicit return 0 to all module functions
 
-**Improvements:**
+### v4.1
 
-* Enhanced Debian 13 (Trixie) compatibility
-* Fixed progress bar display between modules
-* Better terminal output flushing
-* Improved error recovery
-* Fixed readonly variable errors in OS detection
+* Improved APT lock handling
+* Fixed progress bar advancement
+* Better error recovery
+* Enhanced user feedback
 
-3.9 (2025-10-20)
-- Critical bug fixes and fallback logic
+### v4.0
 
-3.7;
+* Fixed wait_for_apt() hanging
+* Improved lock file detection
+* Better timeout handling
+* Fixed various bugs
 
-**Critical Bug Fixes:**
+### v3.x and earlier
 
-* Fixed system_update module hanging on Debian 13 (Trixie)
-* Fixed dry-run mode not working properly
-* Fixed progress bar in non-interactive sessions
-* Improved timeout handling for apt operations
-* Better error handling and recovery
-* Fixed missing MODULE_DEPS entries
-* Better handling of locked dpkg/apt states
+* Initial releases
+* Basic hardening features
+* Module system implementation
 
-**Improvements:**
-
-* Enhanced compatibility with Debian 13
-* Better TTY detection for progress bars
-* Milestone-based progress logging in non-interactive mode
-* Automatic retry mechanism for apt operations
-* Improved dependency resolution
-* Clearer error messages
-
-**Compatibility:**
-
-* Full support for Ubuntu 25.10 (Oracular)
-* Complete Debian 13 (Trixie) compatibility verified
-* Enhanced Kubuntu 24.04+ support
-
-### Version 3.6 (2025-09-15)
-
-**Major Features:**
-
-* Complete refactoring of core execution engine
-* Dependency resolution system for modules
-* Circular dependency detection
-* Progress tracking with visual progress bars
-* Improved desktop environment detection
-* Better backup and restore functionality
-
-**Security Enhancements:**
-
-* AppArmor profile management
-* USB device protection module
-* Lynis security audit integration
-* Enhanced kernel hardening parameters
-* Improved AIDE configuration
-
-**Bug Fixes:**
-
-* Fixed GRUB configuration on EFI systems
-* Resolved Fail2Ban jail conflicts
-* Fixed SSH port change issues
-* Corrected sysctl parameter applications
-* Fixed module dependency ordering
-
-**Usability:**
-
-* Colorized output for better readability
-* Verbose logging option
-* Non-interactive mode for automation
-* Custom configuration file support
-* Module selection (enable/disable specific modules)
-
-### Version 3.5 (2025-07-10)
-
-**Features:**
-
-* Added support for Linux Mint 21+
-* Added support for Pop!_OS 22.04+
-* Rootkit scanner integration (rkhunter + chkrootkit)
-* Automatic security update configuration
-* Password policy enforcement module
-* Secure shared memory implementation
-
-**Improvements:**
-
-* Better handling of desktop environments
-* Improved firewall rule organization
-* Enhanced SSH hardening options
-* More comprehensive audit logging
-* Better error handling and recovery
-
-**Bug Fixes:**
-
-* Fixed ClamAV signature update issues
-* Resolved AppArmor profile conflicts
-* Fixed AIDE database initialization on slow systems
-* Corrected IPv6 disable functionality
-
-### Version 3.0 (2025-04-22)
-
-**Major Release:**
-
-* Complete rewrite in bash with better error handling
-* Modular architecture (enable/disable modules)
-* Security level system (low/moderate/high/paranoid)
-* Automatic backup before all changes
-* One-command restore functionality
-* HTML report generation
-
-**Features:**
-
-* UFW firewall configuration
-* Fail2Ban intrusion prevention
-* AIDE file integrity monitoring
-* Auditd system auditing
-* ClamAV antivirus
-* Kernel hardening (sysctl)
-* Boot security (GRUB)
-* SSH hardening
-* AppArmor enforcement
-
-**Desktop Optimizations:**
-
-* Automatic desktop detection
-* Preservation of gaming functionality
-* KDE Connect / mDNS support
-* Samba compatibility
-* Zero performance impact
-
-### Version 2.0 (2025-01-15)
-
-**Features:**
-
-* Basic firewall setup
-* SSH hardening
-* Password policy
-* Package updates
-* Simple logging
-
-### Version 1.0 (2024-10-01)
-
-**Initial Release:**
-
-* Proof of concept
-* Basic hardening steps
-* Manual configuration
-
-**Pre - Initial Release:**
-
-* Alpha and beta revisions, many hours of research and testing 
 ---
 
 ## Additional Resources
 
 ### Official Documentation:
 
-**Ubuntu Security:**
+**Security Guides:**
 
-* [Ubuntu Security Guide](https://ubuntu.com/security)
-* [Ubuntu Server Security Guide](https://ubuntu.com/server/docs/security)
-* [AppArmor on Ubuntu](https://ubuntu.com/server/docs/security-apparmor)
-
-**Debian Security:**
-
-* [Debian Security Manual](https://www.debian.org/doc/manuals/securing-debian-manual/)
-* [Debian Security FAQ](https://www.debian.org/security/faq)
-* [Debian Security Tracker](https://security-tracker.debian.org/)
-
-**Security Standards:**
-
+* [Ubuntu Security](https://ubuntu.com/security)
+* [Debian Security](https://www.debian.org/security/)
 * [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/)
-* [DISA STIGs](https://public.cyber.mil/stigs/)
-* [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
-* [PCI Security Standards](https://www.pcisecuritystandards.org/)
 
-### Tools Documentation:
-
-**Firewall:**
+**Tools Documentation:**
 
 * [UFW Documentation](https://help.ubuntu.com/community/UFW)
-* [UFW Man Page](https://manpages.ubuntu.com/manpages/focal/man8/ufw.8.html)
-
-**Intrusion Prevention:**
-
-* [Fail2Ban Manual](https://www.fail2ban.org/wiki/index.php/Main_Page)
-* [Fail2Ban Configuration](https://github.com/fail2ban/fail2ban)
-
-**File Integrity:**
-
-* [AIDE Manual](https://aide.github.io/)
-* [AIDE Configuration Guide](https://aide.github.io/doc/)
-
-**Auditing:**
-
-* [Auditd Documentation](https://github.com/linux-audit/audit-documentation)
-* [Linux Audit Quickstart](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/security_hardening/auditing-the-system_security-hardening)
-
-**Mandatory Access Control:**
-
-* [AppArmor Documentation](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation)
 * [AppArmor Wiki](https://gitlab.com/apparmor/apparmor/-/wikis/home)
-
-**Security Scanning:**
-
-* [Lynis Documentation](https://cisofy.com/documentation/lynis/)
-* [RKHunter README](http://rkhunter.sourceforge.net/)
-* [ClamAV Documentation](https://docs.clamav.net/)
+* [Auditd Manual](https://linux.die.net/man/8/auditd)
+* [fail2ban Documentation](https://www.fail2ban.org/wiki/index.php/Main_Page)
 
 ### Related Projects:
 
@@ -2643,6 +1748,27 @@ This script does not:
 * Configure backups or disaster recovery
 * Provide encryption at rest
 * Replace security awareness training
+* Detect all types of malware or rootkits
+* Protect against zero-day exploits
+* Guarantee compliance with any standard
+
+### v5.0 Specific Limitations
+
+**What v5.0 CAN'T do:**
+
+* Automatically enable Secure Boot (requires BIOS configuration)
+* Detect kernel-level rootkits on live systems
+* Protect against all physical access attacks
+* Prevent attacks on allowed network ports
+* Replace application-level security
+
+**What v5.0 IS honest about:**
+
+* Package verification can't detect sophisticated rootkits
+* fail2ban only blocks IPs (easily bypassed)
+* SSH hardening can't stop attacks using valid keys
+* AppArmor can be bypassed by kernel exploits
+* System updates are more important than any hardening
 
 ### Liability
 
@@ -2671,7 +1797,7 @@ To the maximum extent permitted by law:
 1. Read this README thoroughly
 2. Check existing [GitHub Issues](https://github.com/captainzero93/security_harden_linux/issues)
 3. Review [Troubleshooting](#troubleshooting) section
-4. Run with `--verbose` and check logs at `/var/log/security_hardening.log`
+4. Run with `--verbose` and check logs at `/var/log/fortress_hardening.log`
 
 **Security Vulnerabilities:**
 
@@ -2707,59 +1833,58 @@ For commercial licensing, professional support, or consulting services:
 
 ESSENTIAL COMMANDS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Preview:      sudo ./improved_harden_linux.sh --dry-run -v
-Apply:        sudo ./improved_harden_linux.sh
-Restore:      sudo ./improved_harden_linux.sh --restore
-Report:       sudo ./improved_harden_linux.sh --report
-Help:         sudo ./improved_harden_linux.sh --help
-List modules: sudo ./improved_harden_linux.sh --list-modules
+Learn:        sudo ./fortress_improved.sh --explain --dry-run
+Preview:      sudo ./fortress_improved.sh --dry-run -v
+Apply:        sudo ./fortress_improved.sh
+Report:       cat /root/fortress_report_*.html
+Help:         sudo ./fortress_improved.sh --help
+List modules: sudo ./fortress_improved.sh --list-modules
 
 SECURITY LEVELS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Desktop:      sudo ./improved_harden_linux.sh -l moderate
-Server:       sudo ./improved_harden_linux.sh -l high -n
-Maximum:      sudo ./improved_harden_linux.sh -l paranoid
-Basic:        sudo ./improved_harden_linux.sh -l low
+Desktop:      sudo ./fortress_improved.sh -l moderate
+Server:       sudo ./fortress_improved.sh -l high -n
+Maximum:      sudo ./fortress_improved.sh -l paranoid
+Basic:        sudo ./fortress_improved.sh -l low
 
 MODULE SELECTION:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Enable:       sudo ./improved_harden_linux.sh -e module1,module2
-Disable:      sudo ./improved_harden_linux.sh -x module1,module2
-Custom:       sudo ./improved_harden_linux.sh -c config.conf
+Enable:       sudo ./fortress_improved.sh -e module1,module2
+Disable:      sudo ./fortress_improved.sh -x module1,module2
+Educational:  sudo ./fortress_improved.sh --explain
 
 MONITORING:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Firewall:     sudo ufw status
-Blocked IPs:  sudo fail2ban-client status sshd
+Fail2ban:     sudo fail2ban-client status (if installed)
 Unban IP:     sudo fail2ban-client set sshd unbanip IP
 Audit:        sudo ausearch -m USER_LOGIN -ts recent
 AppArmor:     sudo aa-status
-Logs:         sudo tail -f /var/log/security_hardening.log
+Logs:         sudo tail -f /var/log/fortress_hardening.log
 
-FILE CHECKS:
+FILE CHECKS (v5.0):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AIDE:         sudo aide --check
-Rootkits:     sudo rkhunter --check
-ClamAV:       sudo clamscan -r /home
+Packages:     dpkg --verify
+Reports:      ls -lht /var/log/fortress_package_verification_*.txt
+Weekly cron:  cat /etc/cron.weekly/fortress-verify-packages
 
 BACKUPS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Location:     /root/security_backup_*.tar.gz
-List:         ls -lht /root/security_backup_*.tar.gz
-Restore:      sudo ./improved_harden_linux.sh --restore [FILE]
+Location:     /root/fortress_backups_*/
+List:         ls -lht /root/fortress_backups_*
+Restore:      cp -a /root/fortress_backups_*/* /
 
 EMERGENCY:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SSH lockout:  Use console, restore /etc/ssh/sshd_config.backup.*
+SSH lockout:  Use console, restore /etc/ssh/sshd_config
 Firewall:     sudo ufw disable (from console)
-Boot fail:    Recovery mode, restore /etc/default/grub.backup.*
-Full restore: sudo ./improved_harden_linux.sh --restore
+Boot fail:    Recovery mode, restore /etc/default/grub
+Full restore: cp -a /root/fortress_backups_*/* /
 
 QUICK FIXES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Allow port:   sudo ufw allow PORT/tcp
-Disable AIDE: sudo chmod -x /etc/cron.daily/aide-check
-Stop ClamAV:  sudo systemctl stop clamav-daemon
+Stop service: sudo systemctl stop SERVICE
 
 RESOURCES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2772,7 +1897,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 **Star this repo if it helped you.**
 
-**Version:** 4.2 | **Author:** captainzero93 |
+**Version:** 5.0 | **Author:** captainzero93 |
 
 **GitHub:** https://github.com/captainzero93/
 
