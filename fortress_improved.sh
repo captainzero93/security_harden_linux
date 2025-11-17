@@ -1938,8 +1938,7 @@ main() {
     # Display banner
     echo ""
     echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║              FORTRESS.SH - Security Hardening v${VERSION}              ║"
-    echo "║                    Educational Edition                           ║"
+    echo "║              FORTRESS.SH - Security Hardening v${VERSION}        ║"
     echo "╚══════════════════════════════════════════════════════════════════╝"
     echo ""
     log INFO "Security Level: ${SECURITY_LEVEL}"
