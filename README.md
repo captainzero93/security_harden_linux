@@ -25,6 +25,7 @@ v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need
 ### <b> This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script. </b>
 
 ---
+Added a permissions fix script in the case shared libraries are preving apps launching
 
 ## What's New in v5.0 
 
