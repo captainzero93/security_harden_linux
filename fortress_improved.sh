@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FORTRESS.SH - Linux Security Hardening Script (Educational Edition)
+# FORTRESS.SH - Linux Security Hardening Script 
 # Version: 5.0 - Complete Rewrite Based on Community Feedback
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
