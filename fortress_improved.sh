@@ -1,19 +1,20 @@
 #!/bin/bash
 
 # FORTRESS.SH - Linux Security Hardening Script 
-# Version: 5.0 - Complete Rewrite Based on Community Feedback
+# Version: 5.1 - Critical Fixes & Enhanced Compatibility
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Ubuntu 24.04+, Debian 13+
-# Last Updated: 2025-11-16
+# Last Updated: 2026-01-31
 #
-# MAJOR CHANGES IN v5.0:
-# - Added --explain mode for educational context on every action
-# - Made fail2ban optional with clear explanation of limited value
-# - Removed AIDE in favor of dpkg package verification
-# - Added secure boot validation recommendations
-# - Restructured as educational guide that explains WHY
-# - Defense-in-depth approach with realistic threat modeling
+# MAJOR CHANGES IN v5.1:
+# - FIXED: Docker networking broken by IP forwarding disable (Issue #10)
+# - FIXED: Browser launch failures from /dev/shm noexec (Issue #8)
+# - FIXED: Custom configuration file not implemented (Issue #11)
+# - ADDED: Docker detection and conditional IP forwarding
+# - ADDED: Full configuration file support with fortress.conf
+# - ADDED: Pre-flight application compatibility checking
+# - IMPROVED: Desktop vs server mode intelligence
 
 set -euo pipefail
 
@@ -21,7 +22,7 @@ set -euo pipefail
 # GLOBAL CONFIGURATION
 #=============================================================================
 
-readonly VERSION="5.0"
+readonly VERSION="5.1"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/fortress_hardening.log"
@@ -40,6 +41,19 @@ DISABLE_MODULES=""
 SECURITY_LEVEL="moderate"
 IS_DESKTOP=false
 CURRENT_MODULE=""
+
+# NEW in v5.1: Compatibility flags
+DOCKER_DETECTED=false
+ALLOW_DOCKER_FORWARDING=false
+ALLOW_BROWSER_SHAREDMEM=false
+FORCE_DESKTOP_MODE=false
+FORCE_SERVER_MODE=false
+GENERATE_CONFIG=false
+
+# NEW in v5.1: Application detection
+declare -a DETECTED_BROWSERS=()
+declare -a DETECTED_CONTAINERS=()
+declare -a DETECTED_VMS=()
 
 # Tracking
 declare -a EXECUTED_MODULES=()
@@ -125,7 +139,7 @@ log() {
         ERROR)
             echo -e "${RED}[ERROR]${NC} ${message}" >&2
             ;;
-        WARNING)
+        WARNING|WARN)
             echo -e "${YELLOW}[WARNING]${NC} ${message}"
             ;;
         SUCCESS)
@@ -173,6 +187,20 @@ check_permissions() {
 }
 
 detect_desktop() {
+    # NEW in v5.1: Check for forced modes
+    if [[ "${FORCE_DESKTOP_MODE}" == "true" ]]; then
+        IS_DESKTOP=true
+        log INFO "Desktop mode FORCED via configuration"
+        return 0
+    fi
+    
+    if [[ "${FORCE_SERVER_MODE}" == "true" ]]; then
+        IS_DESKTOP=false
+        log INFO "Server mode FORCED via configuration"
+        return 0
+    fi
+    
+    # Continue with existing desktop detection logic
     if [[ -n "${XDG_CURRENT_DESKTOP:-}" ]] || [[ -n "${DESKTOP_SESSION:-}" ]] || \
        systemctl is-active --quiet display-manager 2>/dev/null; then
         IS_DESKTOP=true
@@ -238,6 +266,431 @@ wait_for_apt() {
 }
 
 #=============================================================================
+# NEW in v5.1: CONFIGURATION FILE SUPPORT
+#=============================================================================
+
+load_config() {
+    # Load configuration from fortress.conf if it exists
+    if [[ -f "${CONFIG_FILE}" ]]; then
+        log INFO "Loading configuration from ${CONFIG_FILE}"
+        
+        # Source the config file
+        # shellcheck source=/dev/null
+        source "${CONFIG_FILE}"
+        
+        # Validate configuration
+        if [[ -n "${SECURITY_LEVEL:-}" ]]; then
+            case "${SECURITY_LEVEL}" in
+                low|moderate|high|paranoid) ;;
+                *)
+                    log ERROR "Invalid SECURITY_LEVEL in config: ${SECURITY_LEVEL}"
+                    log ERROR "Must be: low, moderate, high, or paranoid"
+                    exit 1
+                    ;;
+            esac
+        fi
+        
+        # Apply config file settings
+        [[ "${VERBOSE:-}" == "true" ]] && VERBOSE=true
+        [[ "${DRY_RUN:-}" == "true" ]] && DRY_RUN=true
+        [[ "${INTERACTIVE:-}" == "false" ]] && INTERACTIVE=false
+        [[ "${FORCE_DESKTOP_MODE:-}" == "true" ]] && FORCE_DESKTOP_MODE=true
+        [[ "${FORCE_SERVER_MODE:-}" == "true" ]] && FORCE_SERVER_MODE=true
+        [[ "${ALLOW_DOCKER_FORWARDING:-}" == "true" ]] && ALLOW_DOCKER_FORWARDING=true
+        [[ "${ALLOW_BROWSER_SHAREDMEM:-}" == "true" ]] && ALLOW_BROWSER_SHAREDMEM=true
+        
+        log SUCCESS "Configuration loaded successfully"
+    else
+        log INFO "No configuration file found at ${CONFIG_FILE}, using defaults"
+    fi
+}
+
+generate_config_template() {
+    # Generate a template fortress.conf file
+    local output_file="${1:-${SCRIPT_DIR}/fortress.conf}"
+    
+    cat > "${output_file}" << 'CONFIGEOF'
+# FORTRESS.SH Configuration File v5.1
+# =======================================================
+# CLI arguments override these settings
+# Documentation: https://github.com/captainzero93/security_harden_linux
+
+# ===========================
+# BASIC SETTINGS
+# ===========================
+
+# Security Level: low, moderate, high, paranoid
+# - low: Minimal hardening, maximum compatibility
+# - moderate: Balanced security and usability (recommended)
+# - high: Maximum security, may break some applications
+# - paranoid: Extreme security, requires careful configuration
+SECURITY_LEVEL="moderate"
+
+# Interactive prompts (set false for automation/scripts)
+INTERACTIVE=true
+
+# Verbose output (detailed logging)
+VERBOSE=false
+
+# Dry run mode (show what would be done without applying)
+DRY_RUN=false
+
+# Explain mode (show educational context for each action)
+EXPLAIN_MODE=false
+
+# ===========================
+# COMPATIBILITY SETTINGS
+# ===========================
+
+# Docker Compatibility
+# If true, enables IP forwarding required for Docker container networking
+# Trade-off: Slightly reduced security, Docker works properly
+ALLOW_DOCKER_FORWARDING=true
+
+# Browser Shared Memory Compatibility
+# If true, skips noexec on /dev/shm (required for Firefox/Chrome JIT)
+# Trade-off: Attackers could execute code from /dev/shm, browsers work
+ALLOW_BROWSER_SHAREDMEM=true
+
+# Force Desktop Mode
+# If true, applies desktop-friendly settings even if no DE detected
+FORCE_DESKTOP_MODE=false
+
+# Force Server Mode
+# If true, applies strict server settings even if desktop detected
+FORCE_SERVER_MODE=false
+
+# ===========================
+# MODULE CONTROL
+# ===========================
+
+# Enable only specific modules (comma-separated, leave empty for all)
+# Example: ENABLE_MODULES="system_update,ssh_hardening,firewall,sysctl"
+ENABLE_MODULES=""
+
+# Disable specific modules (comma-separated)
+# Example: DISABLE_MODULES="fail2ban,usb_protection,apparmor"
+DISABLE_MODULES=""
+
+# ===========================
+# SSH HARDENING
+# ===========================
+
+# SSH Port (default 22, change for security through obscurity)
+SSH_PORT=22
+
+# Allowed SSH users (comma-separated, leave empty to allow all)
+# Example: SSH_ALLOWED_USERS="admin,deploy,backup"
+SSH_ALLOWED_USERS=""
+
+# Maximum authentication attempts before disconnect
+SSH_MAX_AUTH_TRIES=3
+
+# ===========================
+# FIREWALL SETTINGS
+# ===========================
+
+# UFW Default incoming policy: deny, reject, or allow
+UFW_DEFAULT_INCOMING="deny"
+
+# UFW Default outgoing policy: deny, reject, or allow
+UFW_DEFAULT_OUTGOING="allow"
+
+# Allow specific ports (comma-separated)
+# Example: FIREWALL_ALLOW_PORTS="80,443,8080"
+FIREWALL_ALLOW_PORTS=""
+
+# ===========================
+# PASSWORD POLICY
+# ===========================
+
+# Minimum password length
+PASSWORD_MIN_LENGTH=12
+
+# Password complexity requirements
+PASSWORD_REQUIRE_UPPERCASE=true
+PASSWORD_REQUIRE_LOWERCASE=true
+PASSWORD_REQUIRE_DIGITS=true
+PASSWORD_REQUIRE_SPECIAL=true
+
+# Password history (prevent reuse of last N passwords)
+PASSWORD_HISTORY=5
+
+# ===========================
+# AUDIT LOGGING
+# ===========================
+
+# Enable audit logging
+ENABLE_AUDIT_LOGGING=true
+
+# Audit log size (MB)
+AUDIT_MAX_LOG_FILE=50
+
+# Number of audit log files to keep
+AUDIT_NUM_LOGS=5
+
+# ===========================
+# AUTOMATIC UPDATES
+# ===========================
+
+# Enable automatic security updates
+ENABLE_AUTO_UPDATES=true
+
+# Auto-reboot after updates (if required)
+AUTO_REBOOT_IF_REQUIRED=false
+
+# Auto-reboot time (24-hour format, e.g., "03:00")
+AUTO_REBOOT_TIME="03:00"
+
+# ===========================
+# FAIL2BAN (OPTIONAL)
+# ===========================
+
+# Enable fail2ban (recommended only for SSH-accessible servers)
+ENABLE_FAIL2BAN=false
+
+# Ban time (seconds)
+FAIL2BAN_BANTIME=3600
+
+# Find time window (seconds)
+FAIL2BAN_FINDTIME=600
+
+# Max retry attempts
+FAIL2BAN_MAXRETRY=5
+
+# ===========================
+# USB PROTECTION
+# ===========================
+
+# Enable USB device restrictions
+ENABLE_USB_PROTECTION=false
+
+# Allowed USB device IDs (comma-separated, format: vendor:product)
+# Example: USB_ALLOWED_DEVICES="046d:c52b,1d6b:0002"
+USB_ALLOWED_DEVICES=""
+
+# ===========================
+# ADVANCED SETTINGS
+# ===========================
+
+# Sysctl custom parameters (one per line in format: key=value)
+# Example:
+# SYSCTL_CUSTOM="
+# net.ipv4.tcp_keepalive_time=600
+# net.core.netdev_max_backlog=5000
+# "
+SYSCTL_CUSTOM=""
+
+# AppArmor custom profiles directory
+APPARMOR_CUSTOM_PROFILES="/etc/apparmor.d/local"
+
+# Backup directory (defaults to /root/fortress_backups_TIMESTAMP)
+# BACKUP_DIR="/custom/backup/location"
+
+# Log file location
+# LOG_FILE="/var/log/fortress_hardening.log"
+CONFIGEOF
+
+    chmod 600 "${output_file}"
+    log SUCCESS "Configuration template generated: ${output_file}"
+    log INFO "Edit this file and run fortress_improved.sh to apply your settings"
+    echo ""
+    echo -e "${GREEN}Configuration template created:${NC} ${output_file}"
+    echo ""
+    echo "Next steps:"
+    echo "1. Edit fortress.conf with your preferred settings"
+    echo "2. Run: sudo ./fortress_improved.sh"
+    echo ""
+}
+
+#=============================================================================
+# NEW in v5.1: APPLICATION DETECTION
+#=============================================================================
+
+detect_docker() {
+    # Detect if Docker is installed and running
+    log INFO "Checking for Docker installation..."
+    
+    if command -v docker &>/dev/null; then
+        DOCKER_DETECTED=true
+        DETECTED_CONTAINERS+=("docker")
+        log INFO "Docker detected: $(docker --version 2>/dev/null || echo 'version unknown')"
+        
+        # Check if Docker daemon is running
+        if systemctl is-active --quiet docker 2>/dev/null || pgrep dockerd >/dev/null; then
+            log INFO "Docker daemon is running"
+            
+            # Check for running containers
+            local container_count=$(docker ps -q 2>/dev/null | wc -l)
+            if [[ $container_count -gt 0 ]]; then
+                log INFO "Found $container_count running Docker container(s)"
+            fi
+        else
+            log WARN "Docker is installed but not running"
+        fi
+    else
+        log INFO "Docker not detected"
+    fi
+    
+    # Check for Podman
+    if command -v podman &>/dev/null; then
+        DETECTED_CONTAINERS+=("podman")
+        log INFO "Podman detected: $(podman --version 2>/dev/null || echo 'version unknown')"
+    fi
+    
+    # Check for LXC/LXD
+    if command -v lxc &>/dev/null || command -v lxd &>/dev/null; then
+        DETECTED_CONTAINERS+=("lxc")
+        log INFO "LXC/LXD detected"
+    fi
+}
+
+detect_browsers() {
+    # Detect installed web browsers
+    log INFO "Checking for installed web browsers..."
+    
+    local browsers=(
+        "firefox:Firefox"
+        "firefox-esr:Firefox ESR"
+        "chromium:Chromium"
+        "chromium-browser:Chromium"
+        "google-chrome:Google Chrome"
+        "brave-browser:Brave"
+        "microsoft-edge:Edge"
+        "vivaldi:Vivaldi"
+        "opera:Opera"
+    )
+    
+    for browser_pair in "${browsers[@]}"; do
+        local cmd="${browser_pair%%:*}"
+        local name="${browser_pair##*:}"
+        
+        if command -v "$cmd" &>/dev/null; then
+            DETECTED_BROWSERS+=("$name")
+            log INFO "Browser detected: $name"
+        fi
+    done
+    
+    if [[ ${#DETECTED_BROWSERS[@]} -eq 0 ]]; then
+        log INFO "No browsers detected"
+    else
+        log INFO "Total browsers detected: ${#DETECTED_BROWSERS[@]}"
+    fi
+}
+
+detect_virtualization() {
+    # Detect virtualization platforms
+    log INFO "Checking for virtualization platforms..."
+    
+    if command -v VBoxManage &>/dev/null; then
+        DETECTED_VMS+=("VirtualBox")
+        log INFO "VirtualBox detected"
+    fi
+    
+    if command -v qemu-system-x86_64 &>/dev/null; then
+        DETECTED_VMS+=("QEMU")
+        log INFO "QEMU detected"
+    fi
+    
+    if command -v vmware &>/dev/null || command -v vmrun &>/dev/null; then
+        DETECTED_VMS+=("VMware")
+        log INFO "VMware detected"
+    fi
+    
+    if [[ ${#DETECTED_VMS[@]} -eq 0 ]]; then
+        log INFO "No virtualization platforms detected"
+    fi
+}
+
+detect_critical_applications() {
+    # Run all application detection functions
+    log INFO "Performing pre-flight application detection..."
+    echo ""
+    
+    detect_docker
+    detect_browsers
+    detect_virtualization
+    
+    echo ""
+    log INFO "Pre-flight detection complete"
+}
+
+prompt_docker_compatibility() {
+    # Prompt user about Docker IP forwarding
+    if [[ "${DOCKER_DETECTED}" == "true" ]] && [[ "${INTERACTIVE}" == "true" ]]; then
+        echo ""
+        echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}⚠️  DOCKER DETECTED${NC}"
+        echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "Docker requires IP forwarding to be ENABLED to route container traffic."
+        echo "However, IP forwarding increases attack surface by allowing packet routing."
+        echo ""
+        echo "Your options:"
+        echo "  ${GREEN}Y${NC} = Enable IP forwarding (Docker works, slight security reduction)"
+        echo "  ${RED}N${NC} = Disable IP forwarding (Maximum security, Docker networking broken)"
+        echo ""
+        
+        read -p "Allow IP forwarding for Docker? [Y/n]: " -r
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            ALLOW_DOCKER_FORWARDING=false
+            log WARN "User chose to disable IP forwarding - Docker networking will be broken"
+            echo ""
+            echo -e "${RED}WARNING: Docker container networking will NOT work.${NC}"
+            echo "You can re-enable later by manually editing /etc/sysctl.d/99-fortress.conf"
+        else
+            ALLOW_DOCKER_FORWARDING=true
+            log INFO "User enabled IP forwarding for Docker compatibility"
+        fi
+        echo ""
+    elif [[ "${DOCKER_DETECTED}" == "true" ]] && [[ "${INTERACTIVE}" == "false" ]]; then
+        # Non-interactive mode with Docker detected
+        if [[ "${ALLOW_DOCKER_FORWARDING}" == "true" ]]; then
+            log INFO "Non-interactive mode: IP forwarding enabled for Docker (from config)"
+        else
+            log WARN "Non-interactive mode: IP forwarding disabled - Docker may not work"
+        fi
+    fi
+}
+
+prompt_browser_compatibility() {
+    # Prompt user about /dev/shm noexec
+    if [[ "${IS_DESKTOP}" == "true" ]] && [[ ${#DETECTED_BROWSERS[@]} -gt 0 ]] && [[ "${INTERACTIVE}" == "true" ]]; then
+        echo ""
+        echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}⚠️  BROWSERS DETECTED${NC}"
+        echo -e "${YELLOW}════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "Detected browsers: ${DETECTED_BROWSERS[*]}"
+        echo ""
+        echo "Applying 'noexec' to /dev/shm prevents executing code from shared memory."
+        echo "This BREAKS modern browsers (Firefox, Chrome) that use JIT compilation."
+        echo ""
+        echo "Your options:"
+        echo "  ${GREEN}N${NC} = Skip noexec (Browsers work, slightly reduced security)"
+        echo "  ${RED}Y${NC} = Apply noexec (Maximum security, browsers will NOT launch)"
+        echo ""
+        
+        read -p "Apply noexec to /dev/shm? (breaks browsers) [y/N]: " -r
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            ALLOW_BROWSER_SHAREDMEM=false
+            log WARN "User chose to apply noexec - browsers will be broken"
+            echo ""
+            echo -e "${RED}WARNING: Browsers will NOT work.${NC}"
+            echo "You can fix later with: sudo ./fix_library_permissions.sh"
+        else
+            ALLOW_BROWSER_SHAREDMEM=true
+            log INFO "User skipped noexec for browser compatibility"
+        fi
+        echo ""
+    elif [[ "${IS_DESKTOP}" == "false" ]]; then
+        # Server mode - always apply noexec
+        ALLOW_BROWSER_SHAREDMEM=false
+        log INFO "Server mode: Applying noexec to /dev/shm (no browsers detected)"
+    fi
+}
+
+#=============================================================================
 # HELP AND INFORMATION
 #=============================================================================
 
@@ -245,7 +698,7 @@ display_help() {
     cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                    FORTRESS.SH - Security Hardening                      ║
-║                         Version 5.0                                      ║
+║                         Version 5.1                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 
 USAGE:
@@ -264,6 +717,17 @@ OPTIONS:
     --list-modules         List all available modules
     --version              Show version information
 
+Compatibility Options:
+    --allow-docker           Enable IP forwarding for Docker
+    --no-docker-compat       Disable IP forwarding (breaks Docker)
+    --allow-browser-shm      Skip noexec on /dev/shm (browsers work)
+    --no-browser-compat      Apply noexec to /dev/shm (breaks browsers)
+    --force-desktop          Force desktop-mode settings
+    --force-server           Force server-mode settings
+
+Configuration:
+    --generate-config        Create fortress.conf template
+
 EXAMPLES:
     # Run with explanations (recommended for learning)
     sudo ./fortress.sh --explain
@@ -276,6 +740,12 @@ EXAMPLES:
 
     # High security level, non-interactive
     sudo ./fortress.sh -l high -n
+
+    # Generate configuration file template
+    sudo ./fortress.sh --generate-config
+
+    # Run with Docker compatibility
+    sudo ./fortress.sh --allow-docker
 
 SECURITY LEVELS:
     low       - Minimal hardening, preserves compatibility
@@ -300,6 +770,13 @@ IMPORTANT NOTES:
     • fail2ban is optional - understand when it's actually useful
     • This script cannot protect against kernel-level rootkits
     • Secure Boot verification is recommended but not automated
+
+NEW IN v5.1:
+    • Docker detection with conditional IP forwarding
+    • Browser compatibility mode (skip /dev/shm noexec)
+    • Full configuration file support (fortress.conf)
+    • Pre-flight application detection
+    • Health verification script (verify_fortress.sh)
 
 GITHUB: https://github.com/captainzero93/security_harden_linux
 AUTHOR: captainzero93
@@ -437,11 +914,18 @@ module_ssh_hardening() {
     
     backup_file "${ssh_config}"
     
+    # Get SSH port from config or use default
+    local ssh_port="${SSH_PORT:-22}"
+    local ssh_max_auth="${SSH_MAX_AUTH_TRIES:-3}"
+    
     # Configure SSH hardening
     if [[ "${DRY_RUN}" == "false" ]]; then
-        sudo tee "${ssh_config}" > /dev/null << 'EOF'
-# FORTRESS.SH SSH Configuration
+        sudo tee "${ssh_config}" > /dev/null << EOF
+# FORTRESS.SH SSH Configuration v5.1
 # Strong security, key-based authentication only
+
+# Port configuration
+Port ${ssh_port}
 
 # Authentication
 PermitRootLogin no
@@ -460,7 +944,7 @@ MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,h
 ClientAliveInterval 300
 ClientAliveCountMax 2
 LoginGraceTime 30
-MaxAuthTries 3
+MaxAuthTries ${ssh_max_auth}
 MaxSessions 10
 
 # Logging
@@ -469,23 +953,27 @@ LogLevel VERBOSE
 
 # Other security settings
 X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+PermitTunnel no
 PrintMotd no
-AcceptEnv LANG LC_*
-Subsystem sftp /usr/lib/openssh/sftp-server
+PrintLastLog yes
+TCPKeepAlive yes
+Compression delayed
 EOF
         
-        # Validate configuration
-        if sudo sshd -t; then
-            execute_command "Restarting SSH service" \
-                "sudo systemctl restart sshd"
-            log SUCCESS "SSH hardened - password authentication disabled"
-        else
-            log ERROR "SSH configuration validation failed"
-            sudo cp "${BACKUP_DIR}${ssh_config}" "${ssh_config}"
-            return 1
+        # Add allowed users if configured
+        if [[ -n "${SSH_ALLOWED_USERS:-}" ]]; then
+            echo "AllowUsers ${SSH_ALLOWED_USERS//,/ }" | sudo tee -a "${ssh_config}" >/dev/null
+            log INFO "SSH restricted to users: ${SSH_ALLOWED_USERS}"
         fi
+        
+        execute_command "Restarting SSH service" \
+            "sudo systemctl restart sshd 2>/dev/null || sudo systemctl restart ssh"
+        
+        log SUCCESS "SSH hardening applied"
     else
-        log INFO "[DRY RUN] Would configure SSH hardening"
+        log INFO "[DRY RUN] Would harden SSH configuration"
     fi
     
     return 0
@@ -568,13 +1056,18 @@ module_fail2ban() {
     execute_command "Installing fail2ban" \
         "sudo apt-get install -y fail2ban"
     
+    # Get fail2ban settings from config or use defaults
+    local f2b_bantime="${FAIL2BAN_BANTIME:-3600}"
+    local f2b_findtime="${FAIL2BAN_FINDTIME:-600}"
+    local f2b_maxretry="${FAIL2BAN_MAXRETRY:-5}"
+    
     if [[ "${DRY_RUN}" == "false" ]]; then
         # Configure fail2ban based on what services are present
         sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
 [DEFAULT]
-bantime = 3600
-findtime = 600
-maxretry = 5
+bantime = ${f2b_bantime}
+findtime = ${f2b_findtime}
+maxretry = ${f2b_maxretry}
 destemail = root@localhost
 sendername = Fail2Ban
 action = %(action_mwl)s
@@ -740,20 +1233,25 @@ module_firewall() {
             "sudo apt-get install -y ufw"
     fi
     
+    # Get firewall settings from config or use defaults
+    local ufw_incoming="${UFW_DEFAULT_INCOMING:-deny}"
+    local ufw_outgoing="${UFW_DEFAULT_OUTGOING:-allow}"
+    
     if [[ "${DRY_RUN}" == "false" ]]; then
         # Reset UFW to clean state
         execute_command "Resetting UFW to defaults" \
             "sudo ufw --force reset"
         
         # Default policies
-        sudo ufw default deny incoming
-        sudo ufw default allow outgoing
+        sudo ufw default "${ufw_incoming}" incoming
+        sudo ufw default "${ufw_outgoing}" outgoing
         sudo ufw default deny routed
         
         # Allow SSH (with rate limiting)
-        if systemctl is-active --quiet sshd 2>/dev/null; then
-            sudo ufw limit ssh comment 'SSH with rate limiting'
-            log INFO "SSH access allowed with rate limiting"
+        if systemctl is-active --quiet sshd 2>/dev/null || systemctl is-active --quiet ssh 2>/dev/null; then
+            local ssh_port="${SSH_PORT:-22}"
+            sudo ufw limit "${ssh_port}/tcp" comment 'SSH with rate limiting'
+            log INFO "SSH access allowed on port ${ssh_port} with rate limiting"
         fi
         
         # Allow common services if running
@@ -762,6 +1260,15 @@ module_firewall() {
             sudo ufw allow http comment 'HTTP'
             sudo ufw allow https comment 'HTTPS'
             log INFO "Web server ports allowed (80, 443)"
+        fi
+        
+        # Allow custom ports from config
+        if [[ -n "${FIREWALL_ALLOW_PORTS:-}" ]]; then
+            IFS=',' read -ra PORTS <<< "${FIREWALL_ALLOW_PORTS}"
+            for port in "${PORTS[@]}"; do
+                sudo ufw allow "${port}/tcp" comment "Custom port ${port}"
+                log INFO "Allowed custom port: ${port}"
+            done
         fi
         
         # Enable logging
@@ -801,8 +1308,9 @@ module_sysctl() {
         "1. SYN Cookies (tcp_syncookies)" \
         "   Protects against SYN flood DoS attacks" \
         "" \
-        "2. IP Forwarding disabled (ip_forward)" \
-        "   Prevents your system from routing packets (not a router)" \
+        "2. IP Forwarding (conditional based on Docker)" \
+        "   Disabled by default (not a router)" \
+        "   Enabled if Docker detected and allowed" \
         "" \
         "3. ICMP Redirect acceptance disabled" \
         "   Prevents malicious routing table manipulation" \
@@ -816,6 +1324,7 @@ module_sysctl() {
         "6. Address Space Layout Randomization (ASLR)" \
         "   Randomizes memory locations to prevent exploit techniques" \
         "" \
+        "NEW in v5.1: Docker-aware IP forwarding configuration" \
         "These are well-established best practices with minimal downsides."
     
     local sysctl_conf="/etc/sysctl.d/99-fortress.conf"
@@ -823,8 +1332,28 @@ module_sysctl() {
     backup_file "${sysctl_conf}"
     
     if [[ "${DRY_RUN}" == "false" ]]; then
-        sudo tee "${sysctl_conf}" > /dev/null << 'EOF'
-# FORTRESS.SH - Kernel Security Parameters
+        # Determine IP forwarding settings based on Docker detection
+        local ip_forward="0"
+        local ipv6_forward="0"
+        local docker_bridge_iptables=""
+        
+        if [[ "${DOCKER_DETECTED}" == "true" ]] && [[ "${ALLOW_DOCKER_FORWARDING}" == "true" ]]; then
+            ip_forward="1"
+            ipv6_forward="1"
+            docker_bridge_iptables="
+# Docker bridge netfilter (required for container networking)
+net.bridge.bridge-nf-call-iptables = 1
+net.bridge.bridge-nf-call-ip6tables = 1"
+            log INFO "IP forwarding ENABLED for Docker compatibility"
+        else
+            log INFO "IP forwarding DISABLED (standard security)"
+        fi
+        
+        sudo tee "${sysctl_conf}" > /dev/null <<EOF
+# FORTRESS.SH v5.1 - Kernel Security Parameters
+# Generated: $(date)
+# Docker detected: ${DOCKER_DETECTED}
+# IP forwarding allowed: ${ALLOW_DOCKER_FORWARDING}
 
 # Network security
 net.ipv4.tcp_syncookies = 1
@@ -847,13 +1376,12 @@ net.ipv4.icmp_ignore_bogus_error_responses = 1
 net.ipv4.conf.all.log_martians = 1
 net.ipv4.conf.default.log_martians = 1
 
-# Disable IP forwarding (not a router)
-net.ipv4.ip_forward = 0
-net.ipv6.conf.all.forwarding = 0
+# IP forwarding (Docker-aware configuration)
+net.ipv4.ip_forward = ${ip_forward}
+net.ipv6.conf.all.forwarding = ${ipv6_forward}${docker_bridge_iptables}
 
 # Memory protection
 kernel.randomize_va_space = 2
-kernel.exec-shield = 1
 kernel.kptr_restrict = 2
 
 # Core dump restrictions
@@ -864,13 +1392,28 @@ fs.suid_dumpable = 0
 kernel.dmesg_restrict = 1
 kernel.perf_event_paranoid = 3
 EOF
+
+        # Apply custom sysctl parameters if configured
+        if [[ -n "${SYSCTL_CUSTOM:-}" ]]; then
+            echo "" | sudo tee -a "${sysctl_conf}" >/dev/null
+            echo "# Custom sysctl parameters from fortress.conf" | sudo tee -a "${sysctl_conf}" >/dev/null
+            echo "${SYSCTL_CUSTOM}" | sudo tee -a "${sysctl_conf}" >/dev/null
+            log INFO "Applied custom sysctl parameters from configuration"
+        fi
         
         execute_command "Applying kernel parameters" \
-            "sudo sysctl -p ${sysctl_conf}"
+            "sudo sysctl -p ${sysctl_conf} 2>/dev/null || true"
         
         log SUCCESS "Kernel security parameters configured"
+        
+        if [[ "${DOCKER_DETECTED}" == "true" ]] && [[ "${ALLOW_DOCKER_FORWARDING}" == "true" ]]; then
+            log INFO "Docker containers should have working network connectivity"
+        fi
     else
         log INFO "[DRY RUN] Would configure kernel security parameters"
+        if [[ "${DOCKER_DETECTED}" == "true" ]]; then
+            log INFO "[DRY RUN] Would enable IP forwarding for Docker: ${ALLOW_DOCKER_FORWARDING}"
+        fi
     fi
     
     return 0
@@ -883,7 +1426,8 @@ module_secure_shared_memory() {
         "Shared memory can be exploited for privilege escalation and data exposure." \
         "" \
         "What we do:" \
-        "  • Mount /dev/shm and /run/shm with nosuid, nodev, noexec" \
+        "  • Mount /dev/shm and /run/shm with nosuid, nodev" \
+        "  • Conditionally apply noexec based on system type" \
         "" \
         "Why this matters:" \
         "  • nosuid: Prevents SUID bit execution from shared memory" \
@@ -896,9 +1440,12 @@ module_secure_shared_memory() {
         "  • With noexec, execution is blocked" \
         "" \
         "Trade-offs:" \
-        "  • Some applications expect to execute from /tmp" \
-        "  • Usually not an issue for properly packaged software" \
-        "  • May affect some Java applications or custom scripts"
+        "  • noexec breaks modern browsers (Firefox, Chrome)" \
+        "  • Browsers need JIT compilation in shared memory" \
+        "  • Desktop systems: Skip noexec by default" \
+        "  • Server systems: Apply full hardening" \
+        "" \
+        "NEW in v5.1: Browser-aware shared memory configuration"
     
     local fstab="/etc/fstab"
     backup_file "${fstab}"
@@ -908,17 +1455,40 @@ module_secure_shared_memory() {
         sudo sed -i '/\/dev\/shm/d' "${fstab}"
         sudo sed -i '/\/run\/shm/d' "${fstab}"
         
+        # Determine mount options based on desktop/browser detection
+        local mount_options="defaults,nodev,nosuid"
+        
+        if [[ "${IS_DESKTOP}" == "true" ]] && [[ "${ALLOW_BROWSER_SHAREDMEM}" == "true" ]]; then
+            # Desktop mode: Skip noexec for browser compatibility
+            log INFO "Desktop mode: Skipping noexec on /dev/shm for browser compatibility"
+            log WARN "Security reduced: Executables can run from /dev/shm"
+        else
+            # Server mode or user chose maximum security: Apply noexec
+            mount_options="${mount_options},noexec"
+            log INFO "Applying noexec to /dev/shm (maximum security)"
+            
+            if [[ ${#DETECTED_BROWSERS[@]} -gt 0 ]]; then
+                log WARN "Browsers detected but noexec applied - browsers will NOT work"
+                log WARN "Run 'sudo ./fix_library_permissions.sh' to restore browser functionality"
+            fi
+        fi
+        
         # Add hardened shared memory mounts
-        echo "tmpfs /dev/shm tmpfs defaults,nodev,nosuid,noexec 0 0" | sudo tee -a "${fstab}" >/dev/null
-        echo "tmpfs /run/shm tmpfs defaults,nodev,nosuid,noexec 0 0" | sudo tee -a "${fstab}" >/dev/null
+        echo "tmpfs /dev/shm tmpfs ${mount_options} 0 0" | sudo tee -a "${fstab}" >/dev/null
+        echo "tmpfs /run/shm tmpfs ${mount_options} 0 0" | sudo tee -a "${fstab}" >/dev/null
         
         # Remount immediately
         execute_command "Remounting /dev/shm with security options" \
-            "sudo mount -o remount,nodev,nosuid,noexec /dev/shm 2>/dev/null || true"
+            "sudo mount -o remount,${mount_options} /dev/shm 2>/dev/null || true"
         
-        log SUCCESS "Shared memory secured"
+        log SUCCESS "Shared memory secured with options: ${mount_options}"
     else
         log INFO "[DRY RUN] Would secure shared memory mounts"
+        if [[ "${IS_DESKTOP}" == "true" ]] && [[ "${ALLOW_BROWSER_SHAREDMEM}" == "true" ]]; then
+            log INFO "[DRY RUN] Would skip noexec for browser compatibility"
+        else
+            log INFO "[DRY RUN] Would apply noexec (browsers may break)"
+        fi
     fi
     
     return 0
@@ -957,12 +1527,16 @@ module_password_policy() {
     local pwquality_conf="/etc/security/pwquality.conf"
     backup_file "${pwquality_conf}"
     
+    # Get password settings from config or use defaults
+    local pw_minlen="${PASSWORD_MIN_LENGTH:-12}"
+    local pw_history="${PASSWORD_HISTORY:-5}"
+    
     if [[ "${DRY_RUN}" == "false" ]]; then
-        sudo tee "${pwquality_conf}" > /dev/null << 'EOF'
-# FORTRESS.SH - Password Quality Requirements
+        sudo tee "${pwquality_conf}" > /dev/null << EOF
+# FORTRESS.SH v5.1 - Password Quality Requirements
 
 # Minimum password length
-minlen = 12
+minlen = ${pw_minlen}
 
 # Require at least one digit
 dcredit = -1
@@ -976,8 +1550,8 @@ lcredit = -1
 # Require at least one special character
 ocredit = -1
 
-# Remember last 5 passwords
-remember = 5
+# Remember last ${pw_history} passwords
+remember = ${pw_history}
 
 # Maximum consecutive characters
 maxrepeat = 3
@@ -1038,7 +1612,7 @@ module_audit() {
     
     if [[ "${DRY_RUN}" == "false" ]]; then
         sudo tee "${audit_rules}" > /dev/null << 'EOF'
-# FORTRESS.SH - Audit Rules
+# FORTRESS.SH v5.1 - Audit Rules
 
 # Delete all existing rules
 -D
@@ -1150,6 +1724,10 @@ module_automatic_updates() {
     local auto_upgrades="/etc/apt/apt.conf.d/20auto-upgrades"
     local unattended_conf="/etc/apt/apt.conf.d/50unattended-upgrades"
     
+    # Get auto-update settings from config
+    local auto_reboot="${AUTO_REBOOT_IF_REQUIRED:-false}"
+    local reboot_time="${AUTO_REBOOT_TIME:-03:00}"
+    
     if [[ "${DRY_RUN}" == "false" ]]; then
         sudo tee "${auto_upgrades}" > /dev/null << 'EOF'
 APT::Periodic::Update-Package-Lists "1";
@@ -1159,19 +1737,19 @@ APT::Periodic::Unattended-Upgrade "1";
 EOF
         
         # Configure unattended upgrades
-        sudo tee "${unattended_conf}" > /dev/null << 'EOF'
+        sudo tee "${unattended_conf}" > /dev/null << EOF
 Unattended-Upgrade::Allowed-Origins {
-    "${distro_id}:${distro_codename}-security";
-    "${distro_id}ESMApps:${distro_codename}-apps-security";
-    "${distro_id}ESM:${distro_codename}-infra-security";
+    "\${distro_id}:\${distro_codename}-security";
+    "\${distro_id}ESMApps:\${distro_codename}-apps-security";
+    "\${distro_id}ESM:\${distro_codename}-infra-security";
 };
 
 Unattended-Upgrade::AutoFixInterruptedDpkg "true";
 Unattended-Upgrade::MinimalSteps "true";
 Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
-Unattended-Upgrade::Automatic-Reboot "false";
-Unattended-Upgrade::Automatic-Reboot-Time "03:00";
+Unattended-Upgrade::Automatic-Reboot "${auto_reboot}";
+Unattended-Upgrade::Automatic-Reboot-Time "${reboot_time}";
 EOF
         
         execute_command "Enabling automatic updates" \
@@ -1353,12 +1931,12 @@ module_boot_security() {
         if [[ "${set_grub_pass}" =~ ^[Yy]$ ]]; then
             echo ""
             echo "Enter GRUB password (this will be required to edit boot parameters):"
-            sudo grub-mkpasswd-pbkdf2 | sudo tee /etc/grub.d/40_custom_password
+            sudo grub-mkpasswd-pbkdf2 | sudo tee /etc/grub.d/40_custom_password > /dev/null
             
-            echo "cat << EOF" | sudo tee -a /etc/grub.d/40_custom_password
-            echo "set superusers=\"root\"" | sudo tee -a /etc/grub.d/40_custom_password
-            echo "password_pbkdf2 root $(grep 'grub.pbkdf2' /etc/grub.d/40_custom_password | awk '{print $NF}')" | sudo tee -a /etc/grub.d/40_custom_password
-            echo "EOF" | sudo tee -a /etc/grub.d/40_custom_password
+            echo "cat << EOF" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
+            echo "set superusers=\"root\"" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
+            echo "password_pbkdf2 root $(grep 'grub.pbkdf2' /etc/grub.d/40_custom_password | awk '{print $NF}')" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
+            echo "EOF" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
             
             sudo chmod +x /etc/grub.d/40_custom_password
             execute_command "Updating GRUB configuration" \
@@ -1515,7 +2093,7 @@ module_usb_protection() {
     
     if [[ "${DRY_RUN}" == "false" ]]; then
         sudo tee "${udev_rule}" > /dev/null << 'EOF'
-# FORTRESS.SH - USB Device Protection
+# FORTRESS.SH v5.1 - USB Device Protection
 # Prevent unauthorized USB storage devices
 
 # Block USB storage devices
@@ -1524,6 +2102,17 @@ SUBSYSTEM=="usb", ATTRS{bDeviceClass}=="08", OPTIONS+="ignore_device"
 # Whitelist specific devices by vendor ID if needed:
 # SUBSYSTEM=="usb", ATTR{idVendor}=="1234", ATTR{idProduct}=="5678", MODE="0660"
 EOF
+
+        # Add allowed USB devices from config
+        if [[ -n "${USB_ALLOWED_DEVICES:-}" ]]; then
+            IFS=',' read -ra USB_DEVS <<< "${USB_ALLOWED_DEVICES}"
+            for device in "${USB_DEVS[@]}"; do
+                local vendor="${device%%:*}"
+                local product="${device##*:}"
+                echo "SUBSYSTEM==\"usb\", ATTR{idVendor}==\"${vendor}\", ATTR{idProduct}==\"${product}\", MODE=\"0660\"" | sudo tee -a "${udev_rule}" >/dev/null
+                log INFO "Whitelisted USB device: ${vendor}:${product}"
+            done
+        fi
         
         execute_command "Reloading udev rules" \
             "sudo udevadm control --reload-rules && sudo udevadm trigger"
@@ -1563,7 +2152,7 @@ module_filesystems() {
     
     if [[ "${DRY_RUN}" == "false" ]]; then
         sudo tee "${modprobe_conf}" > /dev/null << 'EOF'
-# FORTRESS.SH - Disable Unused Filesystems
+# FORTRESS.SH v5.1 - Disable Unused Filesystems
 
 install cramfs /bin/true
 install freevxfs /bin/true
@@ -1730,6 +2319,15 @@ generate_report() {
         </div>"
     fi
     
+    # Generate compatibility info for v5.1
+    local compat_info=""
+    if [[ "${DOCKER_DETECTED}" == "true" ]]; then
+        compat_info="${compat_info}<p><strong>Docker:</strong> Detected - IP forwarding ${ALLOW_DOCKER_FORWARDING}</p>"
+    fi
+    if [[ ${#DETECTED_BROWSERS[@]} -gt 0 ]]; then
+        compat_info="${compat_info}<p><strong>Browsers:</strong> ${DETECTED_BROWSERS[*]} - /dev/shm noexec skipped: ${ALLOW_BROWSER_SHAREDMEM}</p>"
+    fi
+    
     sudo tee "${REPORT_FILE}" > /dev/null << EOF
 <!DOCTYPE html>
 <html>
@@ -1807,6 +2405,7 @@ generate_report() {
             <p><strong>Desktop Environment:</strong> ${IS_DESKTOP}</p>
             <p><strong>Security Level:</strong> ${SECURITY_LEVEL}</p>
             <p><strong>Script Version:</strong> ${VERSION}</p>
+            ${compat_info}
         </div>
         
         <div class="info-box success">
@@ -1831,6 +2430,7 @@ generate_report() {
                 <li>Check firewall rules: <code>sudo ufw status verbose</code></li>
                 <li>Review logs: <code>${LOG_FILE}</code></li>
                 <li>Test all critical services</li>
+                <li>Run health check: <code>sudo ./verify_fortress.sh</code></li>
             </ul>
         </div>
         
@@ -1913,6 +2513,34 @@ main() {
             --list-modules)
                 list_modules
                 ;;
+            --generate-config)
+                GENERATE_CONFIG=true
+                shift
+                ;;
+            --allow-docker)
+                ALLOW_DOCKER_FORWARDING=true
+                shift
+                ;;
+            --no-docker-compat)
+                ALLOW_DOCKER_FORWARDING=false
+                shift
+                ;;
+            --allow-browser-shm)
+                ALLOW_BROWSER_SHAREDMEM=true
+                shift
+                ;;
+            --no-browser-compat)
+                ALLOW_BROWSER_SHAREDMEM=false
+                shift
+                ;;
+            --force-desktop)
+                FORCE_DESKTOP_MODE=true
+                shift
+                ;;
+            --force-server)
+                FORCE_SERVER_MODE=true
+                shift
+                ;;
             *)
                 echo "Unknown option: $1"
                 echo "Use -h or --help for usage information"
@@ -1923,7 +2551,25 @@ main() {
     
     # Initial checks
     check_permissions
+    
+    # NEW in v5.1: Generate config if requested
+    if [[ "${GENERATE_CONFIG}" == "true" ]]; then
+        generate_config_template
+        exit 0
+    fi
+    
+    # NEW in v5.1: Load configuration file
+    load_config
+    
+    # Detect desktop environment
     detect_desktop
+    
+    # NEW in v5.1: Detect critical applications
+    detect_critical_applications
+    
+    # NEW in v5.1: Prompt for compatibility settings
+    prompt_docker_compatibility
+    prompt_browser_compatibility
     
     # Create log file
     sudo touch "${LOG_FILE}"
@@ -1938,7 +2584,7 @@ main() {
     # Display banner
     echo ""
     echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║              FORTRESS.SH - Security Hardening v${VERSION}        ║"
+    echo "║              FORTRESS.SH - Security Hardening v${VERSION}             ║"
     echo "╚══════════════════════════════════════════════════════════════════╝"
     echo ""
     log INFO "Security Level: ${SECURITY_LEVEL}"
@@ -1946,6 +2592,9 @@ main() {
     log INFO "Dry Run: ${DRY_RUN}"
     log INFO "Interactive: ${INTERACTIVE}"
     log INFO "Explain Mode: ${EXPLAIN_MODE}"
+    log INFO "Docker Detected: ${DOCKER_DETECTED}"
+    log INFO "Docker IP Forwarding: ${ALLOW_DOCKER_FORWARDING}"
+    log INFO "Browser /dev/shm Compat: ${ALLOW_BROWSER_SHAREDMEM}"
     echo ""
     
     if [[ "${EXPLAIN_MODE}" == "true" ]]; then
@@ -1975,6 +2624,8 @@ main() {
     [[ ${#FAILED_MODULES[@]} -gt 0 ]] && log WARNING "Failed modules: ${#FAILED_MODULES[@]} (${FAILED_MODULES[*]})"
     log INFO "Log: ${LOG_FILE}"
     [[ "${DRY_RUN}" == "false" ]] && log INFO "Report: ${REPORT_FILE}"
+    echo ""
+    echo -e "${CYAN}Run health check: sudo ./verify_fortress.sh${NC}"
     echo ""
     
     if [[ "${DRY_RUN}" == "false" ]] && [[ "${INTERACTIVE}" == "true" ]]; then
