@@ -2,7 +2,8 @@
 
 **One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
 
-**Version 5.0** - Major Rewrite: Removes security theater, adds intelligent recommendations. Tested WORKING on Debian 13, Ubuntu 24.04+.
+**Version 5.1** - Critical Fixes: Docker compatibility, browser support, full configuration file. Tested WORKING on Debian 13, Ubuntu 24.04+. 
+Check Advanced Usage and Quick Reference settings for NEW config feature help etc.
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -10,7 +11,7 @@
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-5.0-green.svg)]() 
+[![Version](https://img.shields.io/badge/Version-5.1-green.svg)]() 
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
@@ -20,37 +21,37 @@
 
 **REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out.
 
-v5.0 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script.
+v5.1 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script.
 
 ### <b> This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script. </b>
 
 ---
-Added a permissions fix script (fix_library_permissions.sh) in the case shared libraries are preving apps launching. And an additional diagnostic tool PERM_diagnostic.sh , create a ticket with the output if you need.
+Added a permissions fix script (fix_library_permissions.sh) in the case shared libraries are preventing apps launching. And an additional diagnostic tool PERM_diagnostic.sh , create a ticket with the output if you need. NEW in v5.1: verify_fortress.sh health check script to validate system after hardening.
 
-## What's New in v5.0 
+## What's New in v5.1
 
-**MAJOR REWRITE** based on community feedback to remove security theater and add real education:
+**CRITICAL FIXES** based on Issues #8, #10, #11:
 
-### Removed:
-* **AIDE** - Ineffective on live systems, can't detect kernel rootkits. Replaced with `dpkg --verify`
-* **IPv6 disable** - Not a security feature, removed entirely
-* **ClamAV** - Minimal benefit on Linux, removed (install separately if needed)
-* **Blanket fail2ban installation** - Now optional and intelligent
+### Fixed:
+* **Issue #8**: Browsers (Firefox, Chrome) no longer break after hardening
+* **Issue #10**: Docker container networking now works properly
+* **Issue #11**: Configuration file (`fortress.conf`) fully functional
 
 ### Added:
-* **Educational mode** (`--explain`) - Learn WHY each security measure matters
-* **Secure Boot verification** - Checks if enabled, provides setup instructions
-* **Package verification** - Uses dpkg's built-in checksums (weekly cron job)
-* **Intelligent recommendations** - Analyzes your system before suggesting modules
-* **SSH lockout prevention** - Multiple safety checks with explicit confirmation
-* **Honest limitations** - Every module explains what it CAN'T protect against
+* **Docker detection** - Automatically detects Docker/Podman/LXC and adjusts IP forwarding
+* **Browser detection** - Smart /dev/shm handling prevents breaking Firefox/Chrome JIT
+* **Configuration file** - Generate with `--generate-config`, customize all settings
+* **Health verification** - New `verify_fortress.sh` script validates system after hardening
+* **Application detection** - Pre-flight scan warns about potential conflicts
 
-### Improved:
-* **fail2ban** - Only recommended when actually beneficial (web/mail servers, password-auth services)
-* **SSH hardening** - Requires explicit confirmation of working key-based auth
-* **Boot security** - Now verifies Secure Boot status and guides BIOS configuration
-* **All modules** - Include educational explanations and threat modeling
-
+### New CLI Options:
+* `--allow-docker` - Enable IP forwarding for Docker compatibility
+* `--no-docker-compat` - Disable IP forwarding (maximum security, breaks Docker)
+* `--allow-browser-shm` - Skip noexec on /dev/shm (browsers work)
+* `--no-browser-compat` - Apply noexec to /dev/shm (maximum security, breaks browsers)
+* `--force-desktop` - Force desktop-mode settings
+* `--force-server` - Force server-mode settings
+* `--generate-config` - Create fortress.conf template
 
 ---
 
@@ -98,7 +99,8 @@ sudo ./fortress_improved.sh -l high -n
 * [Quick Start](#quick-start)
 * [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 * [Why Each Security Measure Matters](#why-each-security-measure-matters)
-* [What's New in v5.0](#whats-new-in-v50-educational-edition)
+* [What's New in v5.1](#whats-new-in-v51)
+* [What's New in v5.0](#whats-new-in-v50)
 * [Installation](#installation)
 * [Usage Guide](#usage-guide)
 * [Security Levels Explained](#security-levels-explained)
@@ -155,16 +157,7 @@ Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that priori
 
 ### What makes this different:
 
-This script applies **industry-standard security WITHOUT breaking your desktop experience.** No more choosing between security and usability. **v5.0 also teaches you WHY each security measure matters.**
-
-**Tested and optimized for:**
-
-* Gamers (Steam, Lutris, Proton, Discord)
-* Content creators (DaVinci Resolve, Kdenlive, Blender, GIMP)
-* Music producers (Jack, PipeWire, Ardour, Reaper)
-* Developers (Docker, VSCode, databases, IDEs)
-* Office users (LibreOffice, browsers, email)
-* Anyone who just wants more security with minimal hassle
+This script applies **industry-standard security WITHOUT breaking your desktop experience.** No more choosing between security and usability. **v5.1 also intelligently detects Docker and browsers to avoid breaking them.**
 
 ---
 
@@ -186,7 +179,7 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 * Verifies boot security - checks Secure Boot status and guides configuration
 * Removes unnecessary packages - smaller attack surface
 
-### Things That KEEP Working:
+### Things That should KEEP Working:
 
 * Steam and all your games (zero/low FPS impact)
 * Discord, Zoom, Slack, Teams
@@ -201,6 +194,8 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 * RGB peripherals and gaming gear
 * Virtual machines (VirtualBox, QEMU)
 * Docker and development tools
+* Firefox, Chrome, Brave browsers (v5.1 smart /dev/shm handling)
+* Docker container networking (v5.1 conditional IP forwarding)
 
 ---
 
@@ -1206,6 +1201,54 @@ See "What's New in v5.0" section for full details.
 
 ## Troubleshooting
 
+### Issue: Docker Containers Can't Reach Internet (v5.1)
+
+**Symptoms:** Containers start but can't access network
+
+**Cause:** IP forwarding disabled by FORTRESS
+
+**Solutions:**
+
+1. Check current setting:
+   ```bash
+   cat /etc/sysctl.d/99-fortress.conf | grep ip_forward
+   ```
+
+2. Re-run with Docker support:
+   ```bash
+   sudo ./fortress_improved.sh --allow-docker
+   ```
+
+3. Or manual fix:
+   ```bash
+   sudo sed -i 's/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/' /etc/sysctl.d/99-fortress.conf
+   sudo sysctl -p /etc/sysctl.d/99-fortress.conf
+   ```
+
+### Issue: Firefox/Chrome Won't Launch (v5.1)
+
+**Symptoms:** Browser crashes immediately or shows errors
+
+**Cause:** /dev/shm mounted with noexec (breaks JIT compilation)
+
+**Solutions:**
+
+1. Check mount options:
+   ```bash
+   mount | grep /dev/shm
+   ```
+
+2. Run fix script:
+   ```bash
+   sudo ./fix_library_permissions.sh
+   ```
+
+3. Or manual fix:
+   ```bash
+   sudo sed -i 's/nodev,nosuid,noexec/nodev,nosuid/' /etc/fstab
+   sudo mount -o remount /dev/shm
+   ```
+
 ### Issue: SSH Connection Refused
 
 **Symptoms:** Can't connect to server via SSH
@@ -1364,32 +1407,68 @@ See "What's New in v5.0" section for full details.
 
 ### Getting More Help:
 
-1. Check detailed logs:
+1. Run health verification (v5.1):
+   ```bash
+   sudo ./verify_fortress.sh
+   ```
+
+2. Check detailed logs:
    ```bash
    sudo tail -100 /var/log/fortress_hardening.log
    ```
 
-2. Run with verbose output:
+3. Run with verbose output:
    ```bash
    sudo ./fortress_improved.sh --dry-run --verbose
    ```
 
-3. Check system logs:
+4. Check system logs:
    ```bash
    sudo journalctl -xe
    ```
 
-4. Open GitHub issue with:
+5. Open GitHub issue with:
    * Distribution and version
    * Security level used
    * Error messages
    * Log excerpts
+   * Output of `verify_fortress.sh`
 
 ---
 
 ## Advanced Usage
 
-### Custom Configuration File:
+### Configuration File (v5.1):
+
+Generate a configuration template:
+
+```bash
+sudo ./fortress_improved.sh --generate-config
+```
+
+This creates `fortress.conf` with all available settings. Key options:
+
+```bash
+# Security and compatibility
+SECURITY_LEVEL="moderate"
+ALLOW_DOCKER_FORWARDING=true
+ALLOW_BROWSER_SHAREDMEM=true
+
+# Module control
+DISABLE_MODULES="fail2ban,usb_protection"
+ENABLE_MODULES="system_update,ssh_hardening,firewall,apparmor"
+
+# SSH settings
+SSH_PORT=22
+SSH_ALLOWED_USERS=""
+
+# Firewall
+FIREWALL_ALLOW_PORTS="80,443"
+```
+
+The config file is automatically loaded if present in the same directory as the script.
+
+### Custom Configuration File (Legacy):
 
 Create `fortress.conf`:
 
@@ -1595,6 +1674,31 @@ For commercial licensing:
 ---
 
 ## Version History
+
+### v5.1 (2025-01) - Compatibility Edition
+
+**CRITICAL FIXES** for Issues #8, #10, #11
+
+**Fixed:**
+
+* Issue #8: Browser launch failures (Firefox, Chrome) from /dev/shm noexec
+* Issue #10: Docker container networking broken by IP forwarding disable
+* Issue #11: Configuration file not being loaded
+
+**Added:**
+
+* Docker/Podman/LXC detection with conditional IP forwarding
+* Browser detection with smart /dev/shm handling
+* Full configuration file support (`--generate-config`)
+* Pre-flight application detection
+* Health verification script (`verify_fortress.sh`)
+* New CLI options for compatibility control
+
+**Improved:**
+
+* Desktop vs server mode detection
+* Interactive prompts explaining security trade-offs
+* HTML report includes compatibility information
 
 ### v5.0 (2025-11-16) - Educational Edition
 
@@ -1827,18 +1931,24 @@ For commercial licensing, professional support, or consulting services:
 ## Quick Reference Card
 
 ```
-═══════════════════════════════════════════════════════════════════
-                    FORTRESS.SH QUICK REFERENCE
-═══════════════════════════════════════════════════════════════════
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    FORTRESS.SH QUICK REFERENCE v5.1
 
 ESSENTIAL COMMANDS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Learn:        sudo ./fortress_improved.sh --explain --dry-run
 Preview:      sudo ./fortress_improved.sh --dry-run -v
 Apply:        sudo ./fortress_improved.sh
+Verify:       sudo ./verify_fortress.sh
 Report:       cat /root/fortress_report_*.html
 Help:         sudo ./fortress_improved.sh --help
 List modules: sudo ./fortress_improved.sh --list-modules
+
+CONFIGURATION (v5.1):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generate:     sudo ./fortress_improved.sh --generate-config
+Edit:         nano fortress.conf
+Apply:        sudo ./fortress_improved.sh  (auto-loads config)
 
 SECURITY LEVELS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1846,6 +1956,13 @@ Desktop:      sudo ./fortress_improved.sh -l moderate
 Server:       sudo ./fortress_improved.sh -l high -n
 Maximum:      sudo ./fortress_improved.sh -l paranoid
 Basic:        sudo ./fortress_improved.sh -l low
+
+COMPATIBILITY (v5.1):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+With Docker:  sudo ./fortress_improved.sh --allow-docker
+No Docker:    sudo ./fortress_improved.sh --no-docker-compat
+Browsers OK:  sudo ./fortress_improved.sh --allow-browser-shm
+Max security: sudo ./fortress_improved.sh --no-browser-compat
 
 MODULE SELECTION:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1855,6 +1972,7 @@ Educational:  sudo ./fortress_improved.sh --explain
 
 MONITORING:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Health:       sudo ./verify_fortress.sh
 Firewall:     sudo ufw status
 Fail2ban:     sudo fail2ban-client status (if installed)
 Unban IP:     sudo fail2ban-client set sshd unbanip IP
@@ -1862,7 +1980,7 @@ Audit:        sudo ausearch -m USER_LOGIN -ts recent
 AppArmor:     sudo aa-status
 Logs:         sudo tail -f /var/log/fortress_hardening.log
 
-FILE CHECKS (v5.0):
+FILE CHECKS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Packages:     dpkg --verify
 Reports:      ls -lht /var/log/fortress_package_verification_*.txt
@@ -1881,8 +1999,10 @@ Firewall:     sudo ufw disable (from console)
 Boot fail:    Recovery mode, restore /etc/default/grub
 Full restore: cp -a /root/fortress_backups_*/* /
 
-QUICK FIXES:
+QUICK FIXES (v5.1):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Docker net:   Edit /etc/sysctl.d/99-fortress.conf, set ip_forward=1
+Browsers:     Remove noexec from /dev/shm in /etc/fstab
 Allow port:   sudo ufw allow PORT/tcp
 Stop service: sudo systemctl stop SERVICE
 
@@ -1897,7 +2017,7 @@ Issues:       https://github.com/captainzero93/security_harden_linux/issues
 
 **Star this repo if it helped you.**
 
-**Version:** 5.0 | **Author:** captainzero93 |
+**Version:** 5.1 | **Author:** captainzero93 |
 
 **GitHub:** https://github.com/captainzero93/
 
