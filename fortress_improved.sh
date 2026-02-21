@@ -28,7 +28,8 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/fortress_hardening.log"
 readonly REPORT_FILE="/root/fortress_report_$(date +%Y%m%d_%H%M%S).html"
 readonly BACKUP_DIR="/root/fortress_backups_$(date +%Y%m%d_%H%M%S)"
-readonly CONFIG_FILE="${SCRIPT_DIR}/fortress.conf"
+CONFIG_FILE="${SCRIPT_DIR}/fortress.conf"
+CONFIG_FILE_OVERRIDE=""
 readonly TEMP_DIR=$(mktemp -d -t fortress.XXXXXXXXXX)
 
 # Runtime configuration
@@ -230,7 +231,7 @@ backup_file() {
 execute_command() {
     local description="$1"
     shift
-    local command="$@"
+    local command="$*"
     
     if [[ "${DRY_RUN}" == "true" ]]; then
         log INFO "[DRY RUN] ${description}: ${command}"
@@ -270,9 +271,27 @@ wait_for_apt() {
 #=============================================================================
 
 load_config() {
+    # Use override path if provided via -c/--config
+    if [[ -n "${CONFIG_FILE_OVERRIDE}" ]]; then
+        CONFIG_FILE="${CONFIG_FILE_OVERRIDE}"
+    fi
+    
     # Load configuration from fortress.conf if it exists
     if [[ -f "${CONFIG_FILE}" ]]; then
         log INFO "Loading configuration from ${CONFIG_FILE}"
+        
+        # Save CLI-provided values so they take priority over config
+        local cli_verbose="${VERBOSE}"
+        local cli_dry_run="${DRY_RUN}"
+        local cli_interactive="${INTERACTIVE}"
+        local cli_explain="${EXPLAIN_MODE}"
+        local cli_security_level="${SECURITY_LEVEL}"
+        local cli_enable="${ENABLE_MODULES}"
+        local cli_disable="${DISABLE_MODULES}"
+        local cli_force_desktop="${FORCE_DESKTOP_MODE}"
+        local cli_force_server="${FORCE_SERVER_MODE}"
+        local cli_docker="${ALLOW_DOCKER_FORWARDING}"
+        local cli_browser="${ALLOW_BROWSER_SHAREDMEM}"
         
         # Source the config file
         # shellcheck source=/dev/null
@@ -290,14 +309,19 @@ load_config() {
             esac
         fi
         
-        # Apply config file settings
-        [[ "${VERBOSE:-}" == "true" ]] && VERBOSE=true
-        [[ "${DRY_RUN:-}" == "true" ]] && DRY_RUN=true
-        [[ "${INTERACTIVE:-}" == "false" ]] && INTERACTIVE=false
-        [[ "${FORCE_DESKTOP_MODE:-}" == "true" ]] && FORCE_DESKTOP_MODE=true
-        [[ "${FORCE_SERVER_MODE:-}" == "true" ]] && FORCE_SERVER_MODE=true
-        [[ "${ALLOW_DOCKER_FORWARDING:-}" == "true" ]] && ALLOW_DOCKER_FORWARDING=true
-        [[ "${ALLOW_BROWSER_SHAREDMEM:-}" == "true" ]] && ALLOW_BROWSER_SHAREDMEM=true
+        # CLI arguments override config file values
+        # Only apply config value if CLI value is still at its default
+        [[ "${cli_verbose}" == "true" ]] && VERBOSE=true
+        [[ "${cli_dry_run}" == "true" ]] && DRY_RUN=true
+        [[ "${cli_interactive}" == "false" ]] && INTERACTIVE=false
+        [[ "${cli_explain}" == "true" ]] && EXPLAIN_MODE=true
+        [[ "${cli_security_level}" != "moderate" ]] && SECURITY_LEVEL="${cli_security_level}"
+        [[ -n "${cli_enable}" ]] && ENABLE_MODULES="${cli_enable}"
+        [[ -n "${cli_disable}" ]] && DISABLE_MODULES="${cli_disable}"
+        [[ "${cli_force_desktop}" == "true" ]] && FORCE_DESKTOP_MODE=true
+        [[ "${cli_force_server}" == "true" ]] && FORCE_SERVER_MODE=true
+        [[ "${cli_docker}" == "true" ]] && ALLOW_DOCKER_FORWARDING=true
+        [[ "${cli_browser}" == "true" ]] && ALLOW_BROWSER_SHAREDMEM=true
         
         log SUCCESS "Configuration loaded successfully"
     else
@@ -702,7 +726,7 @@ display_help() {
 ╚══════════════════════════════════════════════════════════════════════════╝
 
 USAGE:
-    sudo ./fortress.sh [OPTIONS]
+    sudo ./fortress_improved.sh [OPTIONS]
 
 OPTIONS:
     -h, --help              Show this help message
@@ -726,26 +750,30 @@ Compatibility Options:
     --force-server           Force server-mode settings
 
 Configuration:
+    -c, --config FILE        Use custom configuration file
     --generate-config        Create fortress.conf template
 
 EXAMPLES:
     # Run with explanations (recommended for learning)
-    sudo ./fortress.sh --explain
+    sudo ./fortress_improved.sh --explain
 
     # Dry run to see what would be done
-    sudo ./fortress.sh --dry-run --verbose
+    sudo ./fortress_improved.sh --dry-run --verbose
 
     # Enable only specific modules
-    sudo ./fortress.sh -e system_update,ssh_hardening,firewall
+    sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
 
     # High security level, non-interactive
-    sudo ./fortress.sh -l high -n
+    sudo ./fortress_improved.sh -l high -n
 
     # Generate configuration file template
-    sudo ./fortress.sh --generate-config
+    sudo ./fortress_improved.sh --generate-config
 
     # Run with Docker compatibility
-    sudo ./fortress.sh --allow-docker
+    sudo ./fortress_improved.sh --allow-docker
+
+    # Use custom configuration file
+    sudo ./fortress_improved.sh -c /path/to/fortress.conf
 
 SECURITY LEVELS:
     low       - Minimal hardening, preserves compatibility
@@ -932,7 +960,7 @@ PermitRootLogin no
 PubkeyAuthentication yes
 PasswordAuthentication no
 PermitEmptyPasswords no
-ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
 UsePAM yes
 
 # Strong cryptography
@@ -1606,7 +1634,7 @@ module_audit() {
         "  • Alert on specific patterns"
     
     execute_command "Installing auditd" \
-        "sudo apt-get install -y auditd audispd-plugins"
+        "sudo apt-get install -y auditd && sudo apt-get install -y audispd-plugins 2>/dev/null || true"
     
     local audit_rules="/etc/audit/rules.d/fortress.rules"
     
@@ -1931,18 +1959,30 @@ module_boot_security() {
         if [[ "${set_grub_pass}" =~ ^[Yy]$ ]]; then
             echo ""
             echo "Enter GRUB password (this will be required to edit boot parameters):"
-            sudo grub-mkpasswd-pbkdf2 | sudo tee /etc/grub.d/40_custom_password > /dev/null
             
-            echo "cat << EOF" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
-            echo "set superusers=\"root\"" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
-            echo "password_pbkdf2 root $(grep 'grub.pbkdf2' /etc/grub.d/40_custom_password | awk '{print $NF}')" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
-            echo "EOF" | sudo tee -a /etc/grub.d/40_custom_password > /dev/null
+            # Capture the password hash from grub-mkpasswd-pbkdf2
+            local grub_hash_output
+            grub_hash_output=$(grub-mkpasswd-pbkdf2 2>&1)
+            local grub_hash
+            grub_hash=$(echo "${grub_hash_output}" | grep 'grub.pbkdf2' | awk '{print $NF}')
             
-            sudo chmod +x /etc/grub.d/40_custom_password
-            execute_command "Updating GRUB configuration" \
-                "sudo update-grub"
-            
-            log SUCCESS "GRUB password set - boot parameters now protected"
+            if [[ -n "${grub_hash}" ]]; then
+                sudo tee /etc/grub.d/40_custom_password > /dev/null << GRUBEOF
+#!/bin/sh
+cat << GRUBCFG
+set superusers="root"
+password_pbkdf2 root ${grub_hash}
+GRUBCFG
+GRUBEOF
+                
+                sudo chmod +x /etc/grub.d/40_custom_password
+                execute_command "Updating GRUB configuration" \
+                    "sudo update-grub"
+                
+                log SUCCESS "GRUB password set - boot parameters now protected"
+            else
+                log ERROR "Failed to generate GRUB password hash"
+            fi
         fi
     fi
     
@@ -2203,7 +2243,7 @@ resolve_dependencies() {
     for dep in ${deps}; do
         local subdeps=($(resolve_dependencies "${dep}"))
         for subdep in "${subdeps[@]}"; do
-            if [[ ! " ${result[@]} " =~ " ${subdep} " ]]; then
+            if [[ ${#result[@]} -eq 0 ]] || [[ ! " ${result[*]} " =~ " ${subdep} " ]]; then
                 result+=("${subdep}")
             fi
         done
@@ -2252,7 +2292,7 @@ execute_modules() {
         
         local deps=($(resolve_dependencies "${module}"))
         for dep in "${deps[@]}"; do
-            if [[ ! " ${execution_order[@]} " =~ " ${dep} " ]]; then
+            if [[ ${#execution_order[@]} -eq 0 ]] || [[ ! " ${execution_order[*]} " =~ " ${dep} " ]]; then
                 execution_order+=("${dep}")
             fi
         done
@@ -2313,7 +2353,7 @@ generate_report() {
     
     if [[ ${#FAILED_MODULES[@]} -gt 0 ]]; then
         failed_list="<div class=\"info-box error\">
-            <h2>❌ Failed Modules</h2>
+            <h2>&#10060; Failed Modules</h2>
             <p><strong>Total Failed:</strong> ${#FAILED_MODULES[@]}</p>
             <p><strong>Modules:</strong> ${FAILED_MODULES[*]}</p>
         </div>"
@@ -2512,6 +2552,10 @@ main() {
                 ;;
             --list-modules)
                 list_modules
+                ;;
+            -c|--config)
+                CONFIG_FILE_OVERRIDE="$2"
+                shift 2
                 ;;
             --generate-config)
                 GENERATE_CONFIG=true
