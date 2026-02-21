@@ -22,7 +22,7 @@
 
 v5.1 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script. See [Critical Warning for Remote Servers](#critical-warning-for-remote-servers) for full setup instructions.
 
-### Scope
+### Notice
 
 This script handles network/system hardening, AppArmor (not SELinux), audit logging and other security features. It does NOT do user group management, SELinux, or touch VFIO/IOMMU configs. Handle those separately before or after running the script.
 
