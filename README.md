@@ -1,9 +1,8 @@
 # FORTRESS.SH :: Debian Linux Defence Configuration
 
-**One-command security hardening that implements many enterprise-grade protections (DISA STIG + CIS) while allowing the user to decide the level of protection / use trade-off. This enables casual use and more strict enforcement.** 
+**One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) while letting you decide the level of protection vs usability trade-off. Casual desktop use through to strict server enforcement.**
 
-**Version 5.1** - Critical Fixes: Docker compatibility, browser support, full configuration file. Tested WORKING on Debian 13, Ubuntu 24.04+. 
-Check Advanced Usage and Quick Reference settings for NEW config feature help etc.
+**Version 5.1** - Critical Fixes: Docker compatibility, browser support, full configuration file. Tested WORKING on Debian 13, Ubuntu 24.04+.
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -11,51 +10,25 @@ Check Advanced Usage and Quick Reference settings for NEW config feature help et
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-5.1-green.svg)]() 
+[![Version](https://img.shields.io/badge/Version-5.1-green.svg)]()
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
 ---
 
-## **CRITICAL WARNING FOR REMOTE SERVER USERS**
+## CRITICAL WARNING FOR REMOTE SERVER USERS
 
-**REMOTE SERVER USERS**: Set up SSH keys FIRST or you WILL be locked out.
+**Set up SSH keys FIRST or you WILL be locked out.**
 
-v5.1 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script.
+v5.1 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script. See [Critical Warning for Remote Servers](#critical-warning-for-remote-servers) for full setup instructions.
 
-### <b> This script does network/system hardening, AppArmor (not SELinux), audit logging and other security features. This script doesn't do User group management, SELinux, or touch VFIO/IOMMU configs, If you need user group stuff, you will want to handle that separately before or after running the script. </b>
+### Scope
 
----
-Added a permissions fix script (fix_library_permissions.sh) in the case shared libraries are preventing apps launching. And an additional diagnostic tool PERM_diagnostic.sh , create a ticket with the output if you need. NEW in v5.1: verify_fortress.sh health check script to validate system after hardening.
-
-## What's New in v5.1
-
-**CRITICAL FIXES** based on Issues #8, #10, #11:
-
-### Fixed:
-* **Issue #8**: Browsers (Firefox, Chrome) no longer break after hardening
-* **Issue #10**: Docker container networking now works properly
-* **Issue #11**: Configuration file (`fortress.conf`) fully functional
-
-### Added:
-* **Docker detection** - Automatically detects Docker/Podman/LXC and adjusts IP forwarding
-* **Browser detection** - Smart /dev/shm handling prevents breaking Firefox/Chrome JIT
-* **Configuration file** - Generate with `--generate-config`, customize all settings
-* **Health verification** - New `verify_fortress.sh` script validates system after hardening
-* **Application detection** - Pre-flight scan warns about potential conflicts
-
-### New CLI Options:
-* `--allow-docker` - Enable IP forwarding for Docker compatibility
-* `--no-docker-compat` - Disable IP forwarding (maximum security, breaks Docker)
-* `--allow-browser-shm` - Skip noexec on /dev/shm (browsers work)
-* `--no-browser-compat` - Apply noexec to /dev/shm (maximum security, breaks browsers)
-* `--force-desktop` - Force desktop-mode settings
-* `--force-server` - Force server-mode settings
-* `--generate-config` - Create fortress.conf template
+This script handles network/system hardening, AppArmor (not SELinux), audit logging and other security features. It does NOT do user group management, SELinux, or touch VFIO/IOMMU configs. Handle those separately before or after running the script.
 
 ---
 
-## 30-Second Quickstart
+## Quick Start
 
 ### Desktop Users:
 
@@ -90,22 +63,18 @@ sudo ./fortress_improved.sh -l high -n
 
 ## Table of Contents
 
-* [Your fresh Linux install isn't secure](#your-fresh-linux-install-isnt-secure)
+* [Your Fresh Linux Install Isn't Secure](#your-fresh-linux-install-isnt-secure)
 * [Who This Is For](#who-this-is-for)
 * [What This Actually Does](#what-this-actually-does)
 * [Desktop Users: This Won't Ruin Your Workflow](#desktop-users-this-wont-ruin-your-workflow)
 * [Critical Warning for Remote Servers](#critical-warning-for-remote-servers)
-* [TL;DR - Quick Commands](#tldr---quick-commands)
-* [Quick Start](#quick-start)
 * [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
-* [Why Each Security Measure Matters](#why-each-security-measure-matters)
-* [What's New in v5.1](#whats-new-in-v51)
-* [What's New in v5.0](#whats-new-in-v50)
+* [What's New](#whats-new)
 * [Installation](#installation)
 * [Usage Guide](#usage-guide)
 * [Security Levels Explained](#security-levels-explained)
 * [Available Modules](#available-modules)
-* [What Gets Hardened?](#what-gets-hardened)
+* [What Gets Hardened](#what-gets-hardened)
 * [Emergency Recovery](#emergency-recovery)
 * [Common Questions](#common-questions)
 * [Troubleshooting](#troubleshooting)
@@ -121,49 +90,29 @@ sudo ./fortress_improved.sh -l high -n
 
 ---
 
-## Your fresh Linux install isn't secure.
+## Your Fresh Linux Install Isn't Secure
 
-Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that prioritize "making things work" over "keeping you safe." This is intentional. Distributions assume you'll configure security later.
+Ubuntu, Fedora, Mint, Kubuntu - they all ship with security settings that prioritise "making things work" over "keeping you safe." This is intentional. Distributions assume you'll configure security later.
 
 **But most people never do.**
 
-**What this means for you right now:**
+Right now, your system likely has: no firewall enabled so any service you run is exposed to the internet, SSH ports wide open to brute force bots trying thousands of passwords per hour, no tracking of failed login attempts giving attackers unlimited tries, no automatic security updates meaning you could be vulnerable for weeks, minimal kernel protections making exploits easier, and no intrusion detection so if someone breaks in you won't know.
 
-* Your firewall probably isn't even enabled - any service you run is exposed to the internet
-* SSH ports are wide open to brute force attacks - bots try thousands of passwords per hour
-* Failed login attempts aren't tracked - attackers get unlimited tries
-* Your system accepts connections you never asked for - port scanners probe you 24/7
-* Critical security updates might not install automatically - you could be vulnerable for weeks
-* The kernel runs with minimal protections - exploits are easier to pull off
-* No intrusion detection - if someone breaks in, you won't know
-
-**This isn't a Linux flaw** - it's a conscious trade-off. Distributions prioritize compatibility and ease-of-use for new users. That's great for getting started, but terrible for security.
+**This isn't a Linux flaw** - it's a conscious trade-off. Distributions prioritise compatibility and ease-of-use for new users. Great for getting started, terrible for security.
 
 ---
 
 ## Who This Is For
 
-### You, if you:
+**You, if you:** game on Linux and want security without FPS loss, create art/music/videos without security getting in the way, work from home and need basic protection, just want a secure personal computer that works normally, are tired of complicated security guides written for sysadmins, run a home server or self-host services, develop software and want security without breaking your tools, are learning Linux and want to start with good habits, or want to understand security rather than just blindly apply it.
 
-* **Game on Linux** and want to stay secure without / minimal FPS loss
-* **Create art, music, or videos** without security getting in your way
-* **Work from home** and need basic protection
-* **Just want a secure personal computer** that works normally
-* **Are tired of complicated security guides** written for sysadmins
-* **Run a home server** or self-host services
-* **Develop software** and want security without breaking your tools
-* **Are learning Linux** and want to start with good habits
-* **Want to understand security** - not just blindly apply it
-
-### What makes this different:
-
-This script applies **industry-standard security WITHOUT breaking your desktop experience.** No more choosing between security and usability. **v5.1 also intelligently detects Docker and browsers to avoid breaking them.**
+**What makes this different:** This script applies industry-standard security WITHOUT breaking your desktop experience. No more choosing between security and usability. v5.1 also intelligently detects Docker and browsers to avoid breaking them.
 
 ---
 
 ## What This Actually Does
 
-Instead of spending 40+ hours reading security guides and manually configuring dozens of tools, this script:
+Instead of spending 40+ hours reading security guides and manually configuring dozens of tools, this script handles it in one go.
 
 ### Security You Get:
 
@@ -175,76 +124,33 @@ Instead of spending 40+ hours reading security guides and manually configuring d
 * Enforces strong passwords - because "password123" is still too common
 * Enables automatic security updates - patches critical bugs while you sleep
 * Configures audit logging - forensics and evidence if something happens
-* Applies kernel hardening - makes exploits far harder to pull off
 * Verifies boot security - checks Secure Boot status and guides configuration
 * Removes unnecessary packages - smaller attack surface
 
-### Things That should KEEP Working:
+### Things That Should Keep Working:
 
 * Steam and all your games (zero/low FPS impact)
 * Discord, Zoom, Slack, Teams
-* Wacom tablets and drawing tools
-* Audio production (Jack, PipeWire, ALSA)
-* Video editing (DaVinci, Kdenlive, OBS)
-* Game development (Godot, Unity, Unreal)
+* Wacom tablets, drawing tools, pen pressure and tilt
+* Audio production (Jack, PipeWire, ALSA) - real-time scheduling preserved
+* Video editing (DaVinci Resolve, Kdenlive, OBS) - hardware encoding intact
+* Game development (Godot, Unity, Unreal) - build processes unaffected
 * Bluetooth audio and devices
 * Network printers and file sharing
 * KDE Connect phone integration
 * USB devices (with optional logging)
 * RGB peripherals and gaming gear
 * Virtual machines (VirtualBox, QEMU)
-* Docker and development tools
+* Docker and development tools (v5.1 conditional IP forwarding)
 * Firefox, Chrome, Brave browsers (v5.1 smart /dev/shm handling)
-* Docker container networking (v5.1 conditional IP forwarding)
 
 ---
 
 ## Desktop Users: This Won't Ruin Your Workflow
 
-The script:
+The script detects desktop environments automatically and knows you're not a server. It asks before blocking features like mDNS (network discovery), KDE Connect, and Samba. Gaming functionality is preserved with no/little impact on Steam, Lutris, or Proton. There are no background processes eating CPU/GPU. Audio production, creative tools, and Bluetooth all work as normal. It uses "moderate" security by default (balanced, not paranoid), creates automatic backups before every change, and explains each action in educational mode with the `--explain` flag.
 
-* **Detects desktop environments automatically** - knows you're not a server
-* **Asks before blocking features** like mDNS (network discovery), KDE Connect, and Samba
-* **Preserves gaming functionality** - no/little impact on Steam, Lutris, or Proton
-* **Zero performance impact** - no background processes eating CPU/GPU
-* **Audio production safe** - Jack, PipeWire, ALSA untouched
-* **Creative tools work** - Wacom, DaVinci, Blender all function normally
-* **Bluetooth works** - headphones, mice, controllers all fine
-* **Uses "moderate" security by default** - balanced, not paranoid
-* **Creates automatic backups** before every change
-* **Explains each action** in educational mode (--explain flag)
-
-**At "moderate" level:** (the default), you won't even notice the changes. Your computer will feel exactly the same, just with far fewer security holes.
-
-### Special Considerations for Creative Users
-
-**Digital Art:**
-
-* Wacom/Huion tablets work perfectly
-* Krita, GIMP, Blender unchanged
-* Pen pressure and tilt functional
-* USB tablets logged but not blocked
-
-**Video Editing:**
-
-* DaVinci Resolve (all features work)
-* Kdenlive, OpenShot, Shotcut
-* Hardware encoding intact
-* Proxy workflows unaffected
-
-**Audio Production:**
-
-* Jack, PipeWire, PulseAudio all work
-* Real-time kernel scheduling preserved
-* Low-latency monitoring works
-* USB audio interfaces function normally
-
-**Game Development:**
-
-* Godot, Unity, Unreal work fine
-* Build processes unaffected
-* Steam integration intact
-* Version control (Git) works
+**At "moderate" level** (the default), you won't even notice the changes. Your computer will feel exactly the same, just with far fewer security holes.
 
 ---
 
@@ -252,9 +158,7 @@ The script:
 
 ### YOU WILL LOCK YOURSELF OUT IF YOU SKIP THIS SECTION
 
-This script **disables password authentication for SSH** and switches to key-only authentication. This is the single most effective security improvement you can make for SSH.
-
-**But if you don't have SSH keys set up BEFORE running this script, you will be permanently locked out of your server.**
+This script **disables password authentication for SSH** and switches to key-only authentication. This is the single most effective security improvement you can make for SSH. But if you don't have SSH keys set up BEFORE running this script, you will be permanently locked out of your server.
 
 ### Before Running This Script on ANY Remote Server:
 
@@ -272,355 +176,73 @@ ssh -i ~/.ssh/id_ed25519 username@your-server-ip
 # ONLY THEN run the hardening script on the server
 ```
 
-**v5.0 Safety Features:**
+**Safety features built into the script:** It detects if SSH server is running, requires explicit "yes" confirmation that you have working SSH keys, provides setup instructions if you don't have keys, gives multiple warnings before disabling password auth, validates configuration before applying changes, and auto-rolls back on SSH configuration errors.
 
-* Script detects if SSH server is running
-* Requires explicit "yes" confirmation that you have working SSH keys
-* Provides setup instructions if you don't have keys
-* Multiple warnings before disabling password auth
-* Configuration validation before applying changes
-* Auto-rollback on SSH configuration errors
+**If you still lock yourself out:** You'll need physical access to the server (or console access from your hosting provider) to restore `/etc/ssh/sshd_config` from the backup.
 
-**If you still lock yourself out:**
-
-You'll need physical access to the server (or console access from your hosting provider) to restore `/etc/ssh/sshd_config` from the backup.
-
-### For Desktop Users:
-
-If you don't use SSH to remotely access your computer, this doesn't affect you. The script will detect this and handle it appropriately.
-
----
-
-## TL;DR - Quick Commands
-
-### First Time Setup:
-
-```bash
-# Learn what the script does (RECOMMENDED)
-sudo ./fortress_improved.sh --explain --dry-run
-
-# See what would change without making changes
-sudo ./fortress_improved.sh --dry-run
-
-# Apply default hardening (interactive)
-sudo ./fortress_improved.sh
-
-# High security, non-interactive (servers)
-sudo ./fortress_improved.sh -l high -n
-```
-
-### Selective Hardening:
-
-```bash
-# Only specific modules
-sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
-
-# Skip certain modules
-sudo ./fortress_improved.sh -x fail2ban,usb_protection
-
-# List all available modules
-sudo ./fortress_improved.sh --list-modules
-```
-
-### Monitoring After Hardening:
-
-```bash
-# Check firewall status
-sudo ufw status verbose
-
-# Check AppArmor status
-sudo aa-status
-
-# View recent authentication attempts
-sudo ausearch -m USER_LOGIN -ts recent
-
-# Verify package integrity
-dpkg --verify
-
-# Check if fail2ban is active (if installed)
-sudo fail2ban-client status
-```
-
----
-
-## Quick Start
-
-### Step 1: Download
-
-```bash
-wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/fortress_improved.sh
-chmod +x fortress_improved.sh
-```
-
-### Step 2: Preview Changes (Recommended)
-
-```bash
-# Educational mode - learn about each security measure
-sudo ./fortress_improved.sh --explain --dry-run
-
-# Or just see what would change
-sudo ./fortress_improved.sh --dry-run --verbose
-```
-
-### Step 3: Apply Hardening
-
-**Desktop (Interactive):**
-
-```bash
-sudo ./fortress_improved.sh
-```
-
-**Server (Non-Interactive):**
-
-```bash
-# Make sure SSH keys are set up first!
-sudo ./fortress_improved.sh -l high -n
-```
-
-### Step 4: Review and Reboot
-
-```bash
-# Check the HTML report
-cat /root/fortress_report_*.html
-
-# Review the log
-tail -100 /var/log/fortress_hardening.log
-
-# Reboot to apply all changes
-sudo reboot
-```
+**For desktop users:** If you don't use SSH to remotely access your computer, this doesn't affect you. The script will detect this and handle it appropriately.
 
 ---
 
 ## Why This Matters - Real-World Attacks
 
-### Attack #1: The Brute Force Bot
+### The Brute Force Bot
 
-**What happens without this script:**
+Without this script, your SSH port (22) is open to the internet. Automated bots try 10,000+ password combinations per hour. Eventually, a weak password gets cracked.
 
-Your SSH port (22) is open to the internet. Automated bots try 10,000+ password combinations per hour. Eventually, a weak password gets cracked. Game over.
+**What this script does:** Disables password authentication completely (key-only access), optionally changes SSH port, rate limits connection attempts, and offers optional fail2ban for additional services.
 
-**What this script does:**
+**Why fail2ban is optional:** With password auth disabled and key-only SSH, brute force attacks become impossible. The script intelligently detects this and recommends skipping fail2ban unless you have web/mail servers that benefit from it.
 
-* Disables password authentication completely (key-only access)
-* Changes SSH port (optional)
-* Rate limits connection attempts
-* Optional fail2ban for additional services
+### The Kernel Exploit
 
-**Why fail2ban is optional in v5.0:** With password auth disabled and key-only SSH, brute force attacks become impossible. The script intelligently detects this and recommends skipping fail2ban unless you have web/mail servers that benefit from it.
+A vulnerability in the Linux kernel allows attackers to escalate privileges, going from limited user to root access.
 
-### Attack #2: The Kernel Exploit
+**What this script does:** Enables kernel hardening (sysctl parameters), restricts access to kernel symbols, enables ASLR (Address Space Layout Randomization), and configures memory protections.
 
-**What happens without this script:**
-
-A vulnerability in the Linux kernel allows attackers to escalate privileges. They go from limited user to root access.
-
-**What this script does:**
-
-* Enables kernel hardening (sysctl parameters)
-* Restricts access to kernel symbols
-* Enables ASLR (Address Space Layout Randomization)
-* Configures memory protections
-
-### Attack #3: The Supply Chain Attack
-
-**What happens without this script:**
+### The Supply Chain Attack
 
 A compromised package update installs malware. You don't notice until your data is encrypted or stolen.
 
-**What this script does:**
+**What this script does:** Weekly package integrity verification using dpkg, audit logging for file changes, system file monitoring for tampering, and AppArmor to limit what processes can do.
 
-* **NEW in v5.0:** Weekly package integrity verification using dpkg
-* Enables audit logging for file changes
-* Monitors system files for tampering
-* AppArmor limits what processes can do
+**Note:** v5.0 removed AIDE because it can't detect kernel-level rootkits on live systems. dpkg's built-in verification is more appropriate for package integrity checking.
 
-**Note:** v5.0 removed AIDE because it can't detect kernel-level rootkits on live systems. Instead, we use dpkg's built-in verification which is more appropriate for package integrity checking.
-
-### Attack #4: The Physical Access Attack
-
-**What happens without this script:**
+### The Physical Access Attack
 
 Someone boots your computer from USB, mounts your drive, and steals everything.
 
-**What this script does:**
-
-* **NEW in v5.0:** Verifies Secure Boot status
-* Provides instructions for enabling Secure Boot in BIOS
-* Sets GRUB bootloader password
-* Restricts boot parameter modification
-* Secures boot configuration files
+**What this script does:** Verifies Secure Boot status, provides instructions for enabling Secure Boot in BIOS, sets GRUB bootloader password, restricts boot parameter modification, and secures boot configuration files.
 
 ---
 
-## Why Each Security Measure Matters
+## What's New
 
-### System Updates (Priority #1)
+### v5.1 - Compatibility Edition
 
-**The single most important security measure.** Most attacks exploit known vulnerabilities that already have patches available.
+**Critical fixes** based on Issues #8, #10, #11:
 
-* Automatic security updates keep you protected
-* Kernel vulnerabilities are patched quickly
-* Critical bugs fixed before exploits appear
+**Fixed:** Browsers (Firefox, Chrome) no longer break after hardening (Issue #8), Docker container networking now works properly (Issue #10), and the configuration file (`fortress.conf`) is fully functional (Issue #11).
 
-**v5.0 explains:** Why this is more important than any other hardening measure.
+**Added:** Docker/Podman/LXC detection with conditional IP forwarding, browser detection with smart /dev/shm handling, full configuration file support (`--generate-config`), health verification script (`verify_fortress.sh`), pre-flight application detection, and new CLI options for compatibility control.
 
-### SSH Hardening
+**New CLI Options:**
 
-**If you use remote access, this prevents 99% of SSH attacks.**
+* `--allow-docker` - Enable IP forwarding for Docker compatibility
+* `--no-docker-compat` - Disable IP forwarding (maximum security, breaks Docker)
+* `--allow-browser-shm` - Skip noexec on /dev/shm (browsers work)
+* `--no-browser-compat` - Apply noexec to /dev/shm (maximum security, breaks browsers)
+* `--force-desktop` - Force desktop-mode settings
+* `--force-server` - Force server-mode settings
+* `--generate-config` - Create fortress.conf template
 
-* Password auth disabled (keys only)
-* Root login disabled
-* Strong ciphers enforced
-* Connection rate limiting
+### v5.0 - Educational Edition
 
-**v5.0 improvements:** Multiple safety checks prevent lockouts, explains why fail2ban is NOT needed with key-only auth.
+**Major rewrite** with a complete philosophical shift from "automate everything" to "educate and execute intelligently."
 
-### Firewall (UFW)
+**Removed (security theatre):** AIDE (replaced with dpkg verification), IPv6 disable (not a security feature), ClamAV (minimal Linux benefit), lynis_audit (run separately), rootkit_scanner (false sense of security).
 
-**Blocks unexpected network connections.**
-
-* Default deny incoming
-* Allow only needed services
-* Logs blocked attempts
-* Prevents backdoor connections
-
-**v5.0 intelligently:** Detects running services and opens only necessary ports.
-
-### Kernel Hardening (sysctl)
-
-**Makes kernel exploits harder.**
-
-* ASLR randomizes memory layout
-* Restricts kernel symbols access
-* Protects against memory attacks
-* Hardens network stack
-
-**v5.0 explains:** What each parameter does and why it matters.
-
-### Package Verification (NEW in v5.0)
-
-**Detects package tampering and corruption.**
-
-* Uses dpkg's built-in MD5 checksums
-* Weekly automated verification
-* Alerts on anomalies
-* Honest about limitations (can't detect kernel rootkits)
-
-**Replaced AIDE because:** AIDE on live systems can't detect sophisticated attacks and generates false positives with generic configs.
-
-### Secure Boot Verification (NEW in v5.0)
-
-**Prevents boot-level malware.**
-
-* Checks if Secure Boot is enabled
-* Provides BIOS setup instructions
-* Verifies bootloader signatures
-* Protects against bootkits
-
-**Note:** Script can't auto-enable Secure Boot (requires BIOS config), but guides you through the process.
-
-### Audit Logging
-
-**Records security-relevant events for forensics.**
-
-* Tracks authentication attempts
-* Logs file access to sensitive files
-* Monitors privilege escalation
-* Creates tamper-resistant logs
-
-**v5.0 explains:** What auditd can and can't detect, when to use it.
-
-### Automatic Updates
-
-**Applies security patches automatically.**
-
-* Daily checks for updates
-* Installs security fixes
-* Removes old kernels
-* Optional reboot scheduling
-
-**v5.0 improved:** Better configuration, explains trade-offs.
-
-### AppArmor
-
-**Limits what programs can do, even if compromised.**
-
-* Mandatory access control
-* Restricts file access
-* Prevents privilege escalation
-* Logs policy violations
-
-**v5.0 explains:** How AppArmor works and its limitations.
-
-### Password Policy
-
-**Enforces strong passwords.**
-
-* Minimum length (12+ characters)
-* Complexity requirements
-* Password history
-* Account lockout
-
-**v5.0 notes:** This only matters if password auth is enabled. With SSH keys, password policy is less critical.
-
-### fail2ban (Optional in v5.0)
-
-**Bans IPs with suspicious behavior.**
-
-* Monitors log files
-* Detects brute force attempts
-* Automatically blocks attackers
-* Configurable ban duration
-
-**v5.0 intelligence:** Only recommends installation if you have services that benefit (web/mail servers). Explains why it's unnecessary with key-only SSH.
-
-### Shared Memory Security
-
-**Prevents shared memory exploits.**
-
-* Mount /dev/shm with nosuid
-* Prevents SUID execution
-* Blocks device creation
-* Restricts shared memory attacks
-
-### Boot Security
-
-**Protects boot process.**
-
-* Secure Boot verification
-* GRUB password protection
-* Boot parameter restrictions
-* Bootloader file permissions
-
-### Root Access Restrictions
-
-**Forces use of sudo.**
-
-* Direct root login disabled
-* All actions traceable to users
-* Accountability and audit trail
-* Least privilege principle
-
-### USB Protection (Optional)
-
-**Controls USB device access.**
-
-* Prevents auto-mounting
-* Logs USB connections
-* Optional device whitelisting
-* Reduces attack surface
-
-**v5.0 intelligence:** Desktop detection - asks before applying USB restrictions that might interfere with normal use.
-
-### Unused Filesystem Disable
-
-**Reduces kernel attack surface.**
-
-* Disables rarely-used filesystems
-* Fewer kernel modules loaded
-* Smaller attack surface
-* Prevents obscure exploits
+**Added:** Educational mode (`--explain` flag), Secure Boot verification, package verification (dpkg-based, weekly cron), intelligent module recommendations, SSH lockout prevention (multiple safety checks), honest limitation statements.
 
 ---
 
@@ -646,10 +268,9 @@ chmod +x fortress_improved.sh
 sudo ./fortress_improved.sh --explain --dry-run
 ```
 
-### Manual Install:
+### Clone the Repository:
 
 ```bash
-# Clone repository
 git clone https://github.com/captainzero93/security_harden_linux.git
 cd security_harden_linux
 
@@ -663,6 +284,10 @@ less fortress_improved.sh
 sudo ./fortress_improved.sh
 ```
 
+### Helper Scripts:
+
+There's a permissions fix script (`fix_library_permissions.sh`) in case shared libraries are preventing apps from launching, a diagnostic tool (`PERM_diagnostic.sh`) - create a ticket with the output if you need help, and a health check script (`verify_fortress.sh`) to validate the system after hardening.
+
 ---
 
 ## Usage Guide
@@ -673,17 +298,30 @@ sudo ./fortress_improved.sh
 # Educational mode - learn about each action
 sudo ./fortress_improved.sh --explain
 
-# Dry run - see what would change
+# Dry run - see what would change without making changes
 sudo ./fortress_improved.sh --dry-run
 
-# Default hardening (moderate level)
+# Default hardening (moderate level, interactive)
 sudo ./fortress_improved.sh
 
 # High security level
 sudo ./fortress_improved.sh -l high
 
-# Non-interactive mode
+# Non-interactive mode (servers)
 sudo ./fortress_improved.sh -n
+```
+
+### Selective Hardening:
+
+```bash
+# Only specific modules
+sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
+
+# Skip certain modules
+sudo ./fortress_improved.sh -x fail2ban,usb_protection
+
+# List all available modules
+sudo ./fortress_improved.sh --list-modules
 ```
 
 ### Advanced Options:
@@ -695,39 +333,53 @@ sudo ./fortress_improved.sh --explain -d -v
 # Specific security level
 sudo ./fortress_improved.sh -l paranoid
 
-# Enable only specific modules
-sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
-
-# Disable specific modules
-sudo ./fortress_improved.sh -x fail2ban,usb_protection
-
 # Use custom config file
 sudo ./fortress_improved.sh -c /path/to/config.conf
-
-# List all available modules
-sudo ./fortress_improved.sh --list-modules
 
 # Show version
 sudo ./fortress_improved.sh --version
 ```
 
-### Understanding the --explain Flag (NEW in v5.0):
+### The --explain Flag
 
-```bash
-sudo ./fortress_improved.sh --explain
-```
-
-This mode shows detailed explanations before each module:
-
-* What the module does
-* Why it matters (threat model)
-* What attacks it prevents
-* Trade-offs and limitations
-* What it CAN'T protect against
-* Common misconceptions
-* Alternative approaches
+This mode shows detailed explanations before each module: what the module does, why it matters (threat model), what attacks it prevents, trade-offs and limitations, what it CAN'T protect against, common misconceptions, and alternative approaches.
 
 **Use this to learn security, not just apply it blindly.**
+
+### After Hardening:
+
+```bash
+# Run health verification
+sudo ./verify_fortress.sh
+
+# Check the HTML report
+cat /root/fortress_report_*.html
+
+# Review the log
+tail -100 /var/log/fortress_hardening.log
+
+# Reboot to apply all changes
+sudo reboot
+```
+
+### Monitoring:
+
+```bash
+# Check firewall status
+sudo ufw status verbose
+
+# Check AppArmor status
+sudo aa-status
+
+# View recent authentication attempts
+sudo ausearch -m USER_LOGIN -ts recent
+
+# Verify package integrity
+dpkg --verify
+
+# Check if fail2ban is active (if installed)
+sudo fail2ban-client status
+```
 
 ---
 
@@ -735,85 +387,41 @@ This mode shows detailed explanations before each module:
 
 ### Low (Basic Protection)
 
-**For:** Testing, compatibility checking, minimal disruption
+**For:** Testing, compatibility checking, minimal disruption.
 
-**What it does:**
-
-* Updates system packages
-* Enables basic firewall
-* Configures automatic updates
-* Basic audit logging
-
-**What it skips:**
-
-* SSH hardening
-* AppArmor enforcement
-* Strict kernel parameters
-* Optional modules
+Applies: system updates, basic firewall, automatic updates, basic audit logging. Skips: SSH hardening, AppArmor enforcement, strict kernel parameters, optional modules.
 
 **Use when:** You want security without any risk of breaking things.
 
 ### Moderate (Recommended Default)
 
-**For:** Desktop users, home servers, balanced security
+**For:** Desktop users, home servers, balanced security.
 
-**What it does:**
-
-* All "Low" features
-* SSH hardening (if SSH installed)
-* Kernel hardening
-* AppArmor enforcement
-* Package verification
-* Boot security checks
-
-**What it skips:**
-
-* Aggressive restrictions
-* USB blocking (asks first)
-* Paranoid settings
+Applies: Everything in Low, plus SSH hardening (if SSH installed), kernel hardening, AppArmor enforcement, package verification, boot security checks. Skips: Aggressive restrictions, USB blocking (asks first), paranoid settings.
 
 **Use when:** You want good security that doesn't interfere with normal use.
 
 ### High (Production Servers)
 
-**For:** Servers, high-value targets, stricter security
+**For:** Servers, high-value targets, stricter security.
 
-**What it does:**
-
-* All "Moderate" features
-* Stricter kernel parameters
-* Full audit logging
-* USB restrictions
-* All hardening modules
-
-**What it skips:**
-
-* Extreme paranoia settings
-* Features that might break software
+Applies: Everything in Moderate, plus stricter kernel parameters, full audit logging, USB restrictions, all hardening modules. Skips: Extreme paranoia settings, features that might break software.
 
 **Use when:** Security is more important than convenience.
 
 ### Paranoid (Maximum Security)
 
-**For:** High-security environments, compliance requirements
+**For:** High-security environments, compliance requirements.
 
-**What it does:**
-
-* Everything at maximum settings
-* Most restrictive parameters
-* Full monitoring
-* All security modules
-* Aggressive restrictions
+Applies everything at maximum settings with the most restrictive parameters, full monitoring, and aggressive restrictions.
 
 **Warning:** May break some applications. Test thoroughly.
-
-**Use when:** You need maximum security and are willing to troubleshoot issues.
 
 ---
 
 ## Available Modules
 
-v5.0 includes 17 security modules (reduced from 21 - removed security theater):
+v5.0 includes 17 security modules (reduced from 21 - removed security theatre):
 
 ### Core Modules (Always Recommended):
 
@@ -827,27 +435,27 @@ v5.0 includes 17 security modules (reduced from 21 - removed security theater):
 
 ### Security Modules:
 
-8. **package_verification** - Weekly dpkg integrity checks (NEW in v5.0)
-9. **boot_security** - Secure Boot verification and GRUB password (IMPROVED in v5.0)
+8. **package_verification** - Weekly dpkg integrity checks
+9. **boot_security** - Secure Boot verification and GRUB password
 10. **password_policy** - Strong password requirements
-11. **ntp** - Time synchronization
+11. **ntp** - Time synchronisation
 12. **secure_shared_memory** - Shared memory protections
 13. **root_access** - Disable direct root login
 
 ### Optional Modules:
 
-14. **fail2ban** - IP banning (optional, contextual in v5.0)
+14. **fail2ban** - IP banning (optional, contextual)
 15. **packages** - Remove unnecessary software
 16. **usb_protection** - USB device restrictions
 17. **filesystems** - Disable unused filesystems
 
-### Removed in v5.0 (Security Theater):
+### Removed in v5.0 (Security Theatre):
 
 * ~~aide~~ - Replaced with package_verification (dpkg-based)
 * ~~ipv6~~ - Not a security feature, removed entirely
 * ~~clamav~~ - Minimal Linux benefit, install separately if needed
 * ~~lynis_audit~~ - Run separately, removed for focus
-* ~~rootkit_scanner~~ - Can't detect kernel rootkits, removed
+* ~~rootkit_scanner~~ - Can't detect kernel rootkits, false sense of security
 
 ### Module Selection:
 
@@ -864,35 +472,33 @@ sudo ./fortress_improved.sh --list-modules
 
 ---
 
-## What Gets Hardened?
+## What Gets Hardened
 
 ### Network Security:
 
-* **Firewall (UFW):** Enabled with intelligent port opening
-* **SSH:** Key-only auth, strong ciphers, root login disabled
+* **Firewall (UFW):** Enabled with intelligent port opening, default deny incoming
+* **SSH:** Key-only auth, strong ciphers, root login disabled, connection rate limiting
 * **fail2ban (optional):** Only if beneficial for your services
-* **Network parameters:** SYN cookies, ICMP redirects disabled, IP forwarding off
+* **Network parameters:** SYN cookies, ICMP redirects disabled, IP forwarding off (unless Docker detected)
 
 ### System Security:
 
-* **Kernel:** ASLR enabled, kernel symbols restricted, memory protections
-* **Boot:** Secure Boot verification, GRUB password, boot security
-* **Packages:** Integrity verification (dpkg), automatic security updates
+* **Kernel:** ASLR enabled, kernel symbols restricted, memory protections, hardened network stack
+* **Boot:** Secure Boot verification, GRUB password, boot parameter restrictions
+* **Packages:** Integrity verification (dpkg), automatic security updates, unnecessary packages removed
 * **AppArmor:** Mandatory access control enabled and enforcing
-* **Audit:** Comprehensive logging of security events
 
 ### Access Control:
 
 * **SSH:** Password auth disabled, key-only access
-* **Root:** Direct root login disabled, sudo required
-* **Passwords:** Strong policy enforced (if used)
-* **USB (optional):** Device restrictions and logging
+* **Root:** Direct root login disabled, sudo required, all actions traceable
+* **Passwords:** Strong policy enforced (12+ chars, complexity, lockout)
+* **USB (optional):** Device restrictions, logging, optional whitelisting
 
 ### Monitoring:
 
 * **Audit logs:** Authentication, file changes, privilege escalation
 * **Package verification:** Weekly dpkg checks for tampering
-* **fail2ban (optional):** Monitors and bans malicious IPs
 * **AppArmor:** Logs policy violations
 
 ### Files Changed:
@@ -905,23 +511,15 @@ sudo ./fortress_improved.sh --list-modules
 * `/etc/apt/apt.conf.d/50unattended-upgrades` - Auto updates
 * `/etc/fstab` - Shared memory mount options
 * `/etc/modprobe.d/fortress-filesystems.conf` - Disabled filesystems
-* `/etc/cron.weekly/fortress-verify-packages` - Package verification (NEW)
+* `/etc/cron.weekly/fortress-verify-packages` - Package verification
 
-### Backups Created:
-
-All modified files are backed up to:
-
-* `/root/fortress_backups_TIMESTAMP/`
-
-Original files can be restored from these backups.
+All modified files are backed up to `/root/fortress_backups_TIMESTAMP/` before changes are made.
 
 ---
 
 ## Emergency Recovery
 
-### SSH Lockout Recovery:
-
-**If you can't log in via SSH:**
+### SSH Lockout:
 
 1. Access server via console (physical or VPS console)
 2. Restore SSH config:
@@ -929,14 +527,9 @@ Original files can be restored from these backups.
    sudo cp /root/fortress_backups_*/etc/ssh/sshd_config /etc/ssh/sshd_config
    sudo systemctl restart sshd
    ```
-3. Set up SSH keys properly
-4. Re-run hardening script
+3. Set up SSH keys properly, then re-run the hardening script
 
-**v5.0 Prevention:** Multiple confirmation prompts and SSH key verification before disabling password auth.
-
-### Firewall Issues:
-
-**If firewall blocks something you need:**
+### Firewall Blocking Something:
 
 ```bash
 # Allow specific port
@@ -951,24 +544,17 @@ sudo ufw enable
 
 ### Boot Failure:
 
-**If system won't boot:**
-
 1. Boot into recovery mode (hold Shift during boot)
 2. Select "Drop to root shell prompt"
-3. Remount filesystem:
+3. Restore:
    ```bash
    mount -o remount,rw /
-   ```
-4. Restore GRUB config:
-   ```bash
    cp /root/fortress_backups_*/etc/default/grub /etc/default/grub
    update-grub
+   reboot
    ```
-5. Reboot
 
 ### Full System Restore:
-
-**To restore all changes:**
 
 ```bash
 # Restore all configuration files from backup
@@ -989,102 +575,27 @@ sudo reboot
 
 ## Common Questions
 
-### Q: Will this break my system?
+### Will this break my system?
 
-**A:** Unlikely. The script:
+Unlikely. The script creates backups before all changes, has been tested on multiple distributions, uses safe defaults at "moderate" level, and includes rollback functionality with multiple safety checks. But always test in a VM first, especially at "high" or "paranoid" levels.
 
-* Creates backups before all changes
-* Has been tested on multiple distributions
-* Uses safe defaults at "moderate" level
-* Includes rollback functionality
-* v5.0 adds multiple safety checks
+### Will this slow down my computer?
 
-**But:** Always test in a VM first, especially at "high" or "paranoid" levels.
+No. There are no background processes eating resources, no FPS impact on games, no audio latency increase, and kernel hardening has negligible performance cost. You won't notice a difference.
 
-### Q: What if I lock myself out of SSH?
+### Why did you remove AIDE, ClamAV, and IPv6 disable?
 
-**A:** v5.0 has multiple safeguards:
+AIDE on live systems can't detect kernel rootkits, generates false positives with generic configs, and dpkg already has built-in file verification. ClamAV has minimal effectiveness on Linux and mainly useful for mail servers scanning Windows attachments. IPv6 disable was security theatre - it doesn't improve security and can break things like Docker and modern networks. All removed in v5.0 based on community feedback.
 
-* Detects if SSH keys are set up
-* Requires explicit "yes" confirmation
-* Provides SSH key setup instructions
-* Validates SSH config before applying
-* Auto-rollbacks on SSH errors
+### Why is fail2ban optional?
 
-You'd need to ignore multiple warnings to lock yourself out.
+With SSH password auth disabled and key-only access, brute force attacks become impossible, so fail2ban provides no additional SSH protection. It IS still useful for web servers, mail servers, and other password-authenticated services. The script detects your setup and recommends accordingly.
 
-**If it happens:** Console access required to restore `/etc/ssh/sshd_config` from backup.
+### Can I use this on a Raspberry Pi?
 
-### Q: Why did you remove AIDE?
+Yes, but use "low" or "moderate" level, test thoroughly, and note that some modules may not apply to ARM.
 
-**A:** Community feedback revealed that:
-
-* AIDE on live systems can't detect kernel rootkits
-* Generic AIDE configs generate false positives
-* dpkg already has built-in file verification
-* Sophisticated malware can hide from AIDE
-
-v5.0 uses `dpkg --verify` which is more appropriate for package integrity checking.
-
-### Q: Why is fail2ban optional now?
-
-**A:** With SSH password auth disabled and key-only access:
-
-* Brute force attacks become impossible
-* Failed login attempts are harmless
-* fail2ban provides no additional SSH protection
-
-fail2ban IS still useful for:
-* Web servers with authentication
-* Mail servers
-* Other password-authenticated services
-
-v5.0 intelligently detects your setup and recommends accordingly.
-
-### Q: What happened to IPv6 disable?
-
-**A:** It was security theater. Disabling IPv6:
-
-* Doesn't improve security
-* Can break things (Docker, modern networks)
-* Is not a recognized security best practice
-
-Removed in v5.0 based on community feedback.
-
-### Q: Will this slow down my computer?
-
-**A:** No. The script:
-
-* Doesn't add background processes
-* No FPS impact on games
-* No audio latency increase
-* Kernel hardening has negligible performance cost
-
-You won't notice any performance difference.
-
-### Q: Can I use this on a Raspberry Pi?
-
-**A:** Yes, but:
-
-* Use "low" or "moderate" level
-* May need to adjust for ARM-specific settings
-* Test thoroughly first
-* Some modules may not apply to ARM
-
-### Q: What about ClamAV antivirus?
-
-**A:** Removed in v5.0 because:
-
-* Minimal effectiveness on Linux
-* Mainly useful for mail servers scanning Windows attachments
-* Causes performance overhead
-* Rarely catches actual Linux threats
-
-Install separately if you need it for a mail server.
-
-### Q: How do I verify packages now without AIDE?
-
-**A:** v5.0 uses dpkg verification:
+### How do I verify packages now?
 
 ```bash
 # Manual check
@@ -1097,36 +608,27 @@ cat /etc/cron.weekly/fortress-verify-packages
 ls -lht /var/log/fortress_package_verification_*.txt
 ```
 
-### Q: What's this --explain mode?
+### Does this replace professional security audits?
 
-**A:** NEW in v5.0. Educational mode that shows:
+No. This provides a solid security foundation and protection against common attacks. It does NOT replace professional assessment, guarantee 100% security, provide monitoring/incident response, or configure application-specific security.
 
-* What each module does
-* Why it matters (threat model)
-* What attacks it prevents
-* Limitations and trade-offs
-* Common misconceptions
+### Can I run this multiple times?
 
-Run with: `sudo ./fortress_improved.sh --explain`
+Yes. First run creates the configuration, subsequent runs update/reapply settings. Each run creates new backups. Safe to re-run after system updates.
 
-**Use it to learn security, not just apply it.**
+### What if a module fails?
 
-### Q: Does this replace professional security audits?
+The script logs all errors, continues with remaining modules, tracks which modules failed, and creates an HTML report showing failures. Check `/var/log/fortress_hardening.log` for details.
 
-**A:** No. This provides:
+### Is this suitable for production servers?
 
-* Solid security foundation
-* Best practices implementation
-* Protection against common attacks
+Yes, with caveats: test in staging first, use "high" security level, review all changes, ensure SSH keys are set up, have console access available, and consider a professional assessment.
 
-**It does NOT:**
+### What distributions are supported?
 
-* Replace professional assessment
-* Guarantee 100% security
-* Provide monitoring/incident response
-* Configure application-specific security
+Tested on Ubuntu 22.04, 24.04, 25.10, Debian 11, 12, 13, Kubuntu 24.04+, Linux Mint 21+, and Pop!\_OS 22.04+. Should work on any Debian-based distribution.
 
-### Q: How do I update the script?
+### How do I update the script?
 
 ```bash
 # Download latest version
@@ -1139,300 +641,83 @@ wget https://raw.githubusercontent.com/captainzero93/security_harden_linux/main/
 sudo ./fortress_improved.sh --dry-run
 ```
 
-### Q: Can I run this multiple times?
-
-**A:** Yes, but:
-
-* First run creates configuration
-* Subsequent runs update/reapply settings
-* Each run creates new backups
-* Safe to re-run after system updates
-
-### Q: What if a module fails?
-
-**A:** The script:
-
-* Logs all errors
-* Continues with remaining modules
-* Tracks which modules failed
-* Creates HTML report showing failures
-
-Check `/var/log/fortress_hardening.log` for details.
-
-### Q: Is this suitable for production servers?
-
-**A:** Yes, with caveats:
-
-* Test in staging first
-* Use "high" security level
-* Review all changes
-* Ensure SSH keys are set up
-* Have console access available
-* Consider professional assessment
-
-### Q: What Linux distributions are supported?
-
-**A:** Tested on:
-
-* Ubuntu 22.04, 24.04, 25.10
-* Debian 11, 12, 13
-* Kubuntu 24.04+
-* Linux Mint 21+
-* Pop!\_OS 22.04+
-
-**Should work on any Debian-based distribution.**
-
-### Q: How is v5.0 different from v4.x?
-
-**A:** Major changes:
-
-* Removed security theater (AIDE, IPv6, ClamAV)
-* Added educational mode (--explain)
-* Intelligent module recommendations
-* SSH lockout prevention
-* Secure Boot verification
-* Package verification (dpkg-based)
-* Honest about limitations
-* fail2ban now optional and contextual
-
-See "What's New in v5.0" section for full details.
-
 ---
 
 ## Troubleshooting
 
-### Issue: Docker Containers Can't Reach Internet (v5.1)
+### Docker Containers Can't Reach Internet
 
-**Symptoms:** Containers start but can't access network
+**Cause:** IP forwarding disabled by fortress.
 
-**Cause:** IP forwarding disabled by FORTRESS
+**Fix:** Re-run with `sudo ./fortress_improved.sh --allow-docker`, or manually:
+```bash
+sudo sed -i 's/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/' /etc/sysctl.d/99-fortress.conf
+sudo sysctl -p /etc/sysctl.d/99-fortress.conf
+```
 
-**Solutions:**
+### Firefox/Chrome Won't Launch
 
-1. Check current setting:
-   ```bash
-   cat /etc/sysctl.d/99-fortress.conf | grep ip_forward
-   ```
+**Cause:** /dev/shm mounted with noexec (breaks JIT compilation).
 
-2. Re-run with Docker support:
-   ```bash
-   sudo ./fortress_improved.sh --allow-docker
-   ```
+**Fix:** Run `sudo ./fix_library_permissions.sh`, or manually:
+```bash
+sudo sed -i 's/nodev,nosuid,noexec/nodev,nosuid/' /etc/fstab
+sudo mount -o remount /dev/shm
+```
 
-3. Or manual fix:
-   ```bash
-   sudo sed -i 's/net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/' /etc/sysctl.d/99-fortress.conf
-   sudo sysctl -p /etc/sysctl.d/99-fortress.conf
-   ```
+### SSH Connection Refused
 
-### Issue: Firefox/Chrome Won't Launch (v5.1)
-
-**Symptoms:** Browser crashes immediately or shows errors
-
-**Cause:** /dev/shm mounted with noexec (breaks JIT compilation)
-
-**Solutions:**
-
-1. Check mount options:
-   ```bash
-   mount | grep /dev/shm
-   ```
-
-2. Run fix script:
-   ```bash
-   sudo ./fix_library_permissions.sh
-   ```
-
-3. Or manual fix:
-   ```bash
-   sudo sed -i 's/nodev,nosuid,noexec/nodev,nosuid/' /etc/fstab
-   sudo mount -o remount /dev/shm
-   ```
-
-### Issue: SSH Connection Refused
-
-**Symptoms:** Can't connect to server via SSH
-
-**Solutions:**
-
-1. Check if SSH is running:
-   ```bash
-   sudo systemctl status sshd
-   ```
-
-2. Check firewall:
-   ```bash
-   sudo ufw status
-   sudo ufw allow ssh
-   ```
-
-3. Check SSH config:
-   ```bash
-   sudo sshd -t
-   ```
-
+1. Check if SSH is running: `sudo systemctl status sshd`
+2. Check firewall: `sudo ufw status` then `sudo ufw allow ssh`
+3. Check SSH config: `sudo sshd -t`
 4. Restore from backup if needed:
    ```bash
    sudo cp /root/fortress_backups_*/etc/ssh/sshd_config /etc/ssh/sshd_config
    sudo systemctl restart sshd
    ```
 
-### Issue: Firewall Blocking Service
+### Firewall Blocking a Service
 
-**Symptoms:** Service not accessible from network
+1. Find which port: `sudo netstat -tlnp`
+2. Allow it: `sudo ufw allow 8080/tcp`
+3. Reload: `sudo ufw reload`
 
-**Solutions:**
+### Package Verification Alerts
 
-1. Check which port service uses:
-   ```bash
-   sudo netstat -tlnp
-   ```
+Config files, log files, and cache files changing is normal. Investigate if system binaries or security files have changed, or if there's an unexpected number of changes. Reinstall suspicious packages with `sudo apt-get install --reinstall package-name`.
 
-2. Allow port through firewall:
-   ```bash
-   sudo ufw allow 8080/tcp
-   sudo ufw reload
-   ```
+### Performance Problems
 
-3. Check UFW status:
-   ```bash
-   sudo ufw status verbose
-   ```
+Check audit logging overhead with `sudo auditctl -l` and disable if needed with `sudo systemctl stop auditd`. The script shouldn't cause performance issues at default settings.
 
-### Issue: Package Verification Alerts
+### Boot Fails After Hardening
 
-**Symptoms:** dpkg --verify shows many files changed
+Boot into recovery mode, drop to root shell, then:
+```bash
+mount -o remount,rw /
+cp /root/fortress_backups_*/etc/default/grub /etc/default/grub
+update-grub
+reboot
+```
 
-**Solutions:**
+### AppArmor Blocks Application
 
-1. Check the report:
-   ```bash
-   cat /var/log/fortress_package_verification_*.txt
-   ```
+1. Check logs: `sudo journalctl -xe | grep apparmor`
+2. Set profile to complain mode: `sudo aa-complain /etc/apparmor.d/usr.bin.application`
+3. Or disable profile: `sudo aa-disable /etc/apparmor.d/usr.bin.application`
 
-2. **Normal changes:**
-   * Configuration files (expected)
-   * Log files (expected)
-   * Cache files (expected)
+### USB Devices Not Working
 
-3. **Investigate if:**
-   * System binaries changed
-   * Security files changed
-   * Unexpected number of changes
-
-4. Reinstall suspicious packages:
-   ```bash
-   sudo apt-get install --reinstall package-name
-   ```
-
-### Issue: Performance Problems
-
-**Symptoms:** System slower after hardening
-
-**Check:**
-
-1. Audit logging overhead:
-   ```bash
-   sudo auditctl -l
-   ```
-
-2. Disable if needed:
-   ```bash
-   sudo systemctl stop auditd
-   ```
-
-3. Check fail2ban (if installed):
-   ```bash
-   sudo systemctl status fail2ban
-   ```
-
-**Note:** Script shouldn't cause performance issues at default settings.
-
-### Issue: Boot Fails After Hardening
-
-**Symptoms:** System won't boot
-
-**Solutions:**
-
-1. Boot into recovery mode
-2. Drop to root shell
-3. Restore GRUB config:
-   ```bash
-   mount -o remount,rw /
-   cp /root/fortress_backups_*/etc/default/grub /etc/default/grub
-   update-grub
-   reboot
-   ```
-
-### Issue: AppArmor Blocks Application
-
-**Symptoms:** Application won't run, AppArmor logs show denials
-
-**Solutions:**
-
-1. Check AppArmor logs:
-   ```bash
-   sudo aa-status
-   sudo journalctl -xe | grep apparmor
-   ```
-
-2. Set profile to complain mode:
-   ```bash
-   sudo aa-complain /etc/apparmor.d/usr.bin.application
-   ```
-
-3. Or disable profile:
-   ```bash
-   sudo aa-disable /etc/apparmor.d/usr.bin.application
-   ```
-
-### Issue: USB Devices Not Working
-
-**Symptoms:** USB storage won't mount
-
-**Solutions:**
-
-1. Check USB protection settings:
-   ```bash
-   cat /etc/udev/rules.d/99-fortress-usb.rules
-   ```
-
+1. Check rules: `cat /etc/udev/rules.d/99-fortress-usb.rules`
 2. Temporarily disable:
    ```bash
    sudo mv /etc/udev/rules.d/99-fortress-usb.rules /etc/udev/rules.d/99-fortress-usb.rules.disabled
    sudo udevadm control --reload-rules
    ```
 
-3. Whitelist specific device (edit rules file)
+### Getting More Help
 
-### Getting More Help:
-
-1. Run health verification (v5.1):
-   ```bash
-   sudo ./verify_fortress.sh
-   ```
-
-2. Check detailed logs:
-   ```bash
-   sudo tail -100 /var/log/fortress_hardening.log
-   ```
-
-3. Run with verbose output:
-   ```bash
-   sudo ./fortress_improved.sh --dry-run --verbose
-   ```
-
-4. Check system logs:
-   ```bash
-   sudo journalctl -xe
-   ```
-
-5. Open GitHub issue with:
-   * Distribution and version
-   * Security level used
-   * Error messages
-   * Log excerpts
-   * Output of `verify_fortress.sh`
+Run the health verification with `sudo ./verify_fortress.sh`, check detailed logs with `sudo tail -100 /var/log/fortress_hardening.log`, run with verbose output using `sudo ./fortress_improved.sh --dry-run --verbose`, check system logs with `sudo journalctl -xe`, and open a GitHub issue with your distribution/version, security level used, error messages, log excerpts, and output of `verify_fortress.sh`.
 
 ---
 
@@ -1466,28 +751,9 @@ SSH_ALLOWED_USERS=""
 FIREWALL_ALLOW_PORTS="80,443"
 ```
 
-The config file is automatically loaded if present in the same directory as the script.
+The config file is automatically loaded if present in the same directory as the script. You can also specify a custom path with `sudo ./fortress_improved.sh -c /path/to/config.conf`.
 
-### Custom Configuration File (Legacy):
-
-Create `fortress.conf`:
-
-```bash
-# Custom hardening configuration
-SECURITY_LEVEL="high"
-DISABLE_MODULES="fail2ban,usb_protection"
-ENABLE_MODULES="system_update,ssh_hardening,firewall,apparmor"
-```
-
-Run with:
-
-```bash
-sudo ./fortress_improved.sh -c fortress.conf
-```
-
-### Automated Deployment:
-
-**For multiple servers:**
+### Automated Deployment (Multiple Servers):
 
 ```bash
 #!/bin/bash
@@ -1531,7 +797,7 @@ sudo crontab -e
 
 ### Module Development:
 
-Create custom modules by adding to script:
+Create custom modules by adding to the script:
 
 ```bash
 module_custom_security() {
@@ -1566,7 +832,7 @@ chmod +x fortress_improved.sh
 
 ## Requirements
 
-### Minimum Requirements:
+### Minimum:
 
 * **OS:** Debian-based Linux (Ubuntu, Debian, Mint, Pop, Kubuntu)
 * **Access:** Root or sudo privileges
@@ -1581,13 +847,6 @@ chmod +x fortress_improved.sh
 * SSH keys set up (for remote servers)
 * Understanding of Linux basics
 
-### Not Required:
-
-* SELinux (script uses AppArmor)
-* Specific kernel version
-* Commercial software
-* Paid subscriptions
-
 ### Incompatible With:
 
 * Non-Debian distributions (Fedora, Arch, etc.)
@@ -1599,34 +858,9 @@ chmod +x fortress_improved.sh
 
 ## Security Compliance
 
-This script helps implement controls from:
+This script helps implement controls from DISA STIG, CIS Benchmarks, NIST 800-53, PCI-DSS (partial), and HIPAA (partial).
 
-* **DISA STIG** (Defense Information Systems Agency Security Technical Implementation Guide)
-* **CIS Benchmarks** (Center for Internet Security)
-* **NIST 800-53** (National Institute of Standards and Technology)
-* **PCI-DSS** (Payment Card Industry Data Security Standard) - partial
-* **HIPAA** (Health Insurance Portability and Accountability Act) - partial
-
-**Important:** This provides a foundation, not complete compliance. Professional assessment required for:
-
-* PCI-DSS certification
-* HIPAA compliance
-* SOC 2 audit
-* ISO 27001 certification
-* Government contracts
-
-**What you still need for compliance:**
-
-* Professional security assessment
-* Vulnerability scanning
-* Penetration testing
-* Security awareness training
-* Incident response plan
-* Disaster recovery plan
-* Encryption at rest
-* Data classification
-* Access control policies
-* Regular audits
+**Important:** This provides a foundation, not complete compliance. Professional assessment is required for PCI-DSS certification, HIPAA compliance, SOC 2 audit, ISO 27001 certification, or government contracts. You'll still need professional security assessment, vulnerability scanning, penetration testing, security awareness training, incident response plan, disaster recovery plan, encryption at rest, and regular audits.
 
 ---
 
@@ -1636,40 +870,19 @@ This script helps implement controls from:
 
 **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**
 
-You are free to:
-
-* Share - copy and redistribute
-* Adapt - remix, transform, and build upon
-
-Under these terms:
-
-* **Attribution** - Give appropriate credit
-* **NonCommercial** - Not for commercial use
-* **No additional restrictions**
+You are free to share (copy and redistribute) and adapt (remix, transform, and build upon) under the terms of attribution (give appropriate credit), non-commercial use, and no additional restrictions.
 
 Full license: https://creativecommons.org/licenses/by-nc/4.0/
 
 ### Commercial Use:
 
-For commercial licensing:
-
-* Email: cyberjunk77@protonmail.com
-* Subject: "Commercial License Request"
+For commercial licensing, email: cyberjunk77@protonmail.com with subject "Commercial License Request".
 
 ### Support:
 
-**Community Support (Free):**
+**Community Support (Free):** GitHub Issues, documentation, best-effort responses.
 
-* GitHub Issues
-* Documentation
-* Best-effort responses
-
-**Commercial Support (Paid):**
-
-* Priority responses
-* Custom development
-* Professional consultation
-* Training and workshops
+**Commercial Support (Paid):** Priority responses, custom development, professional consultation, training and workshops.
 
 ---
 
@@ -1677,85 +890,27 @@ For commercial licensing:
 
 ### v5.1 (2025-01) - Compatibility Edition
 
-**CRITICAL FIXES** for Issues #8, #10, #11
-
-**Fixed:**
-
-* Issue #8: Browser launch failures (Firefox, Chrome) from /dev/shm noexec
-* Issue #10: Docker container networking broken by IP forwarding disable
-* Issue #11: Configuration file not being loaded
-
-**Added:**
-
-* Docker/Podman/LXC detection with conditional IP forwarding
-* Browser detection with smart /dev/shm handling
-* Full configuration file support (`--generate-config`)
-* Pre-flight application detection
-* Health verification script (`verify_fortress.sh`)
-* New CLI options for compatibility control
-
-**Improved:**
-
-* Desktop vs server mode detection
-* Interactive prompts explaining security trade-offs
-* HTML report includes compatibility information
+Critical fixes for Issues #8, #10, #11. Fixed browser launch failures from /dev/shm noexec, Docker networking broken by IP forwarding disable, and config file not loading. Added Docker/Podman/LXC detection, browser detection, full config file support, pre-flight application detection, health verification script, and new CLI options. Improved desktop vs server detection and interactive prompts.
 
 ### v5.0 (2025-11-16) - Educational Edition
 
-**MAJOR REWRITE** - Complete philosophical shift
-
-**Removed (Security Theater):**
-
-* AIDE - Can't detect kernel rootkits, replaced with dpkg verification
-* IPv6 disable - Not a security feature
-* ClamAV - Minimal Linux benefit
-* lynis_audit - Run separately
-* rootkit_scanner - False sense of security
-
-**Added (Real Security):**
-
-* Educational mode (--explain flag)
-* Secure Boot verification
-* Package verification (dpkg-based, weekly cron)
-* Intelligent module recommendations
-* SSH lockout prevention (multiple safety checks)
-* Honest limitation statements
-
-**Improved:**
-
-* fail2ban - Now optional and contextual
-* SSH hardening - Explicit key confirmation required
-* Boot security - Verifies Secure Boot status
-* All modules - Include educational explanations
-
-**Philosophy:** From "automate everything" to "educate and execute intelligently"
+Major rewrite. Removed security theatre (AIDE, IPv6, ClamAV, lynis, rootkit scanner). Added educational mode, Secure Boot verification, dpkg-based package verification, intelligent module recommendations, SSH lockout prevention. Made fail2ban optional and contextual. Philosophy shift from "automate everything" to "educate and execute intelligently."
 
 ### v4.2 (2025-11-07)
 
-* Fixed premature exit at 4% issue
-* Fixed show_progress() causing immediate exit with set -e
-* Changed progress bar to use if statement (safe with set -e)
-* Added explicit return 0 to all module functions
+Fixed premature exit at 4% issue, fixed show_progress() causing immediate exit with set -e, changed progress bar to use if statement, added explicit return 0 to all module functions.
 
 ### v4.1
 
-* Improved APT lock handling
-* Fixed progress bar advancement
-* Better error recovery
-* Enhanced user feedback
+Improved APT lock handling, fixed progress bar advancement, better error recovery, enhanced user feedback.
 
 ### v4.0
 
-* Fixed wait_for_apt() hanging
-* Improved lock file detection
-* Better timeout handling
-* Fixed various bugs
+Fixed wait_for_apt() hanging, improved lock file detection, better timeout handling, various bug fixes.
 
 ### v3.x and earlier
 
-* Initial releases
-* Basic hardening features
-* Module system implementation
+Initial releases with basic hardening features and module system implementation.
 
 ---
 
@@ -1763,13 +918,11 @@ For commercial licensing:
 
 ### Official Documentation:
 
-**Security Guides:**
-
 * [Ubuntu Security](https://ubuntu.com/security)
 * [Debian Security](https://www.debian.org/security/)
 * [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/)
 
-**Tools Documentation:**
+### Tools Documentation:
 
 * [UFW Documentation](https://help.ubuntu.com/community/UFW)
 * [AppArmor Wiki](https://gitlab.com/apparmor/apparmor/-/wikis/home)
@@ -1777,8 +930,6 @@ For commercial licensing:
 * [fail2ban Documentation](https://www.fail2ban.org/wiki/index.php/Main_Page)
 
 ### Related Projects:
-
-**Security Hardening:**
 
 * [Dev-Sec Hardening Framework](https://dev-sec.io/)
 * [Ansible Hardening](https://github.com/openstack/ansible-hardening)
@@ -1788,44 +939,22 @@ For commercial licensing:
 
 ### Learning Resources:
 
-**Beginner:**
+**Beginner:** [Linux Journey](https://linuxjourney.com/), [OverTheWire: Bandit](https://overthewire.org/wargames/bandit/), [Cybrary](https://www.cybrary.it/)
 
-* [Linux Journey](https://linuxjourney.com/) - Learn Linux basics
-* [OverTheWire: Bandit](https://overthewire.org/wargames/bandit/) - Security challenges
-* [Cybrary](https://www.cybrary.it/) - Free security training
+**Intermediate:** [TryHackMe Defensive Security](https://tryhackme.com/paths), [Linux Academy](https://linuxacademy.com/), [SANS Reading Room](https://www.sans.org/white-papers/)
 
-**Intermediate:**
-
-* [Defensive Security](https://tryhackme.com/paths) - TryHackMe paths
-* [Linux Academy](https://linuxacademy.com/) - Linux training
-* [SANS Reading Room](https://www.sans.org/white-papers/) - Security papers
-
-**Advanced:**
-
-* [Exploit Education](https://exploit.education/) - Security exercises
-* [PentesterLab](https://pentesterlab.com/) - Web security
-* [HackTheBox](https://www.hackthebox.com/) - Security challenges
+**Advanced:** [Exploit Education](https://exploit.education/), [PentesterLab](https://pentesterlab.com/), [HackTheBox](https://www.hackthebox.com/)
 
 ### Books:
 
-* **"Linux Basics for Hackers"** - OccupyTheWeb
-* **"Practical Linux Security"** - Michael Boelen
-* **"Linux Security Cookbook"** - Gregor N. Purdy
-* **"The Practice of Network Security Monitoring"** - Richard Bejtlich
+* "Linux Basics for Hackers" - OccupyTheWeb
+* "Practical Linux Security" - Michael Boelen
+* "Linux Security Cookbook" - Gregor N. Purdy
+* "The Practice of Network Security Monitoring" - Richard Bejtlich
 
 ### YouTube Channels:
 
-* NetworkChuck - Linux and security basics
-* LiveOverflow - Security research and exploitation
-* IppSec - HackTheBox walkthroughs
-* John Hammond - CTF challenges and security
-
----
-
-**Quick links:**
-
-* Documentation is this README
-* [Report Bug](https://github.com/captainzero93/security_harden_linux/issues/new)
+NetworkChuck, LiveOverflow, IppSec, John Hammond
 
 ---
 
@@ -1843,50 +972,17 @@ This script provides a security foundation, not complete compliance with any fra
 
 ### Limitations
 
-This script does not:
+This script does not guarantee absolute security (no system is 100% secure), replace professional security assessment, provide monitoring or incident response, implement application-specific security, configure backups or disaster recovery, provide encryption at rest, replace security awareness training, detect all types of malware or rootkits, protect against zero-day exploits, or guarantee compliance with any standard.
 
-* Guarantee absolute security (no system is 100% secure)
-* Replace professional security assessment
-* Provide monitoring or incident response
-* Implement application-specific security
-* Configure backups or disaster recovery
-* Provide encryption at rest
-* Replace security awareness training
-* Detect all types of malware or rootkits
-* Protect against zero-day exploits
-* Guarantee compliance with any standard
-
-### v5.0 Specific Limitations
-
-**What v5.0 CAN'T do:**
-
-* Automatically enable Secure Boot (requires BIOS configuration)
-* Detect kernel-level rootkits on live systems
-* Protect against all physical access attacks
-* Prevent attacks on allowed network ports
-* Replace application-level security
-
-**What v5.0 IS honest about:**
-
-* Package verification can't detect sophisticated rootkits
-* fail2ban only blocks IPs (easily bypassed)
-* SSH hardening can't stop attacks using valid keys
-* AppArmor can be bypassed by kernel exploits
-* System updates are more important than any hardening
+**What this script is honest about:** Package verification can't detect sophisticated rootkits. fail2ban only blocks IPs (easily bypassed). SSH hardening can't stop attacks using valid keys. AppArmor can be bypassed by kernel exploits. System updates are more important than any hardening. Script can't auto-enable Secure Boot (requires BIOS config), detect kernel-level rootkits on live systems, protect against all physical access attacks, prevent attacks on allowed network ports, or replace application-level security.
 
 ### Liability
 
-To the maximum extent permitted by law:
-
-* The authors and contributors disclaim all liability for any damages arising from use of this script
-* Users assume all risk associated with use
-* This includes but is not limited to: data loss, system damage, service disruption, security breaches, compliance violations, or financial losses
+To the maximum extent permitted by law, the authors and contributors disclaim all liability for any damages arising from use of this script. Users assume all risk associated with use, including but not limited to data loss, system damage, service disruption, security breaches, compliance violations, or financial losses.
 
 ### Support Disclaimer
 
-* Support is provided on a best-effort basis with no guaranteed response time
-* No service level agreements (SLAs)
-* Bug fixes and updates provided when possible, not guaranteed
+Support is provided on a best-effort basis with no guaranteed response time, no service level agreements (SLAs), and bug fixes/updates provided when possible but not guaranteed.
 
 **BY USING THIS SCRIPT, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO THESE TERMS.**
 
@@ -1896,35 +992,17 @@ To the maximum extent permitted by law:
 
 ### Getting Help:
 
-**Before asking for help:**
+**Before asking for help:** Read this README thoroughly, check existing [GitHub Issues](https://github.com/captainzero93/security_harden_linux/issues), review the [Troubleshooting](#troubleshooting) section, and run with `--verbose` and check logs at `/var/log/fortress_hardening.log`.
 
-1. Read this README thoroughly
-2. Check existing [GitHub Issues](https://github.com/captainzero93/security_harden_linux/issues)
-3. Review [Troubleshooting](#troubleshooting) section
-4. Run with `--verbose` and check logs at `/var/log/fortress_hardening.log`
+**Security Vulnerabilities:** DO NOT open a public issue. Email directly: [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com). Use subject: "SECURITY: [brief description]". Response target: within 48 hours.
 
-**Security Vulnerabilities:**
-
-* **DO NOT** open a public issue
-* Email directly: [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com)
-* Use subject: "SECURITY: [brief description]"
-* Response target: within 48 hours
-
-**Note:** all support is provided on best-effort basis.
+**Note:** All support is provided on a best-effort basis.
 
 ### Commercial Support:
 
-For commercial licensing, professional support, or consulting services:
+For commercial licensing, professional support, or consulting services: [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com)
 
-* [cyberjunk77@protonmail.com](mailto:cyberjunk77@protonmail.com)
-
-**Services available:**
-
-* Custom script development
-* Professional security assessment
-* Compliance consulting
-* Training and workshops
-* Priority support contracts
+**Services available:** Custom script development, professional security assessment, compliance consulting, training and workshops, priority support contracts.
 
 ---
 
