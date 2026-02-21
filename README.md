@@ -888,7 +888,7 @@ For commercial licensing, email: cyberjunk77@protonmail.com with subject "Commer
 
 ## Version History
 
-### v5.1 (2025-01) - Compatibility Edition
+### v5.1 (2026-02) - Compatibility Edition
 
 Critical fixes for Issues #8, #10, #11. Fixed browser launch failures from /dev/shm noexec, Docker networking broken by IP forwarding disable, and config file not loading. Added Docker/Podman/LXC detection, browser detection, full config file support, pre-flight application detection, health verification script, and new CLI options. Improved desktop vs server detection and interactive prompts.
 
