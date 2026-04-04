@@ -439,7 +439,29 @@ module_ssh_hardening() {
     
     # Configure SSH hardening
     if [[ "${DRY_RUN}" == "false" ]]; then
-        sudo tee "${ssh_config}" > /dev/null << 'EOF'
+        # Debian/Ubuntu: default /usr/lib/openssh/sftp-server; match fortress_improved.debian_fix.sh fallbacks
+        local sftp_server=""
+        if [[ -x /usr/lib/openssh/sftp-server ]]; then
+            sftp_server="/usr/lib/openssh/sftp-server"
+        else
+            local cand
+            cand="$(command -v sftp-server 2>/dev/null || true)"
+            if [[ -n "$cand" && -x "$cand" ]]; then
+                sftp_server="$cand"
+            elif command -v dpkg &>/dev/null; then
+                cand="$(dpkg -L openssh-server 2>/dev/null | grep -E '/sftp-server$' | head -1)"
+                if [[ -n "$cand" && -x "$cand" ]]; then
+                    sftp_server="$cand"
+                fi
+            fi
+        fi
+        if [[ -z "$sftp_server" ]]; then
+            log ERROR "SSH hardening: cannot find executable sftp-server (Debian/Ubuntu: apt-get install -y openssh-server)"
+            return 1
+        fi
+        log INFO "Subsystem sftp -> ${sftp_server}"
+
+        sudo tee "${ssh_config}" > /dev/null << EOF
 # FORTRESS.SH SSH Configuration
 # Strong security, key-based authentication only
 
@@ -471,13 +493,13 @@ LogLevel VERBOSE
 X11Forwarding no
 PrintMotd no
 AcceptEnv LANG LC_*
-Subsystem sftp /usr/lib/openssh/sftp-server
+Subsystem sftp ${sftp_server}
 EOF
         
         # Validate configuration
         if sudo sshd -t; then
             execute_command "Restarting SSH service" \
-                "sudo systemctl restart sshd"
+                "sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd"
             log SUCCESS "SSH hardened - password authentication disabled"
         else
             log ERROR "SSH configuration validation failed"
@@ -750,8 +772,9 @@ module_firewall() {
         sudo ufw default allow outgoing
         sudo ufw default deny routed
         
-        # Allow SSH (with rate limiting)
-        if systemctl is-active --quiet sshd 2>/dev/null; then
+        # Allow SSH (with rate limiting); Ubuntu uses unit "ssh", many others "sshd"
+        if systemctl is-active --quiet ssh 2>/dev/null || \
+           systemctl is-active --quiet sshd 2>/dev/null; then
             sudo ufw limit ssh comment 'SSH with rate limiting'
             log INFO "SSH access allowed with rate limiting"
         fi
