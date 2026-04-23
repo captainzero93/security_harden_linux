@@ -948,6 +948,28 @@ module_ssh_hardening() {
     
     # Configure SSH hardening
     if [[ "${DRY_RUN}" == "false" ]]; then
+        # Debian/Ubuntu: default /usr/lib/openssh/sftp-server; match fortress_improved.debian_fix.sh fallbacks
+        local sftp_server=""
+        if [[ -x /usr/lib/openssh/sftp-server ]]; then
+            sftp_server="/usr/lib/openssh/sftp-server"
+        else
+            local cand
+            cand="$(command -v sftp-server 2>/dev/null || true)"
+            if [[ -n "$cand" && -x "$cand" ]]; then
+                sftp_server="$cand"
+            elif command -v dpkg &>/dev/null; then
+                cand="$(dpkg -L openssh-server 2>/dev/null | grep -E '/sftp-server$' | head -1)"
+                if [[ -n "$cand" && -x "$cand" ]]; then
+                    sftp_server="$cand"
+                fi
+            fi
+        fi
+        if [[ -z "$sftp_server" ]]; then
+            log ERROR "SSH hardening: cannot find executable sftp-server (Debian/Ubuntu: apt-get install -y openssh-server)"
+            return 1
+        fi
+        log INFO "Subsystem sftp -> ${sftp_server}"
+
         sudo tee "${ssh_config}" > /dev/null << EOF
 # FORTRESS.SH SSH Configuration v5.1
 # Strong security, key-based authentication only
@@ -985,9 +1007,11 @@ AllowAgentForwarding no
 AllowTcpForwarding no
 PermitTunnel no
 PrintMotd no
+AcceptEnv LANG LC_*
 PrintLastLog yes
 TCPKeepAlive yes
 Compression delayed
+Subsystem sftp ${sftp_server}
 EOF
         
         # Add allowed users if configured
@@ -996,10 +1020,16 @@ EOF
             log INFO "SSH restricted to users: ${SSH_ALLOWED_USERS}"
         fi
         
-        execute_command "Restarting SSH service" \
-            "sudo systemctl restart sshd 2>/dev/null || sudo systemctl restart ssh"
-        
-        log SUCCESS "SSH hardening applied"
+        # Validate configuration
+        if sudo sshd -t; then
+            execute_command "Restarting SSH service" \
+                "sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd"
+            log SUCCESS "SSH hardened - password authentication disabled"
+        else
+            log ERROR "SSH configuration validation failed"
+            sudo cp "${BACKUP_DIR}${ssh_config}" "${ssh_config}"
+            return 1
+        fi
     else
         log INFO "[DRY RUN] Would harden SSH configuration"
     fi
@@ -1275,11 +1305,12 @@ module_firewall() {
         sudo ufw default "${ufw_outgoing}" outgoing
         sudo ufw default deny routed
         
-        # Allow SSH (with rate limiting)
-        if systemctl is-active --quiet sshd 2>/dev/null || systemctl is-active --quiet ssh 2>/dev/null; then
-            local ssh_port="${SSH_PORT:-22}"
-            sudo ufw limit "${ssh_port}/tcp" comment 'SSH with rate limiting'
-            log INFO "SSH access allowed on port ${ssh_port} with rate limiting"
+        # Allow SSH (with rate limiting); Ubuntu uses unit "ssh", many others "sshd"
+        local ufw_ssh_port="${SSH_PORT:-22}"
+        if systemctl is-active --quiet ssh 2>/dev/null || \
+           systemctl is-active --quiet sshd 2>/dev/null; then
+            sudo ufw limit "${ufw_ssh_port}/tcp" comment 'SSH with rate limiting'
+            log INFO "SSH access allowed on port ${ufw_ssh_port} with rate limiting"
         fi
         
         # Allow common services if running
