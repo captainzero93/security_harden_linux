@@ -1,13 +1,31 @@
 #!/bin/bash
 
-# FORTRESS.SH - Linux Security Hardening Script 
-# Version: 5.1 - Critical Fixes & Enhanced Compatibility
+# FORTRESS.SH - Linux Security Hardening Script
+# Version: 5.2 - Module Control & Scanner Compatibility Fixes
 # Author: captainzero93
 # GitHub: https://github.com/captainzero93/security_harden_linux
 # Optimized for Ubuntu 24.04+, Debian 13+
-# Last Updated: 2026-01-31
+# Last Updated: 2026-04-24
 #
-# MAJOR CHANGES IN v5.1:
+# MAJOR CHANGES IN v5.2:
+# - FIXED: -x/--disable and -e/--enable flags ignored (Issue #17)
+#          Dependency resolver was pulling disabled modules back in via other
+#          modules' deps (e.g. fail2ban depends on firewall+ssh_hardening, so
+#          disabling those silently re-enabled them). Now respected strictly.
+# - FIXED: CLI flags not always overriding fortress.conf values.
+#          Replaced "compare to default" logic with explicit _SET flags.
+# - FIXED: Duplicate shebang in fix_library_permissions.sh.
+# - ADDED: --scanner-mode flag for Nessus/OpenSCAP/CIS credential scans.
+# - ADDED: Configurable SSH options (TCP/agent fwd, MaxSessions, TTY, groups)
+#          to unblock compliance scanners without rolling back hardening.
+# - ADDED: kernel.yama.ptrace_scope sysctl hardening.
+# - ADDED: SSH_ALLOWED_GROUPS option (was users-only before).
+# - IMPROVED: fail2ban action defaults to action_ (was action_mwl which
+#             required mailutils + whois and silently failed).
+# - IMPROVED: module package detection (dpkg -l pkg, not grep substring).
+# - PRESERVED: dvic's sftp-server path detection (fixes SCP after hardening).
+#
+# INHERITED FROM v5.1:
 # - FIXED: Docker networking broken by IP forwarding disable (Issue #10)
 # - FIXED: Browser launch failures from /dev/shm noexec (Issue #8)
 # - FIXED: Custom configuration file not implemented (Issue #11)
@@ -22,7 +40,7 @@ set -euo pipefail
 # GLOBAL CONFIGURATION
 #=============================================================================
 
-readonly VERSION="5.1"
+readonly VERSION="5.2"
 readonly SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="/var/log/fortress_hardening.log"
@@ -43,6 +61,22 @@ SECURITY_LEVEL="moderate"
 IS_DESKTOP=false
 CURRENT_MODULE=""
 
+# v5.2: Track which values were set explicitly on the CLI so they properly
+# override fortress.conf (the v5.1 "compare to default" approach was broken:
+# passing -l moderate could be silently replaced by a config file value).
+CLI_SET_VERBOSE=false
+CLI_SET_DRY_RUN=false
+CLI_SET_INTERACTIVE=false
+CLI_SET_EXPLAIN=false
+CLI_SET_SECURITY_LEVEL=false
+CLI_SET_ENABLE=false
+CLI_SET_DISABLE=false
+CLI_SET_FORCE_DESKTOP=false
+CLI_SET_FORCE_SERVER=false
+CLI_SET_DOCKER=false
+CLI_SET_BROWSER=false
+CLI_SET_SCANNER_MODE=false
+
 # NEW in v5.1: Compatibility flags
 DOCKER_DETECTED=false
 ALLOW_DOCKER_FORWARDING=false
@@ -50,6 +84,11 @@ ALLOW_BROWSER_SHAREDMEM=false
 FORCE_DESKTOP_MODE=false
 FORCE_SERVER_MODE=false
 GENERATE_CONFIG=false
+
+# v5.2: Scanner compatibility for Nessus, OpenSCAP, CIS-CAT, Qualys, etc.
+# When true, SSH config is loosened enough for credentialed scans while
+# preserving the rest of the hardening (firewall, sysctl, audit, AppArmor).
+SCANNER_MODE=false
 
 # NEW in v5.1: Application detection
 declare -a DETECTED_BROWSERS=()
@@ -59,6 +98,7 @@ declare -a DETECTED_VMS=()
 # Tracking
 declare -a EXECUTED_MODULES=()
 declare -a FAILED_MODULES=()
+declare -a SKIPPED_MODULES=()
 declare -A MODULE_EXPLANATIONS=()
 
 # Color codes
@@ -275,12 +315,16 @@ load_config() {
     if [[ -n "${CONFIG_FILE_OVERRIDE}" ]]; then
         CONFIG_FILE="${CONFIG_FILE_OVERRIDE}"
     fi
-    
+
     # Load configuration from fortress.conf if it exists
     if [[ -f "${CONFIG_FILE}" ]]; then
         log INFO "Loading configuration from ${CONFIG_FILE}"
-        
-        # Save CLI-provided values so they take priority over config
+
+        # v5.2: Capture CLI-provided values BEFORE sourcing the config so we
+        # can put them back afterwards. The previous "only override if CLI
+        # value differs from its default" approach was broken — e.g. passing
+        # `-l moderate` (the default) could be silently replaced by a config
+        # file's SECURITY_LEVEL="high".
         local cli_verbose="${VERBOSE}"
         local cli_dry_run="${DRY_RUN}"
         local cli_interactive="${INTERACTIVE}"
@@ -292,11 +336,12 @@ load_config() {
         local cli_force_server="${FORCE_SERVER_MODE}"
         local cli_docker="${ALLOW_DOCKER_FORWARDING}"
         local cli_browser="${ALLOW_BROWSER_SHAREDMEM}"
-        
+        local cli_scanner="${SCANNER_MODE}"
+
         # Source the config file
         # shellcheck source=/dev/null
         source "${CONFIG_FILE}"
-        
+
         # Validate configuration
         if [[ -n "${SECURITY_LEVEL:-}" ]]; then
             case "${SECURITY_LEVEL}" in
@@ -308,23 +353,37 @@ load_config() {
                     ;;
             esac
         fi
-        
-        # CLI arguments override config file values
-        # Only apply config value if CLI value is still at its default
-        [[ "${cli_verbose}" == "true" ]] && VERBOSE=true
-        [[ "${cli_dry_run}" == "true" ]] && DRY_RUN=true
-        [[ "${cli_interactive}" == "false" ]] && INTERACTIVE=false
-        [[ "${cli_explain}" == "true" ]] && EXPLAIN_MODE=true
-        [[ "${cli_security_level}" != "moderate" ]] && SECURITY_LEVEL="${cli_security_level}"
-        [[ -n "${cli_enable}" ]] && ENABLE_MODULES="${cli_enable}"
-        [[ -n "${cli_disable}" ]] && DISABLE_MODULES="${cli_disable}"
-        [[ "${cli_force_desktop}" == "true" ]] && FORCE_DESKTOP_MODE=true
-        [[ "${cli_force_server}" == "true" ]] && FORCE_SERVER_MODE=true
-        [[ "${cli_docker}" == "true" ]] && ALLOW_DOCKER_FORWARDING=true
-        [[ "${cli_browser}" == "true" ]] && ALLOW_BROWSER_SHAREDMEM=true
-        
+
+        # v5.2: CLI arguments strictly override config file values — but only
+        # when the user actually passed that specific CLI flag. Tracked via
+        # CLI_SET_* flags populated during argument parsing.
+        [[ "${CLI_SET_VERBOSE}" == "true" ]]         && VERBOSE="${cli_verbose}"
+        [[ "${CLI_SET_DRY_RUN}" == "true" ]]         && DRY_RUN="${cli_dry_run}"
+        [[ "${CLI_SET_INTERACTIVE}" == "true" ]]     && INTERACTIVE="${cli_interactive}"
+        [[ "${CLI_SET_EXPLAIN}" == "true" ]]         && EXPLAIN_MODE="${cli_explain}"
+        [[ "${CLI_SET_SECURITY_LEVEL}" == "true" ]]  && SECURITY_LEVEL="${cli_security_level}"
+        [[ "${CLI_SET_ENABLE}" == "true" ]]          && ENABLE_MODULES="${cli_enable}"
+        [[ "${CLI_SET_DISABLE}" == "true" ]]         && DISABLE_MODULES="${cli_disable}"
+        [[ "${CLI_SET_FORCE_DESKTOP}" == "true" ]]   && FORCE_DESKTOP_MODE="${cli_force_desktop}"
+        [[ "${CLI_SET_FORCE_SERVER}" == "true" ]]    && FORCE_SERVER_MODE="${cli_force_server}"
+        [[ "${CLI_SET_DOCKER}" == "true" ]]          && ALLOW_DOCKER_FORWARDING="${cli_docker}"
+        [[ "${CLI_SET_BROWSER}" == "true" ]]         && ALLOW_BROWSER_SHAREDMEM="${cli_browser}"
+        [[ "${CLI_SET_SCANNER_MODE}" == "true" ]]    && SCANNER_MODE="${cli_scanner}"
+
         log SUCCESS "Configuration loaded successfully"
+
+        # v5.2: Surface what we actually resolved so users don't have to guess.
+        if [[ "${VERBOSE}" == "true" ]]; then
+            log INFO "Resolved SECURITY_LEVEL=${SECURITY_LEVEL}"
+            log INFO "Resolved ENABLE_MODULES=${ENABLE_MODULES:-<none>}"
+            log INFO "Resolved DISABLE_MODULES=${DISABLE_MODULES:-<none>}"
+            log INFO "Resolved SCANNER_MODE=${SCANNER_MODE}"
+        fi
     else
+        if [[ -n "${CONFIG_FILE_OVERRIDE}" ]]; then
+            log ERROR "Configuration file not found: ${CONFIG_FILE}"
+            exit 1
+        fi
         log INFO "No configuration file found at ${CONFIG_FILE}, using defaults"
     fi
 }
@@ -332,11 +391,11 @@ load_config() {
 generate_config_template() {
     # Generate a template fortress.conf file
     local output_file="${1:-${SCRIPT_DIR}/fortress.conf}"
-    
+
     cat > "${output_file}" << 'CONFIGEOF'
-# FORTRESS.SH Configuration File v5.1
+# FORTRESS.SH Configuration File v5.2
 # =======================================================
-# CLI arguments override these settings
+# CLI arguments override these settings (when explicitly passed).
 # Documentation: https://github.com/captainzero93/security_harden_linux
 
 # ===========================
@@ -384,9 +443,27 @@ FORCE_DESKTOP_MODE=false
 # If true, applies strict server settings even if desktop detected
 FORCE_SERVER_MODE=false
 
+# Scanner Mode (NEW in v5.2)
+# If true, loosens SSH restrictions so Nessus / OpenSCAP / CIS-CAT / Qualys
+# credentialed scans can actually evaluate the host. Firewall, sysctl,
+# audit and AppArmor hardening are untouched — only the SSH options that
+# prevent scanners from running their plugins are relaxed.
+# Specifically it sets (overridable individually below):
+#   SSH_ALLOW_TCP_FORWARDING=yes
+#   SSH_ALLOW_AGENT_FORWARDING=yes
+#   SSH_MAX_SESSIONS=20
+#   SSH_KBD_INTERACTIVE=yes
+# Leave false unless you need credentialed compliance scans.
+SCANNER_MODE=false
+
 # ===========================
 # MODULE CONTROL
 # ===========================
+#
+# IMPORTANT (v5.2): A module's dependencies are no longer allowed to
+# silently re-enable a module you excluded. If you disable `firewall` and
+# leave `fail2ban` enabled, fail2ban will be SKIPPED with a warning rather
+# than quietly pulling firewall back in. This was Issue #17.
 
 # Enable only specific modules (comma-separated, leave empty for all)
 # Example: ENABLE_MODULES="system_update,ssh_hardening,firewall,sysctl"
@@ -407,8 +484,32 @@ SSH_PORT=22
 # Example: SSH_ALLOWED_USERS="admin,deploy,backup"
 SSH_ALLOWED_USERS=""
 
+# Allowed SSH groups (comma-separated, leave empty to allow all) — v5.2
+# Example: SSH_ALLOWED_GROUPS="sudo,ssh-users"
+SSH_ALLOWED_GROUPS=""
+
 # Maximum authentication attempts before disconnect
 SSH_MAX_AUTH_TRIES=3
+
+# ---- v5.2: SSH options commonly needed by compliance scanners ---------
+# These default to the secure setting. SCANNER_MODE=true sets them all
+# to the scanner-friendly value unless you override them here.
+
+# TCP forwarding — some Nessus/Qualys plugins need this
+# Values: yes | no
+SSH_ALLOW_TCP_FORWARDING="no"
+
+# Agent forwarding — needed by some authenticated scan plugins
+# Values: yes | no
+SSH_ALLOW_AGENT_FORWARDING="no"
+
+# Max concurrent sessions per connection — parallel scanner threads
+SSH_MAX_SESSIONS=10
+
+# Keyboard-interactive PAM auth — required by some CIS plugins
+# Values: yes | no
+SSH_KBD_INTERACTIVE="no"
+# ------------------------------------------------------------------------
 
 # ===========================
 # FIREWALL SETTINGS
@@ -722,7 +823,7 @@ display_help() {
     cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║                    FORTRESS.SH - Security Hardening                      ║
-║                         Version 5.1                                      ║
+║                         Version 5.2                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 
 USAGE:
@@ -736,7 +837,7 @@ OPTIONS:
     -e, --enable MODULES   Enable specific modules (comma-separated)
     -x, --disable MODULES  Disable specific modules (comma-separated)
     -l, --level LEVEL      Security level (low|moderate|high|paranoid)
-    
+
     --explain              Educational mode - explains WHY for each action
     --list-modules         List all available modules
     --version              Show version information
@@ -748,6 +849,8 @@ Compatibility Options:
     --no-browser-compat      Apply noexec to /dev/shm (breaks browsers)
     --force-desktop          Force desktop-mode settings
     --force-server           Force server-mode settings
+    --scanner-mode           Loosen SSH for Nessus/OpenSCAP/CIS scans
+                             (leaves firewall/sysctl/audit hardening intact)
 
 Configuration:
     -c, --config FILE        Use custom configuration file
@@ -763,6 +866,9 @@ EXAMPLES:
     # Enable only specific modules
     sudo ./fortress_improved.sh -e system_update,ssh_hardening,firewall
 
+    # Disable specific modules (v5.2 now respects this strictly)
+    sudo ./fortress_improved.sh -x fail2ban,usb_protection
+
     # High security level, non-interactive
     sudo ./fortress_improved.sh -l high -n
 
@@ -775,6 +881,9 @@ EXAMPLES:
     # Use custom configuration file
     sudo ./fortress_improved.sh -c /path/to/fortress.conf
 
+    # Harden a host that still needs to pass Nessus/CIS credentialed scans
+    sudo ./fortress_improved.sh --scanner-mode
+
 SECURITY LEVELS:
     low       - Minimal hardening, preserves compatibility
     moderate  - Balanced security and usability (default)
@@ -783,6 +892,11 @@ SECURITY LEVELS:
 
 MODULES:
     Use --list-modules to see all available security modules
+
+    v5.2 change: disabling a module with -x now permanently excludes it.
+    If another module depends on it (e.g. fail2ban needs firewall), that
+    dependent module is SKIPPED with a warning rather than silently
+    pulling the disabled module back in.
 
 EDUCATIONAL MODE (--explain):
     Explains the security rationale behind each action:
@@ -798,6 +912,14 @@ IMPORTANT NOTES:
     • fail2ban is optional - understand when it's actually useful
     • This script cannot protect against kernel-level rootkits
     • Secure Boot verification is recommended but not automated
+
+NEW IN v5.2:
+    • FIXED: -x/--disable now strictly respected (Issue #17)
+    • FIXED: CLI args now reliably override fortress.conf
+    • ADDED: --scanner-mode for Nessus/CIS/OpenSCAP compatibility
+    • ADDED: Configurable SSH TCP/agent fwd, MaxSessions, allowed groups
+    • ADDED: kernel.yama.ptrace_scope hardening
+    • FIXED: Duplicate shebang in fix_library_permissions.sh
 
 NEW IN v5.1:
     • Docker detection with conditional IP forwarding
@@ -871,7 +993,7 @@ module_system_update() {
 
 module_ssh_hardening() {
     CURRENT_MODULE="ssh_hardening"
-    
+
     explain "SSH Hardening" \
         "SSH is often the primary remote access method and a common attack target." \
         "" \
@@ -895,20 +1017,25 @@ module_ssh_hardening() {
         "  • Your logs will fill with failed attempts, but they're harmless" \
         "  • If log noise bothers you, run SSH on non-standard port" \
         "" \
-        "Common misconception: fail2ban is NOT needed with proper SSH hardening."
-    
+        "Common misconception: fail2ban is NOT needed with proper SSH hardening." \
+        "" \
+        "v5.2: If you need credentialed compliance scans (Nessus, OpenSCAP," \
+        "CIS-CAT, Qualys), pass --scanner-mode or set SCANNER_MODE=true in" \
+        "fortress.conf. That loosens *only* the SSH options that break those" \
+        "scanners; the firewall, sysctl, audit, and AppArmor layers stay on."
+
     local ssh_config="/etc/ssh/sshd_config"
-    
+
     # Check if SSH is even installed/needed
     if ! command -v sshd &>/dev/null; then
         if [[ "${IS_DESKTOP}" == "true" ]]; then
             log INFO "SSH server not installed (normal for desktop)"
             log INFO "Desktop systems typically don't need SSH server running"
-            
+
             if [[ "${INTERACTIVE}" == "true" ]]; then
                 read -p "Do you want to install and configure SSH? (y/N): " -r install_ssh
                 [[ ! "${install_ssh}" =~ ^[Yy]$ ]] && return 0
-                
+
                 execute_command "Installing OpenSSH server" \
                     "sudo apt-get install -y openssh-server"
             else
@@ -916,7 +1043,7 @@ module_ssh_hardening() {
             fi
         fi
     fi
-    
+
     # Safety check for existing key-based auth
     if [[ "${INTERACTIVE}" == "true" ]] && [[ "${DRY_RUN}" == "false" ]]; then
         echo ""
@@ -927,7 +1054,7 @@ module_ssh_hardening() {
         echo ""
         echo "Can you currently SSH into this system using a key? (not a password)"
         read -p "Type 'yes' to confirm you have working key-based SSH: " -r confirm
-        
+
         if [[ "${confirm}" != "yes" ]]; then
             log WARNING "SSH hardening skipped - setup key-based auth first"
             echo ""
@@ -939,16 +1066,60 @@ module_ssh_hardening() {
             return 0
         fi
     fi
-    
+
     backup_file "${ssh_config}"
-    
-    # Get SSH port from config or use default
+
+    # Resolve SSH settings, config-file first, with sensible defaults.
     local ssh_port="${SSH_PORT:-22}"
     local ssh_max_auth="${SSH_MAX_AUTH_TRIES:-3}"
-    
+
+    # v5.2: Scanner-compatible options. When SCANNER_MODE=true we pick the
+    # scanner-friendly defaults; individual config values in fortress.conf
+    # can still override either direction. Already-set values win over
+    # scanner-mode's bulk defaults so users keep fine control.
+    local ssh_tcp_fwd="${SSH_ALLOW_TCP_FORWARDING:-}"
+    local ssh_agent_fwd="${SSH_ALLOW_AGENT_FORWARDING:-}"
+    local ssh_max_sessions="${SSH_MAX_SESSIONS:-}"
+    local ssh_kbd="${SSH_KBD_INTERACTIVE:-}"
+
+    if [[ "${SCANNER_MODE}" == "true" ]]; then
+        log WARN "Scanner mode enabled: relaxing SSH for credentialed compliance scans"
+        [[ -z "${ssh_tcp_fwd}"     ]] && ssh_tcp_fwd="yes"
+        [[ -z "${ssh_agent_fwd}"   ]] && ssh_agent_fwd="yes"
+        [[ -z "${ssh_max_sessions}" ]] && ssh_max_sessions=20
+        [[ -z "${ssh_kbd}"         ]] && ssh_kbd="yes"
+    fi
+
+    # Fallbacks for hardened defaults
+    [[ -z "${ssh_tcp_fwd}"      ]] && ssh_tcp_fwd="no"
+    [[ -z "${ssh_agent_fwd}"    ]] && ssh_agent_fwd="no"
+    [[ -z "${ssh_max_sessions}" ]] && ssh_max_sessions=10
+    [[ -z "${ssh_kbd}"          ]] && ssh_kbd="no"
+
+    # Validate simple yes/no values — sshd is picky and will refuse to start
+    # on a typo. Catch that here before we clobber the user's config.
+    local opt
+    for opt in "${ssh_tcp_fwd}" "${ssh_agent_fwd}" "${ssh_kbd}"; do
+        case "${opt}" in
+            yes|no) ;;
+            *)
+                log ERROR "SSH yes/no option has invalid value: '${opt}'"
+                log ERROR "Check SSH_ALLOW_TCP_FORWARDING, SSH_ALLOW_AGENT_FORWARDING, SSH_KBD_INTERACTIVE"
+                return 1
+                ;;
+        esac
+    done
+    if ! [[ "${ssh_max_sessions}" =~ ^[0-9]+$ ]]; then
+        log ERROR "SSH_MAX_SESSIONS must be numeric, got: '${ssh_max_sessions}'"
+        return 1
+    fi
+
     # Configure SSH hardening
     if [[ "${DRY_RUN}" == "false" ]]; then
-        # Debian/Ubuntu: default /usr/lib/openssh/sftp-server; match fortress_improved.debian_fix.sh fallbacks
+        # Contribution by @dvic (PR merged pre-v5.2): SCP/SFTP was broken by
+        # v5.1's sshd_config rewrite because the hard-coded sftp-server path
+        # didn't match every distro. We now discover the actual binary.
+        # Debian/Ubuntu: default /usr/lib/openssh/sftp-server.
         local sftp_server=""
         if [[ -x /usr/lib/openssh/sftp-server ]]; then
             sftp_server="/usr/lib/openssh/sftp-server"
@@ -971,8 +1142,9 @@ module_ssh_hardening() {
         log INFO "Subsystem sftp -> ${sftp_server}"
 
         sudo tee "${ssh_config}" > /dev/null << EOF
-# FORTRESS.SH SSH Configuration v5.1
+# FORTRESS.SH SSH Configuration v5.2
 # Strong security, key-based authentication only
+# Scanner mode: ${SCANNER_MODE}
 
 # Port configuration
 Port ${ssh_port}
@@ -982,7 +1154,7 @@ PermitRootLogin no
 PubkeyAuthentication yes
 PasswordAuthentication no
 PermitEmptyPasswords no
-KbdInteractiveAuthentication no
+KbdInteractiveAuthentication ${ssh_kbd}
 UsePAM yes
 
 # Strong cryptography
@@ -995,7 +1167,7 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 LoginGraceTime 30
 MaxAuthTries ${ssh_max_auth}
-MaxSessions 10
+MaxSessions ${ssh_max_sessions}
 
 # Logging
 SyslogFacility AUTH
@@ -1003,8 +1175,8 @@ LogLevel VERBOSE
 
 # Other security settings
 X11Forwarding no
-AllowAgentForwarding no
-AllowTcpForwarding no
+AllowAgentForwarding ${ssh_agent_fwd}
+AllowTcpForwarding ${ssh_tcp_fwd}
 PermitTunnel no
 PrintMotd no
 AcceptEnv LANG LC_*
@@ -1013,18 +1185,27 @@ TCPKeepAlive yes
 Compression delayed
 Subsystem sftp ${sftp_server}
 EOF
-        
+
         # Add allowed users if configured
         if [[ -n "${SSH_ALLOWED_USERS:-}" ]]; then
             echo "AllowUsers ${SSH_ALLOWED_USERS//,/ }" | sudo tee -a "${ssh_config}" >/dev/null
             log INFO "SSH restricted to users: ${SSH_ALLOWED_USERS}"
         fi
-        
+
+        # v5.2: Add allowed groups if configured
+        if [[ -n "${SSH_ALLOWED_GROUPS:-}" ]]; then
+            echo "AllowGroups ${SSH_ALLOWED_GROUPS//,/ }" | sudo tee -a "${ssh_config}" >/dev/null
+            log INFO "SSH restricted to groups: ${SSH_ALLOWED_GROUPS}"
+        fi
+
         # Validate configuration
         if sudo sshd -t; then
             execute_command "Restarting SSH service" \
                 "sudo systemctl restart ssh 2>/dev/null || sudo systemctl restart sshd"
             log SUCCESS "SSH hardened - password authentication disabled"
+            if [[ "${SCANNER_MODE}" == "true" ]]; then
+                log INFO "Scanner-mode SSH: TCP fwd=${ssh_tcp_fwd}, agent fwd=${ssh_agent_fwd}, MaxSessions=${ssh_max_sessions}, kbd-int=${ssh_kbd}"
+            fi
         else
             log ERROR "SSH configuration validation failed"
             sudo cp "${BACKUP_DIR}${ssh_config}" "${ssh_config}"
@@ -1032,8 +1213,10 @@ EOF
         fi
     else
         log INFO "[DRY RUN] Would harden SSH configuration"
+        [[ "${SCANNER_MODE}" == "true" ]] && \
+            log INFO "[DRY RUN] Would apply scanner-mode SSH relaxations"
     fi
-    
+
     return 0
 }
 
@@ -1120,6 +1303,12 @@ module_fail2ban() {
     local f2b_maxretry="${FAIL2BAN_MAXRETRY:-5}"
     
     if [[ "${DRY_RUN}" == "false" ]]; then
+        # v5.2: Default action changed from action_mwl (needs mailutils +
+        # whois — silently broken if not installed) to action_ (just iptables
+        # ban, always works). Users wanting mail alerts can override with
+        # FAIL2BAN_ACTION="%(action_mwl)s" in fortress.conf.
+        local f2b_action="${FAIL2BAN_ACTION:-%(action_)s}"
+
         # Configure fail2ban based on what services are present
         sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
 [DEFAULT]
@@ -1128,7 +1317,7 @@ findtime = ${f2b_findtime}
 maxretry = ${f2b_maxretry}
 destemail = root@localhost
 sendername = Fail2Ban
-action = %(action_mwl)s
+action = ${f2b_action}
 
 [sshd]
 enabled = ${ssh_has_password_auth}
@@ -1450,6 +1639,10 @@ fs.suid_dumpable = 0
 # Process restrictions
 kernel.dmesg_restrict = 1
 kernel.perf_event_paranoid = 3
+
+# v5.2: Restrict ptrace (prevents cross-process memory reads)
+# 0 = classic, 1 = restricted (only parents/CAP_SYS_PTRACE), 2 = admin-only, 3 = none
+kernel.yama.ptrace_scope = 1
 EOF
 
         # Apply custom sysctl parameters if configured
@@ -2091,9 +2284,12 @@ module_packages() {
     )
     
     local found_packages=()
-    
+
     for pkg in "${potentially_unnecessary[@]}"; do
-        if dpkg -l | grep -q "^ii.*${pkg}"; then
+        # v5.2: Use dpkg-query for exact match — the old `dpkg -l | grep "^ii.*${pkg}"`
+        # could false-positive on packages containing the name as a substring
+        # (e.g. searching "nis" would match "nis-utils").
+        if dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "^install ok installed$"; then
             found_packages+=("${pkg}")
         fi
     done
@@ -2286,70 +2482,185 @@ resolve_dependencies() {
 
 execute_modules() {
     local modules_to_run=()
-    
+    local -a disabled=()
+    local -a enabled_whitelist=()
+    local enable_mode=false
+
     # Determine which modules to run
     if [[ -n "${ENABLE_MODULES}" ]]; then
-        IFS=',' read -ra modules_to_run <<< "${ENABLE_MODULES}"
+        enable_mode=true
+        IFS=',' read -ra enabled_whitelist <<< "${ENABLE_MODULES}"
+        # De-duplicate while preserving order
+        local -A seen=()
+        local tmp=()
+        for m in "${enabled_whitelist[@]}"; do
+            m="${m// /}"
+            [[ -z "${m}" ]] && continue
+            if [[ -z "${seen[$m]:-}" ]]; then
+                seen[$m]=1
+                tmp+=("${m}")
+            fi
+        done
+        enabled_whitelist=("${tmp[@]}")
+        modules_to_run=("${enabled_whitelist[@]}")
     else
         modules_to_run=("${!SECURITY_MODULES[@]}")
-        
-        # Apply disabled modules filter
-        if [[ -n "${DISABLE_MODULES}" ]]; then
-            IFS=',' read -ra disabled <<< "${DISABLE_MODULES}"
-            local filtered=()
-            for module in "${modules_to_run[@]}"; do
-                local skip=false
-                for disabled_mod in "${disabled[@]}"; do
-                    [[ "${module}" == "${disabled_mod}" ]] && skip=true && break
-                done
-                $skip || filtered+=("${module}")
-            done
-            modules_to_run=("${filtered[@]}")
-        fi
     fi
-    
-    # Check for circular dependencies
-    for module in "${modules_to_run[@]}"; do
-        if ! check_circular_deps "${module}" "${module}"; then
+
+    # Normalize disabled list (always applied, even in enable mode: we treat
+    # -x as authoritative for "never run this, even as a dependency").
+    if [[ -n "${DISABLE_MODULES}" ]]; then
+        IFS=',' read -ra raw_disabled <<< "${DISABLE_MODULES}"
+        local -A dseen=()
+        local dm
+        for dm in "${raw_disabled[@]}"; do
+            dm="${dm// /}"
+            [[ -z "${dm}" ]] && continue
+            if [[ -z "${dseen[$dm]:-}" ]]; then
+                dseen[$dm]=1
+                disabled+=("${dm}")
+            fi
+        done
+    fi
+
+    # Validate module names up-front — catch typos before we spend a minute
+    # resolving dependencies only to fail later.
+    local m
+    for m in "${enabled_whitelist[@]}" "${disabled[@]}"; do
+        if [[ -z "${SECURITY_MODULES[$m]:-}" ]]; then
+            log ERROR "Unknown module: '${m}'"
+            log ERROR "Run with --list-modules to see valid module names."
+            exit 1
+        fi
+    done
+
+    # Apply the disable filter to modules_to_run (before dep resolution).
+    if [[ ${#disabled[@]} -gt 0 ]]; then
+        local filtered=()
+        for m in "${modules_to_run[@]}"; do
+            local skip=false
+            local d
+            for d in "${disabled[@]}"; do
+                [[ "${m}" == "${d}" ]] && skip=true && break
+            done
+            $skip || filtered+=("${m}")
+        done
+        modules_to_run=("${filtered[@]}")
+    fi
+
+    # Check for circular dependencies (rare, but guard against it).
+    for m in "${modules_to_run[@]}"; do
+        if ! check_circular_deps "${m}" "${m}"; then
             log ERROR "Cannot proceed due to circular dependencies"
             exit 1
         fi
     done
-    
-    # Resolve dependencies and build execution order
+
+    # v5.2 CRITICAL FIX (Issue #17):
+    # Build execution order, but STRICTLY respect the user's disable/enable
+    # decisions. If a module's dependency would be disabled (or, in enable
+    # mode, isn't in the whitelist), we SKIP the dependent module with a
+    # warning rather than silently pulling the forbidden dep back in.
+    #
+    # Example: user passes `-x firewall` and keeps fail2ban enabled.
+    #   v5.1: fail2ban's dep resolver inserts firewall back into the order.
+    #         Script installs firewall — contradicting the user.
+    #   v5.2: fail2ban is skipped with a warning. firewall stays off.
     local -a execution_order=()
-    for module in "${modules_to_run[@]}"; do
-        [[ -z "${module}" ]] && continue
-        
-        local deps=($(resolve_dependencies "${module}"))
-        for dep in "${deps[@]}"; do
-            if [[ ${#execution_order[@]} -eq 0 ]] || [[ ! " ${execution_order[*]} " =~ " ${dep} " ]]; then
-                execution_order+=("${dep}")
+    local -a to_skip=()
+    for m in "${modules_to_run[@]}"; do
+        [[ -z "${m}" ]] && continue
+
+        local raw_deps
+        raw_deps=($(resolve_dependencies "${m}"))
+
+        # Check every dep (including transitive) against the forbid lists.
+        local forbidden_dep=""
+        local d
+        for d in "${raw_deps[@]}"; do
+            # Disabled list forbids absolutely.
+            local is_disabled=false
+            local dd
+            for dd in "${disabled[@]}"; do
+                [[ "${d}" == "${dd}" ]] && is_disabled=true && break
+            done
+            if ${is_disabled}; then
+                forbidden_dep="${d}"
+                break
+            fi
+            # In enable-mode, deps must also be in the whitelist.
+            if ${enable_mode} && [[ "${d}" != "${m}" ]]; then
+                local in_whitelist=false
+                local w
+                for w in "${enabled_whitelist[@]}"; do
+                    [[ "${d}" == "${w}" ]] && in_whitelist=true && break
+                done
+                if ! ${in_whitelist}; then
+                    forbidden_dep="${d}"
+                    break
+                fi
+            fi
+        done
+
+        if [[ -n "${forbidden_dep}" ]]; then
+            log WARN "Skipping '${m}' — depends on '${forbidden_dep}' which you excluded."
+            log WARN "To run '${m}', also enable '${forbidden_dep}' (or drop it from --disable)."
+            SKIPPED_MODULES+=("${m} (needs ${forbidden_dep})")
+            to_skip+=("${m}")
+            continue
+        fi
+
+        # Safe to add this module's resolved deps to the execution order.
+        for d in "${raw_deps[@]}"; do
+            if [[ ${#execution_order[@]} -eq 0 ]] || [[ ! " ${execution_order[*]} " =~ " ${d} " ]]; then
+                execution_order+=("${d}")
             fi
         done
     done
-    
+
+    # Defensive: strip anything from execution_order that slipped past the
+    # checks above (e.g. a dep of a dep that equals a disabled module).
+    if [[ ${#disabled[@]} -gt 0 ]]; then
+        local cleaned=()
+        for m in "${execution_order[@]}"; do
+            local skip=false
+            local d
+            for d in "${disabled[@]}"; do
+                [[ "${m}" == "${d}" ]] && skip=true && break
+            done
+            $skip || cleaned+=("${m}")
+        done
+        execution_order=("${cleaned[@]}")
+    fi
+
     local total=${#execution_order[@]}
     local current=0
-    
+
     echo ""
     log INFO "================================================"
-    log INFO "Execution order (${total} modules):"
-    log INFO "${execution_order[*]}"
+    if [[ ${total} -eq 0 ]]; then
+        log WARN "No modules to execute — check your --enable/--disable lists."
+    else
+        log INFO "Execution order (${total} modules):"
+        log INFO "${execution_order[*]}"
+    fi
+    if [[ ${#SKIPPED_MODULES[@]} -gt 0 ]]; then
+        log WARN "Skipped (${#SKIPPED_MODULES[@]}): ${SKIPPED_MODULES[*]}"
+    fi
     log INFO "================================================"
     echo ""
-    
+
     # Execute modules
     for module in "${execution_order[@]}"; do
         [[ -z "${module}" ]] && continue
-        
+
         current=$((current + 1))
-        
+
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         log INFO "Module ${current}/${total}: ${SECURITY_MODULES[${module}]:-Unknown}"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        
+
         local func="module_${module}"
         if declare -f "${func}" > /dev/null; then
             if "${func}"; then
@@ -2358,7 +2669,7 @@ execute_modules() {
             else
                 FAILED_MODULES+=("${module}")
                 log ERROR "Module ${module} failed"
-                
+
                 if [[ "${INTERACTIVE}" == "true" ]]; then
                     read -p "Continue with remaining modules? (Y/n): " -r continue_exec
                     [[ "${continue_exec}" =~ ^[Nn]$ ]] && break
@@ -2368,10 +2679,10 @@ execute_modules() {
             log ERROR "Module function ${func} not found"
             FAILED_MODULES+=("${module}")
         fi
-        
+
         sleep 0.5
     done
-    
+
     echo ""
 }
 
@@ -2538,6 +2849,10 @@ EOF
 
 main() {
     # Parse arguments
+    # v5.2: Each CLI flag that mirrors a config setting also flips a
+    # CLI_SET_* sentinel. load_config() reads those to decide whether the
+    # value should override fortress.conf, fixing the v5.1 bug where a CLI
+    # value matching a default was silently replaced by a config value.
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -h|--help)
@@ -2546,35 +2861,54 @@ main() {
                 ;;
             -v|--verbose)
                 VERBOSE=true
+                CLI_SET_VERBOSE=true
                 shift
                 ;;
             -n|--non-interactive)
                 INTERACTIVE=false
+                CLI_SET_INTERACTIVE=true
                 shift
                 ;;
             -d|--dry-run)
                 DRY_RUN=true
+                CLI_SET_DRY_RUN=true
                 shift
                 ;;
             --explain)
                 EXPLAIN_MODE=true
+                CLI_SET_EXPLAIN=true
                 shift
                 ;;
             -l|--level)
+                if [[ $# -lt 2 ]] || [[ -z "${2:-}" ]]; then
+                    echo "Missing value for $1"
+                    exit 1
+                fi
                 if [[ ! "$2" =~ ^(low|moderate|high|paranoid)$ ]]; then
                     echo "Invalid security level: $2"
                     echo "Valid options: low, moderate, high, paranoid"
                     exit 1
                 fi
                 SECURITY_LEVEL="$2"
+                CLI_SET_SECURITY_LEVEL=true
                 shift 2
                 ;;
             -e|--enable)
+                if [[ $# -lt 2 ]]; then
+                    echo "Missing value for $1"
+                    exit 1
+                fi
                 ENABLE_MODULES="$2"
+                CLI_SET_ENABLE=true
                 shift 2
                 ;;
             -x|--disable)
+                if [[ $# -lt 2 ]]; then
+                    echo "Missing value for $1"
+                    exit 1
+                fi
                 DISABLE_MODULES="$2"
+                CLI_SET_DISABLE=true
                 shift 2
                 ;;
             --version)
@@ -2585,6 +2919,10 @@ main() {
                 list_modules
                 ;;
             -c|--config)
+                if [[ $# -lt 2 ]]; then
+                    echo "Missing value for $1"
+                    exit 1
+                fi
                 CONFIG_FILE_OVERRIDE="$2"
                 shift 2
                 ;;
@@ -2594,26 +2932,37 @@ main() {
                 ;;
             --allow-docker)
                 ALLOW_DOCKER_FORWARDING=true
+                CLI_SET_DOCKER=true
                 shift
                 ;;
             --no-docker-compat)
                 ALLOW_DOCKER_FORWARDING=false
+                CLI_SET_DOCKER=true
                 shift
                 ;;
             --allow-browser-shm)
                 ALLOW_BROWSER_SHAREDMEM=true
+                CLI_SET_BROWSER=true
                 shift
                 ;;
             --no-browser-compat)
                 ALLOW_BROWSER_SHAREDMEM=false
+                CLI_SET_BROWSER=true
                 shift
                 ;;
             --force-desktop)
                 FORCE_DESKTOP_MODE=true
+                CLI_SET_FORCE_DESKTOP=true
                 shift
                 ;;
             --force-server)
                 FORCE_SERVER_MODE=true
+                CLI_SET_FORCE_SERVER=true
+                shift
+                ;;
+            --scanner-mode)
+                SCANNER_MODE=true
+                CLI_SET_SCANNER_MODE=true
                 shift
                 ;;
             *)
@@ -2670,6 +3019,9 @@ main() {
     log INFO "Docker Detected: ${DOCKER_DETECTED}"
     log INFO "Docker IP Forwarding: ${ALLOW_DOCKER_FORWARDING}"
     log INFO "Browser /dev/shm Compat: ${ALLOW_BROWSER_SHAREDMEM}"
+    log INFO "Scanner Mode: ${SCANNER_MODE}"
+    [[ -n "${ENABLE_MODULES}"  ]] && log INFO "Enabled modules (whitelist): ${ENABLE_MODULES}"
+    [[ -n "${DISABLE_MODULES}" ]] && log INFO "Disabled modules (blocklist): ${DISABLE_MODULES}"
     echo ""
     
     if [[ "${EXPLAIN_MODE}" == "true" ]]; then
