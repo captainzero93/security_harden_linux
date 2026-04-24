@@ -2,7 +2,7 @@
 
 **One-command security hardening that implements enterprise-grade protections (DISA STIG + CIS) while letting you decide the level of protection vs usability trade-off. Casual desktop use through to strict server enforcement.**
 
-**Version 5.1** - Critical Fixes: Docker compatibility, browser support, full configuration file. Tested WORKING on Debian 13, Ubuntu 24.04+.
+**Version 5.2** - Module Control & Scanner Compatibility: fixed `-x`/`--disable` (Issue #17), added `--scanner-mode` for Nessus/CIS credentialed scans, fixed bugs in CLI/config precedence and the verify script. Tested for Debian 13, Ubuntu 24.04+.
 
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%2B-orange.svg)](https://ubuntu.com/)
@@ -10,7 +10,7 @@
 [![Debian](https://img.shields.io/badge/Debian-11%2B%20%7C%2013-red.svg)](https://www.debian.org/)
 [![Linux Mint](https://img.shields.io/badge/Linux%20Mint-21%2B-87CF3E.svg)](https://linuxmint.com/)
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
-[![Version](https://img.shields.io/badge/Version-5.1-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-5.2-green.svg)]()
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
@@ -20,7 +20,7 @@
 
 **Set up SSH keys FIRST or you WILL be locked out.**
 
-v5.1 includes multiple safety checks to prevent SSH lockouts, but you still need working key-based authentication before running the script. See [Critical Warning for Remote Servers](#critical-warning-for-remote-servers) for full setup instructions.
+v5.2 keeps all the safety checks from v5.1 (explicit "yes" confirmation, automatic config validation, rollback on sshd syntax error) but you still need working key-based authentication before running the script. See [Critical Warning for Remote Servers](#critical-warning-for-remote-servers) for full setup instructions.
 
 ### Notice
 
@@ -70,6 +70,7 @@ sudo ./fortress_improved.sh -l high -n
 * [Critical Warning for Remote Servers](#critical-warning-for-remote-servers)
 * [Why This Matters - Real-World Attacks](#why-this-matters---real-world-attacks)
 * [What's New](#whats-new)
+* [Nessus / CIS Compliance Scans](#nessus--cis-compliance-scans)
 * [Installation](#installation)
 * [Usage Guide](#usage-guide)
 * [Security Levels Explained](#security-levels-explained)
@@ -218,6 +219,37 @@ Someone boots your computer from USB, mounts your drive, and steals everything.
 
 ## What's New
 
+### v5.2 - Module Control & Scanner Compatibility
+
+**Critical fixes** based on user-reported issues:
+
+**Fixed:**
+
+* **Issue #17 — `-x`/`--disable` and `-e`/`--enable` silently ignored.** The dependency resolver in v5.1 could re-add a module you'd just excluded because *another* module depended on it. Example: `-x firewall,ssh_hardening` while leaving `fail2ban` enabled would still install `firewall` and `ssh_hardening` because `fail2ban` depends on them. v5.2 treats your exclusion list as authoritative — if a module's dependency would be excluded, the *dependent module* is skipped with a clear warning (e.g. `Skipping 'fail2ban' — depends on 'firewall' which you excluded`).
+* **CLI flags didn't always override `fortress.conf`.** The v5.1 override logic compared the CLI value to the hard-coded default, so `-l moderate` against a config file with `SECURITY_LEVEL="high"` silently kept `high`. v5.2 tracks *which* CLI flags were actually set and only those override the config.
+* **`verify_fortress.sh` was silently broken** on the first check under `set -euo pipefail` — the `((PASSED++))` pattern returns exit code 1 when the counter is 0. Replaced all 42 instances with `PASSED=$((PASSED + 1))` style. Script now actually runs to completion.
+* **`fix_library_permissions.sh` had a duplicate shebang + duplicate header block.** Cleaned up.
+* **Package detection false positive.** `dpkg -l | grep "^ii.*nis"` would also match `nis-utils` or anything containing `nis`. Now uses `dpkg-query -W -f='${Status}'` for exact matches.
+* **`fail2ban` silently failed** if `mailutils` or `whois` weren't installed, because the default action was `action_mwl` (mail, whois, log). Default is now `action_` (simple ban). Override with `FAIL2BAN_ACTION="%(action_mwl)s"` in `fortress.conf` if you want the mail flavour.
+
+**Added:**
+
+* **`--scanner-mode` flag** for Nessus / OpenSCAP / CIS-CAT / Qualys credentialed compliance scans. The previous SSH config locked out scanners at the protocol layer (no TCP forwarding, no agent forwarding, `MaxSessions 10`, `KbdInteractiveAuthentication no`). `--scanner-mode` loosens *only* those SSH options; firewall, sysctl, audit, and AppArmor hardening stay fully intact. See [Nessus / CIS Compliance Scans](#nessus--cis-compliance-scans) below.
+* **`SSH_ALLOWED_GROUPS`** config option (groups-based `AllowGroups`; before, only `AllowUsers` was available).
+* **Four new SSH config knobs** so you can match scanner requirements without flipping `--scanner-mode` globally: `SSH_ALLOW_TCP_FORWARDING`, `SSH_ALLOW_AGENT_FORWARDING`, `SSH_MAX_SESSIONS`, `SSH_KBD_INTERACTIVE`.
+* **`kernel.yama.ptrace_scope = 1`** sysctl hardening (restricts cross-process ptrace — blocks many userspace memory-dumping attacks).
+* **`-c` / `--config` now hard-errors** when the file you pointed at doesn't exist, instead of silently falling back to defaults.
+* **Startup banner + verify_fortress.sh** now report `SCANNER_MODE`, `ENABLE_MODULES`, `DISABLE_MODULES`, and which modules were skipped due to excluded dependencies.
+
+**Preserved:**
+
+* **dvic's SCP/SFTP fix** (merged pre-v5.2) — sshd_config's `Subsystem sftp` path is auto-detected on Debian/Ubuntu variants, so `scp` keeps working after hardening. Fixed the `subsystem request failed on channel 0` error that hit.
+
+**New / updated CLI options:**
+
+* `--scanner-mode` - Enable Nessus/CIS credentialed scan compatibility
+* `-c FILE` - Now errors clearly if the file is missing (was silent)
+
 ### v5.1 - Compatibility Edition
 
 **Critical fixes** based on Issues #8, #10, #11:
@@ -243,6 +275,80 @@ Someone boots your computer from USB, mounts your drive, and steals everything.
 **Removed (security theatre):** AIDE (replaced with dpkg verification), IPv6 disable (not a security feature), ClamAV (minimal Linux benefit), lynis_audit (run separately), rootkit_scanner (false sense of security).
 
 **Added:** Educational mode (`--explain` flag), Secure Boot verification, package verification (dpkg-based, weekly cron), intelligent module recommendations, SSH lockout prevention (multiple safety checks), honest limitation statements.
+
+---
+
+## Nessus / CIS Compliance Scans
+
+If you run credentialed compliance scans (Nessus Professional, Nessus Expert, Tenable.io, OpenSCAP, CIS-CAT Pro, Qualys VMDR), the default v5.1 SSH hardening blocks the scanner at the protocol layer — the scanner logs in but can't actually evaluate anything.
+
+**Symptom:** "Nessus can log in but it doesn't return any errors nor does it attempt to check credentials."
+
+**Root cause:** Hardened sshd_config sets:
+
+* `AllowTcpForwarding no` — blocks TCP-tunnelled plugins
+* `AllowAgentForwarding no` — blocks agent-based auth chaining
+* `MaxSessions 10` — caps parallel scanner threads below what many scanners need
+* `KbdInteractiveAuthentication no` — blocks PAM-based credential prompts some CIS profiles require
+
+**Fix (v5.2):** use `--scanner-mode`.
+
+```bash
+# One-shot hardening that still passes credentialed scans
+sudo ./fortress_improved.sh --scanner-mode
+
+# Or persist it via fortress.conf
+echo 'SCANNER_MODE=true' >> fortress.conf
+sudo ./fortress_improved.sh
+```
+
+What `--scanner-mode` changes (defaults shown; all individually overridable in `fortress.conf`):
+
+| Option                         | Hardened default | Scanner-mode |
+|--------------------------------|------------------|--------------|
+| `AllowTcpForwarding`           | `no`             | `yes`        |
+| `AllowAgentForwarding`         | `no`             | `yes`        |
+| `MaxSessions`                  | `10`             | `20`         |
+| `KbdInteractiveAuthentication` | `no`             | `yes`        |
+
+What `--scanner-mode` does **NOT** change: everything else. Firewall (UFW), sysctl kernel hardening, audit logging, AppArmor, password policy, boot security, USB protection, filesystem blacklist, and automatic updates are all applied identically. You're not rolling back the hardening — you're unblocking the scanner's ability to evaluate it.
+
+**If you only need a subset of those relaxations**, set them individually in `fortress.conf` and leave `SCANNER_MODE=false`:
+
+```bash
+# Example: just bump MaxSessions for a parallel scanner
+SSH_MAX_SESSIONS=20
+
+# Example: allow keyboard-interactive only
+SSH_KBD_INTERACTIVE="yes"
+```
+
+**Reverting to fully-locked SSH** after a scan window:
+
+```bash
+# Re-run without scanner mode (re-applies hardened defaults)
+sudo ./fortress_improved.sh -e ssh_hardening
+```
+
+### SCP / SFTP not working after hardening
+
+This was a reported bug with the v5.1 SSH config;
+
+```
+$ scp file.txt host:/tmp/
+subsystem request failed on channel 0
+scp: Connection closed
+```
+
+**Cause:** v5.1's `sshd_config` template hard-coded an `sftp-server` path that wasn't present on every Debian/Ubuntu variant.
+
+**Fix:** Merged pre-v5.2 (contributed by @dvic). The `Subsystem sftp` line now probes in order:
+
+1. `/usr/lib/openssh/sftp-server` (Debian/Ubuntu default)
+2. Whatever `command -v sftp-server` returns
+3. `dpkg -L openssh-server | grep /sftp-server$`
+
+If all three fail, the module errors out cleanly instead of writing a broken config. `scp` works out-of-the-box from v5.2 onward.
 
 ---
 
@@ -888,6 +994,10 @@ For commercial licensing, email: cyberjunk77@protonmail.com with subject "Commer
 
 ## Version History
 
+### v5.2 (2026-04) - Module Control & Scanner Compatibility
+
+Fixed Issue #17 — `-x`/`--disable` and `-e`/`--enable` are now strictly respected; a module whose dependency was excluded is skipped with a warning rather than silently pulling the excluded dep back in. Fixed CLI-vs-config precedence (CLI flags now override `fortress.conf` even when they match a default). Added `--scanner-mode` for Nessus/CIS/OpenSCAP credentialed scans, plus individual overrides for `AllowTcpForwarding`, `AllowAgentForwarding`, `MaxSessions`, and `KbdInteractiveAuthentication`. Added `SSH_ALLOWED_GROUPS` and `kernel.yama.ptrace_scope=1` hardening. Fixed latent bugs: `verify_fortress.sh` was silently dying on the first check due to `((PASSED++))` + `set -e`; `fix_library_permissions.sh` had a duplicate shebang; package detection false-positived on substrings; fail2ban's default action `action_mwl` silently failed without `mailutils`. Preserved dvic's sftp-server path auto-detection (fixes `scp` after hardening).
+
 ### v5.1 (2026-02) - Compatibility Edition
 
 Critical fixes for Issues #8, #10, #11. Fixed browser launch failures from /dev/shm noexec, Docker networking broken by IP forwarding disable, and config file not loading. Added Docker/Podman/LXC detection, browser detection, full config file support, pre-flight application detection, health verification script, and new CLI options. Improved desktop vs server detection and interactive prompts.
@@ -1010,7 +1120,7 @@ For commercial licensing, professional support, or consulting services: [cyberju
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                    FORTRESS.SH QUICK REFERENCE v5.1
+                    FORTRESS.SH QUICK REFERENCE v5.2
 
 ESSENTIAL COMMANDS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
