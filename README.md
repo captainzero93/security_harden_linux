@@ -1,3 +1,6 @@
+!!-- Consider this broken as of now it will be going an overhaul soon --!!
+!!-- DO NOT USE ON A PRODUCTION MACHINE --!!
+
 # FORTRESS.SH :: Debian Linux Defence Configuration
 
 NOTICE: Fix Permissions .sh was causing issues on some systems it's been removed for now, the newer versions should already have fixed the issues that script attempted to.
