@@ -1303,7 +1303,7 @@ module_fail2ban() {
     local has_web_server=false
     local has_mail_server=false
     local ssh_has_password_auth=true
-    
+
     command -v apache2 &>/dev/null && has_web_server=true
     command -v nginx &>/dev/null && has_web_server=true
     command -v postfix &>/dev/null && has_mail_server=true
@@ -1366,10 +1366,10 @@ action = ${f2b_action}
 [sshd]
 enabled = ${ssh_has_password_auth}
 port = ssh
-logpath = /var/log/auth.log
+backend = systemd
 EOF
 
-        if [[ "${has_web_server}" == "true" ]]; then
+        if command -v nginx &>/dev/null; then
             ${SUDO} tee -a /etc/fail2ban/jail.local > /dev/null << 'EOF'
 
 [nginx-http-auth]
@@ -1377,6 +1377,11 @@ enabled = true
 filter = nginx-http-auth
 port = http,https
 logpath = /var/log/nginx/error.log
+EOF
+        fi
+
+        if command -v apache2 &>/dev/null; then
+            ${SUDO} tee -a /etc/fail2ban/jail.local > /dev/null << 'EOF'
 
 [apache-auth]
 enabled = true
