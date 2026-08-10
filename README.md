@@ -17,7 +17,6 @@ NOTICE: Fix Permissions .sh was causing issues on some systems it's been removed
 [![Pop!\_OS](https://img.shields.io/badge/Pop!__OS-22.04%2B-48B9C7.svg)](https://pop.system76.com/)
 [![Version](https://img.shields.io/badge/Version-5.3-green.svg)]()
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/captainzero)
 
 ---
 
