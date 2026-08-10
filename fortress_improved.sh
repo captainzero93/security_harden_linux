@@ -171,7 +171,7 @@ declare -A MODULE_DEPS=(
     ["usb_protection"]=""
     ["filesystems"]=""
     ["package_verification"]="system_update"
-    ["fail2ban"]="system_update firewall ssh_hardening"
+    ["fail2ban"]="system_update firewall"
 )
 
 #=============================================================================
